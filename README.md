@@ -293,6 +293,7 @@ https://github.com/andie-andrews/NLP-Scheduler-Capstone
 
 
 Example project structure:
+```
 nlp-scheduler-agent
 ├── api
 ├── agent
@@ -300,3 +301,4 @@ nlp-scheduler-agent
 ├── entity_resolution
 ├── ui
 └── notebooks
+```
