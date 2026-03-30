@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+/apis/Scheduler.Api/.vs/Scheduler.Api
+/apis/Scheduler.Api/Scheduler.Api/bin/Debug/net8.0
+/apis/Scheduler.Api/Scheduler.Api/obj
