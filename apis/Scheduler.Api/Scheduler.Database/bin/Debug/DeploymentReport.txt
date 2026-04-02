@@ -1,0 +1,25 @@
+﻿** Highlights
+     Tables that will be recreated with data migrated
+       None
+     Clustered indexes that will be dropped
+       None
+     Clustered indexes that will be created
+       None
+     Possible data issues
+       None
+
+** User actions
+     Create
+       [dbo].[Employees] (Table)
+       [dbo].[ScheduleEmployees] (Table)
+       [dbo].[ScheduleManagers] (Table)
+       [dbo].[Schedules] (Table)
+       [dbo].[Shifts] (Table)
+       [dbo].[FK_ScheduleEmployees_Schedules] (Foreign Key)
+       [dbo].[FK_ScheduleEmployees_Employees] (Foreign Key)
+       [dbo].[FK_ScheduleManagers_Schedules] (Foreign Key)
+       [dbo].[FK_ScheduleManagers_Employees] (Foreign Key)
+       [dbo].[FK_Shifts_Schedules] (Foreign Key)
+       [dbo].[FK_Shifts_Employees] (Foreign Key)
+
+** Supporting actions

@@ -7,7 +7,7 @@ namespace Scheduler.Api.Infrastructure.Domain.Models
     public int Id { get; set; }
     public string Username { get; set; }
     public string Password { get; set; } // plain for now (capstone)
-    public Role Role { get; set; }
+    public Scheduler.Api.Infrastructure.Domain.Enums.Role Role { get; set; }
     public int EmployeeId { get; set; }
   }
 }
