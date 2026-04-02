@@ -1,6 +1,8 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Scheduler.Api.Features.Auth.Handlers;
 using Scheduler.Api.Features.Employee.Handlers;
+using Scheduler.Api.Features.Schedules.Handlers;
 using Scheduler.Api.Infrastructure.Domain.Services;
 using System.Text;
 
@@ -64,6 +66,9 @@ builder.Services.AddScoped<IDbConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<HealthHandler>();
 builder.Services.AddScoped<GetEmployeeByNameHandler>();
+builder.Services.AddScoped<GetMyScheduleHandler>();
+builder.Services.AddScoped<AuthHandler>();
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

@@ -35,3 +35,9 @@ VALUES
 INSERT INTO Shifts (ScheduleId, EmployeeId, Start, DurationHours)
 VALUES
 (1, 1, DATEADD(HOUR, 8, GETDATE()), 8);
+
+INSERT INTO Users (Username, Password, Role, EmployeeId)
+VALUES
+('john', 'password', 1, 1),
+('jane', 'password', 1, 2),
+('boss', 'password', 2, 3);

@@ -19,10 +19,11 @@ namespace Scheduler.Api.Infrastructure.Domain.Services
     {
       var claims = new List<Claim>
       {
-        new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-        new Claim("username", user.Username),
         new Claim("employeeId", user.EmployeeId.ToString()),
-        new Claim(ClaimTypes.Role, user.Role.ToString())
+        new Claim("firstName", user.FirstName),
+        new Claim("lastName", user.LastName),
+        new Claim("fullName", $"{user.FirstName} {user.LastName}"),
+        new Claim("role", user.Role.ToString())
       };
 
       var key = new SymmetricSecurityKey(

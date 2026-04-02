@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Scheduler.Api.Features.Auth.Data;
+using Scheduler.Api.Features.Auth.Handlers;
 using Scheduler.Api.Features.Auth.Models;
 using Scheduler.Api.Infrastructure.Domain.Services;
 
@@ -8,26 +8,25 @@ using Scheduler.Api.Infrastructure.Domain.Services;
 public class AuthController : ControllerBase
 {
   private readonly JwtService _jwt;
+  private readonly AuthHandler _authHandler;
 
-  public AuthController(JwtService jwt)
+  public AuthController(JwtService jwt,
+    AuthHandler authHandler)
   {
     _jwt = jwt;
+    _authHandler = authHandler;
   }
 
   [HttpPost("login")]
-  public IActionResult Login(LoginRequestV1Model request)
+  public async Task<IActionResult> Login(LoginRequestV1Model request)
   {
-    // fake user store (for now)
-    var user = FakeUsers.Users
-      .FirstOrDefault(u =>
-        u.Username == request.Username &&
-        u.Password == request.Password);
+    var user = await _authHandler.Authenticate(request.Username, request.Password);
 
     if (user == null)
-      return Unauthorized();
+      return Unauthorized("Invalid credentials");
 
     var token = _jwt.GenerateToken(user);
 
-    return Ok(new { token });
+    return Ok(new { token }); 
   }
 }

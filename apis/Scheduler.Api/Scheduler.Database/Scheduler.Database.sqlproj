@@ -65,6 +65,7 @@
     <Build Include="ScheduleManagers.sql" />
     <PostDeploy Include="PostDeployment.sql" />
     <Build Include="Roles.sql" />
+    <Build Include="User.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Scheduler.Database.publish.xml" />
