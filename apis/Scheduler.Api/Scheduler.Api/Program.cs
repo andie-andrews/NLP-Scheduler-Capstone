@@ -5,6 +5,7 @@ using Scheduler.Api.Features.Employee.Handlers;
 using Scheduler.Api.Features.Schedules.Handlers;
 using Scheduler.Api.Infrastructure.Domain.Services;
 using System.Text;
+using Scheduler.Api.Features.Shifts.Handlers;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -69,11 +70,19 @@ builder.Services.AddScoped<GetEmployeeByNameHandler>();
 builder.Services.AddScoped<AuthHandler>();
 
 
-builder.Services.AddScoped<GetMyScheduleHandler>();
 builder.Services.AddScoped<GetSchedulesHandler>();
 builder.Services.AddScoped<GetScheduleEmployeesHandler>();
 builder.Services.AddScoped<GetScheduleShiftsHandler>();
 builder.Services.AddScoped<CreateShiftHandler>();
+builder.Services.AddScoped<CreateScheduleHandler>();
+builder.Services.AddScoped<UpdateScheduleHandler>();
+builder.Services.AddScoped<DeleteScheduleHandler>();
+builder.Services.AddScoped<AddEmployeeToScheduleHandler>();
+builder.Services.AddScoped<DeleteEmployeeToScheduleHandler>();
+builder.Services.AddScoped<GetEmployeeByIdHandler>();
+builder.Services.AddScoped<GetAllEmployeesHandler>();
+builder.Services.AddScoped<GetEmployeeByNameHandler>();
+builder.Services.AddScoped<GetEmployeeShiftsHandler>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

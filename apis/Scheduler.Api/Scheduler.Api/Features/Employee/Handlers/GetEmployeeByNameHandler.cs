@@ -17,15 +17,17 @@ public class GetEmployeeByNameHandler
     using var connection = _db.CreateConnection();
 
     var sql = @"
-            SELECT TOP 1
-                e.Id,
-                e.FirstName,
-                e.LastName,
-                e.RoleId
-            FROM Employees e
-            WHERE e.FirstName = @FirstName
-              AND e.LastName = @LastName
-        ";
+    SELECT TOP 10
+        Id,
+        FirstName,
+        LastName,
+        RoleId
+    FROM Employees
+    WHERE
+        (@FirstName IS NULL OR FirstName LIKE @FirstName + '%')
+        OR
+        (@LastName IS NULL OR LastName LIKE @LastName + '%')
+";
 
     Console.WriteLine($"FirstName: {query.FirstName}, LastName: {query.LastName}");
     var parameters = new

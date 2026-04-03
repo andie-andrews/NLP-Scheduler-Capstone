@@ -10,6 +10,5 @@ public class Employee
 
   public byte RoleId { get; set; }
 
-  // 🔥 computed (not mapped from DB)
   public string FullName => $"{FirstName} {LastName}";
 }

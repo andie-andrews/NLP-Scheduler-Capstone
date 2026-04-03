@@ -3,42 +3,74 @@ using Microsoft.AspNetCore.Mvc;
 using Scheduler.Api.Features.Employee.Handlers;
 using Scheduler.Api.Features.Employee.Queries;
 
-//[Authorize]
+namespace Scheduler.Api.Features.Employee;
+
+[Authorize]
 [ApiController]
 [Route("api/employees")]
 public class EmployeeController : ControllerBase
 {
-  private readonly GetEmployeeByNameHandler _handler;
+  private readonly GetEmployeeByNameHandler _getByNameHandler;
+  private readonly GetEmployeeByIdHandler _getEmployeeByIdHandler;
+  private readonly GetAllEmployeesHandler _getAllHandler;
 
-  public EmployeeController(GetEmployeeByNameHandler handler)
+  public EmployeeController(
+    GetEmployeeByNameHandler getByNameHandler,
+    GetEmployeeByIdHandler getEmployeeByIdHandler,
+    GetAllEmployeesHandler getAllHandler)
   {
-    _handler = handler;
+    _getByNameHandler = getByNameHandler;
+    _getEmployeeByIdHandler = getEmployeeByIdHandler;
+    _getAllHandler = getAllHandler;
   }
 
-  [HttpGet("me")]
-  public IActionResult GetMe()
+  [HttpGet("{employeeId}")]
+  public async Task<IActionResult> GetEmployee(int employeeId)
   {
-    var employeeId = User.FindFirst("employeeId")?.Value;
-    return Ok(new { employeeId });
-  }
+    var jwtEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 
-  [Authorize(Roles = "Supervisor")]
-  [HttpGet("{id}")]
-  public IActionResult GetEmployee(int id)
-  {
-    return Ok($"Supervisor accessing employee {id}");
-  }
+    if (role != "Supervisor" && jwtEmployeeId != employeeId)
+      return Forbid();
 
-  [HttpGet("search")]
-  public async Task<IActionResult> GetByName(
-    [FromQuery] string firstName,
-    [FromQuery] string lastName)
-  {
-    var result = await _handler.Handle(
-      new EmployeeQueries.GetEmployeeByNameQuery(firstName, lastName));
+    var result = await _getEmployeeByIdHandler.Handle(employeeId);
 
     if (result == null)
       return NotFound();
+
+    return Ok(result);
+  }
+
+  [Authorize(Roles = "Supervisor")]
+  [HttpGet]
+  public async Task<IActionResult> GetEmployees([FromQuery] string? query)
+  {
+    // 🔹 No query → return all
+    if (string.IsNullOrWhiteSpace(query))
+    {
+      var all = await _getAllHandler.Handle();
+      return Ok(all);
+    }
+
+    // 🔹 Split query
+    var parts = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+    string? firstName = null;
+    string? lastName = null;
+
+    if (parts.Length == 1)
+    {
+      firstName = parts[0];
+      lastName = parts[0];
+    }
+    else
+    {
+      firstName = parts[0];
+      lastName = parts[1];
+    }
+
+    var result = await _getByNameHandler.Handle(
+      new EmployeeQueries.GetEmployeeByNameQuery(firstName, lastName));
 
     return Ok(result);
   }

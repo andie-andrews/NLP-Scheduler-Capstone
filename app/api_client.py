@@ -12,7 +12,7 @@ def get_headers():
         "Authorization": f"Bearer {token}"
     }
 
-def post(path, data):
+def post(path, data = None):
     return requests.post(
         f"{BASE_URL}{path}",
         json=data,
@@ -28,8 +28,8 @@ def get(path, params=None):
         verify=False
     )
 
-def get_my_schedule():
-    return get("/api/schedules/my")
+def get_my_schedule(employee_id, params=None):
+    return get(f"/api/employees/{employee_id}/shifts", params=params)
 
 def get_schedules():
     return get("/api/schedules")
@@ -77,4 +77,43 @@ def delete_schedule(schedule_id):
         f"{BASE_URL}/api/schedules/{schedule_id}",
         headers=get_headers(),
         verify=False
+    )
+
+# -------------------------------
+# SCHEDULE EMPLOYEES
+# -------------------------------
+
+def add_employee_to_schedule(schedule_id, employee_id):
+    return post(
+        f"/api/schedules/{schedule_id}/employees/{employee_id}"
+    )
+
+
+def remove_employee_from_schedule(schedule_id, employee_id):
+    return requests.delete(
+        f"{BASE_URL}/api/schedules/{schedule_id}/employees/{employee_id}",
+        headers=get_headers(),
+        verify=False
+    )
+
+
+# -------------------------------
+# EMPLOYEE CRUD
+# -------------------------------
+
+def get_all_employees(params=None):
+    return get("/api/employees", params=params)
+
+
+def get_employee(employee_id):
+    return get(f"/api/employees/{employee_id}")
+
+
+def create_employee(first_name, last_name):
+    return post(
+        "/api/employees",
+        {
+            "firstName": first_name,
+            "lastName": last_name
+        }
     )

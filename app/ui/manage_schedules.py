@@ -6,7 +6,10 @@ from api_client import (
     create_shift,
     create_schedule,
     update_schedule,
-    delete_schedule
+    delete_schedule,
+    get_all_employees,
+    add_employee_to_schedule,
+    remove_employee_from_schedule
 )
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -14,7 +17,11 @@ from collections import defaultdict
 
 def render():
 
-    # 🔥 HEADER (CLEAN + ICONS)
+    # 🔥 INIT STATE
+    if "week_offset" not in st.session_state:
+        st.session_state["week_offset"] = 0
+
+    # 🔥 HEADER
     header_col1, header_col2 = st.columns([6, 2])
 
     with header_col1:
@@ -23,114 +30,110 @@ def render():
     with header_col2:
         btn_col1, btn_col2, btn_col3 = st.columns(3)
 
-        with btn_col1:
-            if st.button("➕", help="Create Schedule", use_container_width=True):
-                st.session_state["show_create_schedule"] = True
+        if btn_col1.button("➕", use_container_width=True):
+            st.session_state["show_create_schedule"] = True
 
-        with btn_col2:
-            if st.button("✎", help="Edit Schedule", use_container_width=True):
-                st.session_state["show_edit_schedule"] = True
+        if btn_col2.button("✎", use_container_width=True):
+            st.session_state["show_edit_schedule"] = True
 
-        with btn_col3:
-            if st.button("🗑️", help="Delete Schedule", use_container_width=True):
-                st.session_state["show_delete_schedule"] = True
+        if btn_col3.button("🗑️", use_container_width=True):
+            st.session_state["show_delete_schedule"] = True
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
-    # 🔹 Load schedules
+    # 🔹 LOAD SCHEDULES
     res = get_schedules()
     if res.status_code != 200:
         st.error("Failed to load schedules")
         return
 
     schedules = res.json()
-
     if not schedules:
         st.info("No schedules available")
         return
 
     schedule_map = {s["name"]: s["id"] for s in schedules}
 
-    # 🔹 Select schedule
     selected_name = st.selectbox("Select Schedule", list(schedule_map.keys()))
     schedule_id = schedule_map[selected_name]
 
-    # 🔥 WEEK STATE
-    if "week_offset" not in st.session_state:
-        st.session_state["week_offset"] = 0
-
-    # 🔹 NAVIGATION (CENTERED)
+    # 🔹 WEEK NAV
     nav_col1, nav_col2, nav_col3 = st.columns([1, 4, 1])
 
-    with nav_col1:
-        if st.button("◀", use_container_width=True):
-            st.session_state["week_offset"] -= 1
+    if nav_col1.button("◀"):
+        st.session_state["week_offset"] -= 1
 
-    with nav_col3:
-        if st.button("▶", use_container_width=True):
-            st.session_state["week_offset"] += 1
+    if nav_col3.button("▶"):
+        st.session_state["week_offset"] += 1
 
     today = datetime.today()
     base_week = today - timedelta(days=today.weekday() + 1 if today.weekday() != 6 else 0)
     start_of_week = base_week + timedelta(weeks=st.session_state["week_offset"])
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
-    with nav_col2:
-        st.markdown(
-            f"""
-            <div style="text-align:center;">
-                <div style="font-size:14px;color:#aaa;">Schedule</div>
-                <div style="font-size:22px;font-weight:600;">
-                    Week of {start_of_week.strftime('%b %d, %Y')}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    nav_col2.markdown(
+        f"<div style='text-align:center;font-size:20px;font-weight:600;'>Week of {start_of_week.strftime('%b %d, %Y')}</div>",
+        unsafe_allow_html=True
+    )
 
-    # 🔹 Load employees
+    # 🔹 LOAD EMPLOYEES
     emp_res = get_schedule_employees(schedule_id)
     employees = emp_res.json() if emp_res.status_code == 200 else []
 
-    # 🔹 Load shifts
+    # 🔥 LOAD ALL EMPLOYEES
+    all_emp_res = get_all_employees()
+    all_employees = all_emp_res.json() if all_emp_res.status_code == 200 else []
+
+    # 🔥 ZERO STATE
+    if not employees:
+        st.info("No employees assigned to this schedule.")
+
+        zero_key = f"zero_add_{schedule_id}_{len(employees)}"
+
+        selected = st.selectbox(
+            "Add employee",
+            options=[None] + [e["id"] for e in all_employees],
+            format_func=lambda x: "➕ Select employee..." if x is None else
+            next(f"{e['firstName']} {e['lastName']}" for e in all_employees if e["id"] == x),
+            key=zero_key
+        )
+
+        if selected:
+            add_employee_to_schedule(schedule_id, selected)
+            st.rerun()
+
+        return
+
+    # 🔹 LOAD SHIFTS
     shift_res = get_schedule_shifts(
         schedule_id,
         params={"weekStart": start_of_week.isoformat()}
     )
     shifts = shift_res.json() if shift_res.status_code == 200 else []
 
-    # 🔹 Group shifts
     shift_lookup = defaultdict(list)
+
     for s in shifts:
         date_key = s["start"][:10]
         shift_lookup[(s["employeeId"], date_key)].append(s)
 
-    # 🔹 Totals
     day_totals = defaultdict(int)
 
-    # 🔹 HEADER ROW
+    # 🔹 HEADER
     header = st.columns(8)
     header[0].markdown("**Employee**")
 
     for i, day in enumerate(days):
         header[i + 1].markdown(
-            f"""
-            <div style="text-align:center;">
-                <div style="font-size:13px;color:#aaa;">
-                    {day.strftime('%a')}
-                </div>
-                <div style="font-weight:600;">
-                    {day.strftime('%m/%d')}
-                </div>
-            </div>
-            """,
+            f"<div style='text-align:center'>{day.strftime('%a %m/%d')}</div>",
             unsafe_allow_html=True
         )
 
-    st.markdown("<hr style='border:0.5px solid #333;'>", unsafe_allow_html=True)
+    st.markdown("---")
 
     # 🔹 ROWS
     for emp in employees:
+
         full_name = f"{emp['firstName']} {emp['lastName']}"
 
         employee_total = 0
@@ -141,16 +144,19 @@ def render():
                     employee_total += shift["durationHours"]
                     day_totals[day.strftime("%Y-%m-%d")] += shift["durationHours"]
 
-        row = st.columns(8)
+        row = st.columns(9)
 
-        # 🔥 INLINE TOTAL
         row[0].markdown(f"**{full_name} ({employee_total}h)**")
+
+        if row[1].button("❌", key=f"remove_{emp['id']}"):
+            remove_employee_from_schedule(schedule_id, emp["id"])
+            st.rerun()
 
         for i, day in enumerate(days):
             day_str = day.strftime("%Y-%m-%d")
             key = (emp["id"], day_str)
 
-            with row[i + 1]:
+            with row[i + 2]:
 
                 if key in shift_lookup:
                     for shift in shift_lookup[key]:
@@ -160,98 +166,105 @@ def render():
                         st.markdown(
                             f"""
                             <div style="
-                                background: linear-gradient(135deg, #2c2f36, #3a3f47);
-                                padding:8px;
-                                margin:6px 0;
-                                border-radius:8px;
+                                background:#2c2f36;
+                                padding:6px;
+                                border-radius:6px;
+                                margin:4px 0;
                                 font-size:12px;
                                 border:1px solid #444;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                             ">
-                                <div style="font-weight:600;">
-                                    {start_dt.strftime('%I:%M %p')} - {end_dt.strftime('%I:%M %p')}
-                                </div>
-                                <div style="color:#bbb;">
-                                    {shift['durationHours']}h
-                                </div>
+                                {start_dt.strftime('%I:%M %p')} - {end_dt.strftime('%I:%M %p')}<br/>
+                                <span style='color:#aaa'>{shift['durationHours']}h</span>
                             </div>
                             """,
                             unsafe_allow_html=True
                         )
 
-                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
-                if st.button("＋", key=f"add_{emp['id']}_{day_str}", use_container_width=True):
+                if st.button("＋", key=f"add_shift_{emp['id']}_{day_str}"):
                     create_shift(
                         schedule_id,
                         emp["id"],
-                        day.replace(hour=8, minute=0).isoformat(),
+                        day.replace(hour=8).isoformat(),
                         8
                     )
                     st.rerun()
 
-        st.markdown("<hr style='border:0.5px solid #222;'>", unsafe_allow_html=True)
-
-    # 🔹 FOOTER TOTALS
+    # 🔹 FOOTER
+    st.markdown("---")
     footer = st.columns(8)
 
-    footer[0].markdown(
-        "<div style='color:#aaa;'>Totals</div>",
-        unsafe_allow_html=True
-    )
+    footer[0].markdown("Totals")
 
     for i, day in enumerate(days):
         total = day_totals[day.strftime("%Y-%m-%d")]
+        footer[i + 1].markdown(f"**{total}h**")
 
-        footer[i + 1].markdown(
-            f"""
-            <div style="text-align:center;font-weight:600;">
-                {total}h
-            </div>
-            """,
-            unsafe_allow_html=True
+    # 🔥 GHOST ROW
+    assigned_ids = {emp["id"] for emp in employees}
+    available = [e for e in all_employees if e["id"] not in assigned_ids]
+
+    if available:
+
+        ghost_key = f"ghost_add_{schedule_id}_{len(employees)}"
+
+        ghost_row = st.columns(9)
+
+        selected = ghost_row[0].selectbox(
+            "",
+            options=[None] + [e["id"] for e in available],
+            format_func=lambda x: "➕ Add employee..." if x is None else
+            next(f"{e['firstName']} {e['lastName']}" for e in available if e["id"] == x),
+            key=ghost_key
         )
 
-    # 🔹 CREATE SCHEDULE
+        if selected:
+            add_employee_to_schedule(schedule_id, selected)
+            selected = None
+            st.rerun()
+
+    # 🔥 MODALS (unchanged)
+
     if st.session_state.get("show_create_schedule"):
-        with st.form("create_schedule"):
-            st.subheader("Create Schedule")
-            name = st.text_input("Schedule Name")
 
-            if st.form_submit_button("Create"):
-                res = create_schedule(name)
-                if res.status_code == 200:
-                    st.success("Created")
-                    st.session_state["show_create_schedule"] = False
-                    st.rerun()
+        @st.dialog("Create Schedule")
+        def create_dialog():
+            name = st.text_input("Name")
+            if st.button("Create"):
+                create_schedule(name)
+                st.session_state["show_create_schedule"] = False
+                st.rerun()
+            if st.button("Cancel"):
+                st.session_state["show_create_schedule"] = False
+                st.rerun()
 
-    # 🔹 EDIT SCHEDULE
+        create_dialog()
+
     if st.session_state.get("show_edit_schedule"):
-        with st.form("edit_schedule"):
-            st.subheader("Edit Schedule")
-            new_name = st.text_input("Name", value=selected_name)
 
-            if st.form_submit_button("Save"):
-                res = update_schedule(schedule_id, new_name)
-                if res.status_code == 200:
-                    st.success("Updated")
-                    st.session_state["show_edit_schedule"] = False
-                    st.rerun()
+        @st.dialog("Edit Schedule")
+        def edit_dialog():
+            name = st.text_input("Name", value=selected_name)
+            if st.button("Save"):
+                update_schedule(schedule_id, name)
+                st.session_state["show_edit_schedule"] = False
+                st.rerun()
+            if st.button("Cancel"):
+                st.session_state["show_edit_schedule"] = False
+                st.rerun()
 
-    # 🔹 DELETE SCHEDULE
+        edit_dialog()
+
     if st.session_state.get("show_delete_schedule"):
-        st.warning(f"Delete '{selected_name}'?")
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            if st.button("Confirm Delete"):
-                res = delete_schedule(schedule_id)
-                if res.status_code == 200:
-                    st.success("Deleted")
-                    st.session_state["show_delete_schedule"] = False
-                    st.rerun()
-
-        with col2:
+        @st.dialog("Delete Schedule")
+        def delete_dialog():
+            st.warning(f"Delete '{selected_name}'?")
+            if st.button("Confirm"):
+                delete_schedule(schedule_id)
+                st.session_state["show_delete_schedule"] = False
+                st.rerun()
             if st.button("Cancel"):
                 st.session_state["show_delete_schedule"] = False
+                st.rerun()
+
+        delete_dialog()

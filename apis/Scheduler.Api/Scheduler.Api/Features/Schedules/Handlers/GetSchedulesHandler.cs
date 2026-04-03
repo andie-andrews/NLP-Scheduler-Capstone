@@ -17,9 +17,9 @@ public class GetSchedulesHandler
     using var connection = _db.CreateConnection();
 
     var sql = @"
-            SELECT Id, Name, StartDate, EndDate
+            SELECT Id, Name
             FROM Schedules
-            ORDER BY StartDate DESC
+            ORDER BY Name 
         ";
 
     return await connection.QueryAsync<Schedule>(sql);

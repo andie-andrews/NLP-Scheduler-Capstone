@@ -22,7 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Shifts\" />
     <Folder Include="Infrastructure\Security\" />
   </ItemGroup>
 

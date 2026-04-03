@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using Scheduler.Api.Infrastructure.Domain.Models;
 
-namespace Scheduler.Api.Features.Schedules.Handlers;
+namespace Scheduler.Api.Features.Shifts.Handlers;
 
 public class GetScheduleShiftsHandler
 {
@@ -12,7 +12,10 @@ public class GetScheduleShiftsHandler
     _db = db;
   }
 
-  public async Task<IEnumerable<Shift>> Handle(int scheduleId, DateTime? weekStart)
+  public async Task<IEnumerable<Shift>> Handle(
+    int scheduleId, 
+    DateTime? weekStart, 
+    int? employeeId)
   {
     using var connection = _db.CreateConnection();
 
@@ -26,14 +29,21 @@ public class GetScheduleShiftsHandler
             WHERE ScheduleId = @scheduleId
               AND Start >= @startOfWeek
               AND Start < @endOfWeek
-            ORDER BY Start
         ";
+
+    if (employeeId.HasValue)
+    {
+        sql += " AND EmployeeId = @employeeId";
+    }
+
+    sql += " ORDER BY Start";
 
     return await connection.QueryAsync<Shift>(sql, new
     {
       scheduleId,
       startOfWeek,
-      endOfWeek
+      endOfWeek,
+      employeeId
     });
   }
 }
