@@ -33,3 +33,22 @@ def render():
         for s in items:
             start = datetime.fromisoformat(s["start"])
             st.write(f"{start.strftime('%I:%M %p')} - {s['durationHours']} hrs")
+
+def get_schedules():
+    return get("/api/schedules")
+
+def get_schedule_employees(schedule_id):
+    return get(f"/api/schedules/{schedule_id}/employees")
+
+def get_schedule_shifts(schedule_id):
+    return get(f"/api/schedules/{schedule_id}/shifts")
+
+def create_shift(schedule_id, employee_id, start, duration):
+    return post(
+        f"/api/schedules/{schedule_id}/shifts",
+        {
+            "employeeId": employee_id,
+            "start": start,
+            "durationHours": duration
+        }
+    )

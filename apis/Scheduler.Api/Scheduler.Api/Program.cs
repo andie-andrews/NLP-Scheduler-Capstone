@@ -66,8 +66,14 @@ builder.Services.AddScoped<IDbConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<HealthHandler>();
 builder.Services.AddScoped<GetEmployeeByNameHandler>();
-builder.Services.AddScoped<GetMyScheduleHandler>();
 builder.Services.AddScoped<AuthHandler>();
+
+
+builder.Services.AddScoped<GetMyScheduleHandler>();
+builder.Services.AddScoped<GetSchedulesHandler>();
+builder.Services.AddScoped<GetScheduleEmployeesHandler>();
+builder.Services.AddScoped<GetScheduleShiftsHandler>();
+builder.Services.AddScoped<CreateShiftHandler>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

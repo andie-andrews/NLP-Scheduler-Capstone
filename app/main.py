@@ -13,6 +13,9 @@ st.set_page_config(page_title="Scheduler App", layout="wide")
 if "token" not in st.session_state:
     render_login()
     st.stop()
+else:
+    st.sidebar.write(f"Welcome, {st.session_state['full_name']}")
+    st.sidebar.write(f"Role: {st.session_state['role']}")
 
 # 🔓 Logged in
 st.sidebar.title("Navigation")
