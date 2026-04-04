@@ -35,7 +35,7 @@ def get_schedules():
     return get("/api/schedules")
 
 def get_schedule_employees(schedule_id):
-    return get(f"/api/schedules/{schedule_id}/employees")
+    return get(f"/api/schedules/{schedule_id}/scheduleEmployees")
 
 def get_schedule_shifts(schedule_id, params=None):
     return get(f"/api/schedules/{schedule_id}/shifts", params=params)

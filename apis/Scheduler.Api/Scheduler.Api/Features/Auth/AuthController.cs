@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿  using Microsoft.AspNetCore.Mvc;
 using Scheduler.Api.Features.Auth.Handlers;
 using Scheduler.Api.Features.Auth.Models;
 using Scheduler.Api.Infrastructure.Domain.Services;

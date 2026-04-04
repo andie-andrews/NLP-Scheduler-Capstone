@@ -34,8 +34,16 @@ public class EmployeeController : ControllerBase
     _updateEmployeeHandler = updateEmployeeHandler;
   }
 
+  /// <summary>
+  /// Get an employee by ID.
+  /// </summary>
+  /// <param name="employeeId">Employee ID</param>
+  /// <returns>Employee details</returns>
   [HttpGet("{employeeId}")]
-  public async Task<IActionResult> GetEmployee(int employeeId)
+  [ProducesResponseType(typeof(Infrastructure.Domain.Models.Employee), 200)]
+  [ProducesResponseType(403)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> GetEmployee([FromRoute] int employeeId)
   {
     var jwtEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
@@ -51,18 +59,22 @@ public class EmployeeController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>
+  /// Get all employees or search by name (Supervisor only).
+  /// </summary>
+  /// <param name="query">Optional search query</param>
+  /// <returns>List of employees</returns>
   [Authorize(Roles = "Supervisor")]
   [HttpGet]
+  [ProducesResponseType(typeof(IEnumerable<Infrastructure.Domain.Models.Employee>), 200)]
   public async Task<IActionResult> GetEmployees([FromQuery] string? query)
   {
-    // 🔹 No query → return all
     if (string.IsNullOrWhiteSpace(query))
     {
       var all = await _getAllHandler.Handle();
       return Ok(all);
     }
 
-    // 🔹 Split query
     var parts = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
     string? firstName = null;
@@ -85,17 +97,29 @@ public class EmployeeController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>
+  /// Create a new employee (Supervisor only).
+  /// </summary>
+  /// <param name="request">Employee data</param>
+  /// <returns>Created employee</returns>
   [Authorize(Roles = "Supervisor")]
   [HttpPost]
-  public async Task<IActionResult> CreateEmployee(CreateEmployeeRequest request)
+  [ProducesResponseType(201)]
+  public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeRequest request)
   {
     var id = await _createEmployeeHandler.Handle(request);
     return CreatedAtAction(nameof(GetEmployee), new { employeeId = id }, null);
   }
 
+  /// <summary>
+  /// Delete an employee (Supervisor only).
+  /// </summary>
+  /// <param name="employeeId">Employee ID</param>
   [Authorize(Roles = "Supervisor")]
   [HttpDelete("{employeeId}")]
-  public async Task<IActionResult> DeleteEmployee(int employeeId)
+  [ProducesResponseType(204)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> DeleteEmployee([FromRoute] int employeeId)
   {
     var result = await _deleteEmployeeHandler.Handle(employeeId);
     if (!result)
@@ -104,9 +128,16 @@ public class EmployeeController : ControllerBase
     return NoContent();
   }
 
+  /// <summary>
+  /// Update an employee (Supervisor only).
+  /// </summary>
+  /// <param name="employeeId">Employee ID</param>
+  /// <param name="request">Update data</param>
   [Authorize(Roles = "Supervisor")]
   [HttpPut("{employeeId}")]
-  public async Task<IActionResult> PutEmployee(int employeeId, UpdateEmployeeRequest request)
+  [ProducesResponseType(204)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> PutEmployee([FromRoute] int employeeId, [FromBody] UpdateEmployeeRequest request)
   {
     var updated = await _updateEmployeeHandler.Handle(employeeId, request);
     if (!updated)

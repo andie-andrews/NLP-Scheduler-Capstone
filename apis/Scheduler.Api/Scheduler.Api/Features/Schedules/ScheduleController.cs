@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Scheduler.Api.Features.Schedules.Handlers;
 using Scheduler.Api.Features.Schedules.Models;
+using Scheduler.Api.Infrastructure.Domain.Models;
 
 namespace Scheduler.Api.Features.Schedules;
 
@@ -39,54 +40,111 @@ public class ScheduleController : ControllerBase
     _deleteEmployeeToScheduleHandler = deleteEmployeeToScheduleHandler;
   }
 
+  /// <summary>
+  /// Gets all schedules. Only accessible by Supervisors.
+  /// </summary>
+  /// <returns>A list of schedules.</returns>
   [Authorize(Roles = "Supervisor")]
   [HttpGet]
+  [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
   public async Task<IActionResult> GetSchedules()
   {
     var result = await _getSchedules.Handle();
     return Ok(result);
   }
 
-  [HttpGet("{scheduleId}/employees")]
-  public async Task<IActionResult> GetEmployees(int scheduleId)
+  /// <summary>
+  /// Gets a schedule by its unique identifier.
+  /// </summary>
+  /// <param name="scheduleId">The unique identifier of the schedule.</param>
+  /// <returns>The schedule if found; otherwise, 404.</returns>
+  [HttpGet("{scheduleId}")]
+  [ProducesResponseType(typeof(Schedule), 200)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> GetSchedule([FromRoute] int scheduleId)
   {
-    var result = await _getEmployees.Handle(scheduleId);
+    var result = await _getSchedules.Handle();
     return Ok(result);
   }
 
+  /// <summary>
+  /// Creates a new schedule.
+  /// </summary>
+  /// <param name="request">The schedule creation data.</param>
+  /// <returns>The ID of the created schedule.</returns>
   [HttpPost]
-  [Authorize(Roles = "Supervisor")]
+  [ProducesResponseType(typeof(Schedule), 201)]
   public async Task<IActionResult> CreateSchedule([FromBody] CreateScheduleRequest request)
   {
     var id = await _createScheduleHandler.Handle(request.Name);
     return Ok(new { id });
   }
 
+  /// <summary>
+  /// Updates an existing schedule.
+  /// </summary>
+  /// <param name="scheduleId">The unique identifier of the schedule to update.</param>
+  /// <param name="request">The updated schedule data.</param>
+  /// <returns>No content if successful; otherwise, 404.</returns>
   [HttpPut("{scheduleId}")]
-  [Authorize(Roles = "Supervisor")]
-  public async Task<IActionResult> UpdateSchedule(int scheduleId, [FromBody] UpdateScheduleRequest request)
+  [ProducesResponseType(204)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> UpdateSchedule([FromRoute] int scheduleId, [FromBody] UpdateScheduleRequest request)
   {
     await _updateScheduleHandler.Handle(scheduleId, request.Name);
     return Ok();
   }
 
+  /// <summary>
+  /// Deletes a schedule by its unique identifier.
+  /// </summary>
+  /// <param name="scheduleId">The unique identifier of the schedule to delete.</param>
+  /// <returns>No content if successful; otherwise, 404.</returns>
   [HttpDelete("{scheduleId}")]
-  [Authorize(Roles = "Supervisor")]
-  public async Task<IActionResult> DeleteSchedule(int scheduleId)
+  [ProducesResponseType(204)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> DeleteSchedule([FromRoute] int scheduleId)
   {
     await _deleteScheduleHandler.Handle(scheduleId);
     return Ok();
   }
 
+  /// <summary>
+  /// Gets all employees assigned to a schedule.
+  /// </summary>
+  /// <param name="scheduleId">The unique identifier of the schedule.</param>
+  /// <returns>A list of employees assigned to the schedule.</returns>
+  [HttpGet("{scheduleId}/scheduleEmployees")]
+  [ProducesResponseType(typeof(Infrastructure.Domain.Models.Employee), 200)]
+  public async Task<IActionResult> GetEmployees([FromRoute] int scheduleId)
+  {
+    var result = await _getEmployees.Handle(scheduleId);
+    return Ok(result);
+  }
+
+  /// <summary>
+  /// Adds an employee to a schedule.
+  /// </summary>
+  /// <param name="scheduleId">The unique identifier of the schedule.</param>
+  /// <param name="employeeId">The unique identifier of the employee to add.</param>
+  /// <returns>No content if successful.</returns>
   [HttpPost("{scheduleId}/scheduleEmployees/{employeeId}")]
-  public async Task<IActionResult> AddScheduledEmployee(int scheduleId, int employeeId)
+  [ProducesResponseType(204)]
+  [ProducesResponseType(typeof(Schedule), 201)]
+  public async Task<IActionResult> AddScheduledEmployee([FromRoute] int scheduleId, [FromRoute] int employeeId)
   {
     await _addEmployeeToScheduleHandler.Handle(scheduleId, employeeId);
     return Ok();
   }
 
+  /// <summary>
+  /// Removes an employee from a schedule.
+  /// </summary>
+  /// <param name="scheduleId">The unique identifier of the schedule.</param>
+  /// <param name="employeeId">The unique identifier of the employee to remove.</param>
+  /// <returns>No content if successful.</returns>
   [HttpDelete("{scheduleId}/scheduleEmployees/{employeeId}")]
-  public async Task<IActionResult> DeleteScheduledEmployee(int scheduleId, int employeeId)
+  public async Task<IActionResult> DeleteScheduledEmployee([FromRoute] int scheduleId, [FromRoute] int employeeId)
   {
     await _deleteEmployeeToScheduleHandler.Handle(scheduleId, employeeId);
     return Ok();

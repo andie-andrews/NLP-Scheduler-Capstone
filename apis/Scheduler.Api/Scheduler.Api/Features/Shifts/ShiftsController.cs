@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Scheduler.Api.Features.Schedules.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
+using Scheduler.Api.Infrastructure.Domain.Models;
 
 namespace Scheduler.Api.Features.Shifts;
 
@@ -26,8 +27,15 @@ public class ShiftsController : ControllerBase
     _deleteShiftHandler = deleteShiftHandler;
   }
 
+  /// <summary>
+  /// Get all shifts for an employee.
+  /// </summary>
+  /// <param name="employeeId">Employee ID</param>
+  /// <param name="weekStart">Optional week start filter</param>
   [HttpGet("employees/{employeeId}/shifts")]
-  public async Task<IActionResult> GetEmployeeShifts(int employeeId, [FromQuery] DateTime? weekStart)
+  [ProducesResponseType(typeof(IEnumerable<Shift>), 200)]
+  [ProducesResponseType(403)]
+  public async Task<IActionResult> GetEmployeeShifts([FromRoute] int employeeId, [FromQuery] DateTime? weekStart)
   {
     if (!User.IsInRole("Supervisor"))
     {
@@ -45,8 +53,15 @@ public class ShiftsController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>
+  /// Get all shifts for a schedule.
+  /// </summary>
+  /// <param name="scheduleId">Schedule ID</param>
+  /// <param name="weekStart">Optional week start filter</param>
   [HttpGet("schedules/{scheduleId}/shifts")]
-  public async Task<IActionResult> GetShifts(int scheduleId, [FromQuery] DateTime? weekStart)
+  [ProducesResponseType(typeof(IEnumerable<Shift>), 200)]
+  [ProducesResponseType(403)]
+  public async Task<IActionResult> GetShifts([FromRoute] int scheduleId, [FromQuery] DateTime? weekStart)
   {
     int? employeeId = null;
 
@@ -63,9 +78,15 @@ public class ShiftsController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>
+  /// Create a new shift for a schedule (Supervisor only).
+  /// </summary>
+  /// <param name="scheduleId">Schedule ID</param>
+  /// <param name="request">Shift data</param>
   [HttpPost("schedules/{scheduleId}/shifts")]
   [Authorize(Roles = "Supervisor")]
-  public async Task<IActionResult> CreateShift(int scheduleId, [FromBody] CreateShiftRequest request)
+  [ProducesResponseType(200)]
+  public async Task<IActionResult> CreateShift([FromRoute] int scheduleId, [FromBody] CreateShiftRequest request)
   {
     var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
 
@@ -80,9 +101,14 @@ public class ShiftsController : ControllerBase
     return Ok();
   }
 
+  /// <summary>
+  /// Delete a shift (Supervisor only).
+  /// </summary>
+  /// <param name="shiftId">Shift ID</param>
   [HttpDelete("shifts/{shiftId}")]
   [Authorize (Roles = "Supervisor")]
-  public async Task<IActionResult> DeleteShift(int shiftId)
+  [ProducesResponseType(200)]
+  public async Task<IActionResult> DeleteShift([FromRoute] int shiftId)
   {
     await _deleteShiftHandler.Handle(shiftId);
     return Ok();
