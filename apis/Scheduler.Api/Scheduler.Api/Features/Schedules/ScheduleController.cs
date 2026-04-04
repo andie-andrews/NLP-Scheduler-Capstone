@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Scheduler.Api.Features.Employee.Handlers;
 using Scheduler.Api.Features.Schedules.Handlers;
 using Scheduler.Api.Features.Schedules.Models;
 
@@ -79,14 +78,14 @@ public class ScheduleController : ControllerBase
     return Ok();
   }
 
-  [HttpPost("{scheduleId}/employees/{employeeId}")]
+  [HttpPost("{scheduleId}/scheduleEmployees/{employeeId}")]
   public async Task<IActionResult> AddScheduledEmployee(int scheduleId, int employeeId)
   {
     await _addEmployeeToScheduleHandler.Handle(scheduleId, employeeId);
     return Ok();
   }
 
-  [HttpDelete("{scheduleId}/employees/{employeeId}")]
+  [HttpDelete("{scheduleId}/scheduleEmployees/{employeeId}")]
   public async Task<IActionResult> DeleteScheduledEmployee(int scheduleId, int employeeId)
   {
     await _deleteEmployeeToScheduleHandler.Handle(scheduleId, employeeId);

@@ -1,8 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Data;
-
+﻿using System.Data;
 using Microsoft.Data.SqlClient;
-using System.Data;
+
+namespace Scheduler.Api.Infrastructure.Data;
+
 public interface IDbConnectionFactory
 {
   IDbConnection CreateConnection();

@@ -3,6 +3,8 @@ using Scheduler.Api.Features.Auth.Handlers;
 using Scheduler.Api.Features.Auth.Models;
 using Scheduler.Api.Infrastructure.Domain.Services;
 
+namespace Scheduler.Api.Features.Auth;
+
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase

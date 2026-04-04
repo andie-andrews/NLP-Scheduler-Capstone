@@ -1,4 +1,6 @@
 ﻿using Dapper;
+using Scheduler.Api.Infrastructure.Data;
+
 namespace Scheduler.Api.Features.Schedules.Handlers
 {
   public class DeleteScheduleHandler

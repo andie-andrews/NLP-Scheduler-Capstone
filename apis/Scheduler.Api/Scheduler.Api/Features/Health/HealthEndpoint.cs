@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
+namespace Scheduler.Api.Features.Health;
+
 public static class HealthEndpoint
 {
   public static void Map(WebApplication app)

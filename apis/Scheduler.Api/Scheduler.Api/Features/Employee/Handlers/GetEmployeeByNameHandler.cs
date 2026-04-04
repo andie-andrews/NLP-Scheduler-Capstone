@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Scheduler.Api.Features.Employee.Queries;
+using Scheduler.Api.Infrastructure.Data;
 
 namespace Scheduler.Api.Features.Employee.Handlers;
 

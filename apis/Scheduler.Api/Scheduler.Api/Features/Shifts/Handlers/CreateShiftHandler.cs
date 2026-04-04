@@ -1,6 +1,7 @@
 ﻿using Dapper;
+using Scheduler.Api.Infrastructure.Data;
 
-namespace Scheduler.Api.Features.Schedules.Handlers;
+namespace Scheduler.Api.Features.Shifts.Handlers;
 
 public class CreateShiftHandler
 {
@@ -15,7 +16,6 @@ public class CreateShiftHandler
   {
     using var connection = _db.CreateConnection();
 
-    // 🔐 Validate manager access
     var isManager = await connection.ExecuteScalarAsync<int?>(@"
             SELECT 1
             FROM ScheduleManagers

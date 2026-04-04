@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Scheduler.Api.Features.Schedules.Handlers;
 using Scheduler.Api.Features.Schedules.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
 
@@ -13,16 +12,18 @@ public class ShiftsController : ControllerBase
 {
   private readonly GetScheduleShiftsHandler _getShifts;
   private readonly GetEmployeeShiftsHandler _getEmployeeShifts;
-  private readonly CreateShiftHandler _createShift;
-
+  private readonly CreateShiftHandler _createShiftHandler;
+  private readonly DeleteShiftHandler _deleteShiftHandler;
   public ShiftsController(
     GetScheduleShiftsHandler getShifts,
     CreateShiftHandler createShift, 
-    GetEmployeeShiftsHandler getEmployeeShifts)
+    GetEmployeeShiftsHandler getEmployeeShifts,
+    DeleteShiftHandler deleteShiftHandler)
   {
     _getShifts = getShifts;
-    _createShift = createShift;
+    _createShiftHandler = createShift;
     _getEmployeeShifts = getEmployeeShifts;
+    _deleteShiftHandler = deleteShiftHandler;
   }
 
   [HttpGet("employees/{employeeId}/shifts")]
@@ -68,7 +69,7 @@ public class ShiftsController : ControllerBase
   {
     var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
 
-    await _createShift.Handle(
+    await _createShiftHandler.Handle(
       scheduleId,
       request.EmployeeId,
       request.Start,
@@ -76,6 +77,14 @@ public class ShiftsController : ControllerBase
       userEmployeeId
     );
 
+    return Ok();
+  }
+
+  [HttpDelete("shifts/{shiftId}")]
+  [Authorize (Roles = "Supervisor")]
+  public async Task<IActionResult> DeleteShift(int shiftId)
+  {
+    await _deleteShiftHandler.Handle(shiftId);
     return Ok();
   }
 }

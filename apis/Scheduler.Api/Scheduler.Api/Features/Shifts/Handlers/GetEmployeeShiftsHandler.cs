@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Scheduler.Api.Infrastructure.Data;
 using Scheduler.Api.Infrastructure.Domain.Models;
 
 namespace Scheduler.Api.Features.Shifts.Handlers

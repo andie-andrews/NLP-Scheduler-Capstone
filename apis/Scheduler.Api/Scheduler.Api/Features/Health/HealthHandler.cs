@@ -1,4 +1,7 @@
 ﻿using Dapper;
+using Scheduler.Api.Infrastructure.Data;
+
+namespace Scheduler.Api.Features.Health;
 
 public class HealthHandler
 {

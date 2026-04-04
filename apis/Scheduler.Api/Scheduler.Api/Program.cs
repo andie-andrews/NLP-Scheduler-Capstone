@@ -5,7 +5,9 @@ using Scheduler.Api.Features.Employee.Handlers;
 using Scheduler.Api.Features.Schedules.Handlers;
 using Scheduler.Api.Infrastructure.Domain.Services;
 using System.Text;
+using Scheduler.Api.Features.Health;
 using Scheduler.Api.Features.Shifts.Handlers;
+using Scheduler.Api.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -83,6 +85,10 @@ builder.Services.AddScoped<GetEmployeeByIdHandler>();
 builder.Services.AddScoped<GetAllEmployeesHandler>();
 builder.Services.AddScoped<GetEmployeeByNameHandler>();
 builder.Services.AddScoped<GetEmployeeShiftsHandler>();
+builder.Services.AddScoped<CreateEmployeeHandler>();
+builder.Services.AddScoped<UpdateEmployeeHandler>();
+builder.Services.AddScoped<DeleteEmployeeHandler>();
+builder.Services.AddScoped<DeleteShiftHandler>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

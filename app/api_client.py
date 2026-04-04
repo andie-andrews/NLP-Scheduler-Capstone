@@ -85,13 +85,13 @@ def delete_schedule(schedule_id):
 
 def add_employee_to_schedule(schedule_id, employee_id):
     return post(
-        f"/api/schedules/{schedule_id}/employees/{employee_id}"
+        f"/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}"
     )
 
 
 def remove_employee_from_schedule(schedule_id, employee_id):
     return requests.delete(
-        f"{BASE_URL}/api/schedules/{schedule_id}/employees/{employee_id}",
+        f"{BASE_URL}/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}",
         headers=get_headers(),
         verify=False
     )
@@ -109,11 +109,12 @@ def get_employee(employee_id):
     return get(f"/api/employees/{employee_id}")
 
 
-def create_employee(first_name, last_name):
+def create_employee(first_name, last_name, role="Employee"):
     return post(
         "/api/employees",
         {
             "firstName": first_name,
-            "lastName": last_name
+            "lastName": last_name,
+            "role": role
         }
     )

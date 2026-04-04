@@ -4,3 +4,7 @@ D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.
 D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.Database\obj\Debug\Scheduler.Database.sqlproj.AssemblyReference.cache
 D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.Database\obj\Debug\Scheduler.Database.dll
 D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.Database\obj\Debug\Scheduler.Database.pdb
+D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.Database\obj\Debug\Model.xml
+D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.Database\obj\Debug\refactor.xml
+D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.Database\obj\Debug\postdeploy.sql
+D:\Paylocity\ai_course_repo\NLP-Scheduler-Capstone\apis\Scheduler.Api\Scheduler.Database\obj\Debug\predeploy.sql

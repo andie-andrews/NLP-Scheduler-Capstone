@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Scheduler.Api.Features.Employee.Handlers;
+using Scheduler.Api.Features.Employee.Models;
 using Scheduler.Api.Features.Employee.Queries;
 
 namespace Scheduler.Api.Features.Employee;
@@ -13,15 +14,24 @@ public class EmployeeController : ControllerBase
   private readonly GetEmployeeByNameHandler _getByNameHandler;
   private readonly GetEmployeeByIdHandler _getEmployeeByIdHandler;
   private readonly GetAllEmployeesHandler _getAllHandler;
+  private readonly CreateEmployeeHandler _createEmployeeHandler;
+  private readonly DeleteEmployeeHandler _deleteEmployeeHandler;
+  private readonly UpdateEmployeeHandler _updateEmployeeHandler;
 
   public EmployeeController(
     GetEmployeeByNameHandler getByNameHandler,
     GetEmployeeByIdHandler getEmployeeByIdHandler,
-    GetAllEmployeesHandler getAllHandler)
+    GetAllEmployeesHandler getAllHandler,
+    CreateEmployeeHandler createEmployeeHandler,
+    DeleteEmployeeHandler deleteEmployeeHandler,
+    UpdateEmployeeHandler updateEmployeeHandler)
   {
     _getByNameHandler = getByNameHandler;
     _getEmployeeByIdHandler = getEmployeeByIdHandler;
     _getAllHandler = getAllHandler;
+    _createEmployeeHandler = createEmployeeHandler;
+    _deleteEmployeeHandler = deleteEmployeeHandler;
+    _updateEmployeeHandler = updateEmployeeHandler;
   }
 
   [HttpGet("{employeeId}")]
@@ -73,5 +83,35 @@ public class EmployeeController : ControllerBase
       new EmployeeQueries.GetEmployeeByNameQuery(firstName, lastName));
 
     return Ok(result);
+  }
+
+  [Authorize(Roles = "Supervisor")]
+  [HttpPost]
+  public async Task<IActionResult> CreateEmployee(CreateEmployeeRequest request)
+  {
+    var id = await _createEmployeeHandler.Handle(request);
+    return CreatedAtAction(nameof(GetEmployee), new { employeeId = id }, null);
+  }
+
+  [Authorize(Roles = "Supervisor")]
+  [HttpDelete("{employeeId}")]
+  public async Task<IActionResult> DeleteEmployee(int employeeId)
+  {
+    var result = await _deleteEmployeeHandler.Handle(employeeId);
+    if (!result)
+      return NotFound();
+
+    return NoContent();
+  }
+
+  [Authorize(Roles = "Supervisor")]
+  [HttpPut("{employeeId}")]
+  public async Task<IActionResult> PutEmployee(int employeeId, UpdateEmployeeRequest request)
+  {
+    var updated = await _updateEmployeeHandler.Handle(employeeId, request);
+    if (!updated)
+      return NotFound();
+
+    return NoContent();
   }
 }

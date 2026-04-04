@@ -1,6 +1,4 @@
-﻿using Scheduler.Api.Infrastructure.Domain.Enums;
-
-namespace Scheduler.Api.Infrastructure.Domain.Models
+﻿namespace Scheduler.Api.Infrastructure.Domain.Models
 {
   public class User
   {
