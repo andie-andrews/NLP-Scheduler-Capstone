@@ -1,11 +1,12 @@
 import streamlit as st
 
 def get_tabs():
-    role = st.session_state.get("role")
-
     tabs = ["My Schedule"]
 
-    if role == "Supervisor":
+    if st.session_state["role"] in ["Supervisor", "Manager"]:
         tabs.extend(["Manage Employees", "Manage Schedules"])
+
+    # 👇 ADD THIS
+    tabs.append("AI Assistant")
 
     return tabs
