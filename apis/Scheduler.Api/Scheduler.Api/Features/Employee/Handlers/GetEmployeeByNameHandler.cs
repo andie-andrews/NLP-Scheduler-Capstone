@@ -13,12 +13,12 @@ public class GetEmployeeByNameHandler
     _db = db;
   }
 
-  public async Task<Infrastructure.Domain.Models.Employee?> Handle(EmployeeQueries.GetEmployeeByNameQuery query)
+  public async Task<IEnumerable<Infrastructure.Domain.Models.Employee>> Handle(EmployeeQueries.GetEmployeeByNameQuery query)
   {
     using var connection = _db.CreateConnection();
 
     var sql = @"
-    SELECT TOP 10
+    SELECT 
         Id,
         FirstName,
         LastName,
@@ -38,7 +38,7 @@ public class GetEmployeeByNameHandler
     };
 
 
-    return await connection.QueryFirstOrDefaultAsync<Infrastructure.Domain.Models.Employee>(
+    return await connection.QueryAsync<Infrastructure.Domain.Models.Employee>(
       sql,
       parameters);
   }

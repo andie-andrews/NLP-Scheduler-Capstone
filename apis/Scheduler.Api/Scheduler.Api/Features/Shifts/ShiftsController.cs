@@ -86,7 +86,7 @@ public class ShiftsController : ControllerBase
   [HttpPost("schedules/{scheduleId}/shifts")]
   [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(200)]
-  public async Task<IActionResult> CreateShift([FromRoute] int scheduleId, [FromBody] CreateShiftRequest request)
+  public async Task<IActionResult> CreateShift([FromRoute] int scheduleId, CreateShiftRequest request)
   {
     var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
 

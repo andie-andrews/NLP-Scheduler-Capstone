@@ -38,7 +38,38 @@ def find_matching_shifts(shifts, intent):
 
 
 # -------------------------------
-# 🧠 Intent Parsing
+# Employee Resolution 
+# -------------------------------
+def resolve_employee(intent, role, token, session_employee_id, memory):
+    """
+    Determines which employee the request is targeting.
+    """
+
+    # No name → it's "me"
+    if not intent.employee_name:
+        return {"id": session_employee_id, "is_self": True}
+
+    # Employees cannot query others
+    if role == "Employee":
+        return None
+
+    employees = tools.get_employee_by_name(token, intent.employee_name)
+
+    if not employees:
+        return {"error": f"No employee found for {intent.employee_name}"}
+
+    if len(employees) > 1:
+        memory.save_intent(intent)
+        memory.save_disambiguation("employee", employees)
+        return {"disambiguation": employees}
+
+    emp = employees[0]
+    emp["is_self"] = emp["id"] == session_employee_id
+    return emp
+
+
+# -------------------------------
+# Intent Parsing
 # -------------------------------
 def parse_intent(user_input: str, role: str):
     client = get_client()
@@ -65,12 +96,13 @@ def parse_intent(user_input: str, role: str):
 # -------------------------------
 # 🚀 MAIN ORCHESTRATOR
 # -------------------------------
-DEFAULT_SCHEDULE_ID = 1  # 🔥 TEMP for demo
+DEFAULT_SCHEDULE_ID = 12  # 🔥 TEMP for demo
+
 
 def handle_request(user_input: str, role: str, token: str, memory, employee_id):
 
     # -------------------------------
-    # 🔁 MEMORY (follow-ups)
+    # MEMORY (follow-ups)
     # -------------------------------
     if memory.last_options:
         text = user_input.lower()
@@ -113,105 +145,107 @@ def handle_request(user_input: str, role: str, token: str, memory, employee_id):
     intent = parse_intent(user_input, role)
 
     # -------------------------------
-    # 🔒 ROLE GUARDRAILS
+    # 👤 RESOLVE TARGET EMPLOYEE
     # -------------------------------
-    if role == "Employee" and intent.employee_name:
+    target = resolve_employee(intent, role, token, employee_id, memory)
+
+    if not target:
         return "You can only perform actions for yourself."
+
+    if "error" in target:
+        return target["error"]
+
+    if "disambiguation" in target:
+        return {
+            "type": "disambiguation",
+            "options": target["disambiguation"]
+        }
+
+    target_id = target["id"]
+    is_self = target.get("is_self", False)
+    name = "You" if is_self else target.get("firstName", "They")
 
     # -------------------------------
     # 📅 NEXT SHIFT
     # -------------------------------
     if intent.action == "get_my_next_shift":
         shifts = normalize_schedule(
-            tools.get_employee_shifts(token, employee_id, 0)
+            tools.get_employee_shifts(token, target_id, 0)
         )
 
         if not shifts:
-            return "You have no upcoming shifts."
+            return f"{name} have no upcoming shifts."
 
         next_shift = sorted(shifts, key=lambda x: x.get("start", ""))[0]
 
-        return f"Your next shift is on {next_shift.get('start')} for {next_shift.get('durationHours')} hours."
+        return f"{name} next shift is on {next_shift.get('start')} for {next_shift.get('durationHours')} hours."
 
     # -------------------------------
     # 📊 HOURS THIS WEEK
     # -------------------------------
     if intent.action == "get_my_hours_week":
         shifts = normalize_schedule(
-            tools.get_employee_shifts(token, employee_id, 0)
+            tools.get_employee_shifts(token, target_id, 0)
         )
 
         total = sum(s.get("durationHours", 0) for s in shifts)
-        return f"You are scheduled for {total} hours this week."
+
+        return f"{name} are scheduled for {total} hours this week."
 
     # -------------------------------
-    # 📆 DAYS WORKED
+    #  DAYS WORKED
     # -------------------------------
     if intent.action == "get_my_days_worked_week":
         shifts = normalize_schedule(
-            tools.get_employee_shifts(token, employee_id, 0)
+            tools.get_employee_shifts(token, target_id, 0)
         )
 
         days = set(s.get("start", "")[:10] for s in shifts if s.get("start"))
-        return f"You are working {len(days)} days this week."
+
+        return f"{name} are working {len(days)} days this week."
 
     # -------------------------------
-    # 📋 LIST SHIFTS WEEK
+    # LIST SHIFTS WEEK
     # -------------------------------
     if intent.action == "list_my_shifts_week":
         shifts = normalize_schedule(
-            tools.get_employee_shifts(token, employee_id, 0)
+            tools.get_employee_shifts(token, target_id, 0)
         )
 
-        return shifts if shifts else "You have no shifts this week."
+        return shifts if shifts else f"{name} have no shifts this week."
 
     # -------------------------------
-    # 📋 LIST NEXT WEEK
+    # LIST NEXT WEEK
     # -------------------------------
     if intent.action == "list_my_shifts_next_week":
         shifts = normalize_schedule(
-            tools.get_employee_shifts(token, employee_id, 1)
+            tools.get_employee_shifts(token, target_id, 1)
         )
 
-        return shifts if shifts else "You have no shifts next week."
+        return shifts if shifts else f"{name} have no shifts next week."
 
     # -------------------------------
-    # ➕ CREATE SHIFT
+    # CREATE SHIFT
     # -------------------------------
     if intent.action == "create_shift":
-        employees = tools.get_employee_by_name(intent.employee_name)
-
-        if not employees:
-            return f"No employee found for {intent.employee_name}."
-
-        if len(employees) > 1:
-            memory.save_intent(intent)
-            memory.save_disambiguation("employee", employees)
-
-            return {
-                "type": "disambiguation",
-                "options": employees
-            }
-
-        emp = employees[0]
-
+        print("DEBUG: Creating shift with target:", target)
         tools.create_shift(
             token,
             DEFAULT_SCHEDULE_ID,
-            emp["id"],
+            target.get('id'),
             intent.date,
             intent.time,
             intent.duration_hours,
         )
 
-        return f"Shift scheduled for {emp.get('firstName')}."
+        return f"Shift scheduled for Employee:{target.get('id')} - {target.get('fullName')} on schedule:{DEFAULT_SCHEDULE_ID}."
 
     # -------------------------------
     # ❌ DELETE SHIFT
     # -------------------------------
     if intent.action == "delete_shift":
         shifts = normalize_schedule(
-            tools.get_employee_shifts(token, employee_id, 0)
+            tools.get_employee_shifts(token, target_id, 0)
         )
 
         matches = find_matching_shifts(shifts, intent)
@@ -229,7 +263,7 @@ def handle_request(user_input: str, role: str, token: str, memory, employee_id):
         return "Shift deleted."
 
     # -------------------------------
-    # ❓ FALLBACK
+    # FALLBACK
     # -------------------------------
     if role in ["Supervisor", "Manager"]:
         return "Try: 'Schedule John Monday at 8am for 8 hours'"
