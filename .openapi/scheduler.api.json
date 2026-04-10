@@ -270,6 +270,22 @@
           "get schedules",
           "view schedules"
         ],
+        "x-resolution": {
+          "entity": "schedule",
+          "queryParam": "query",
+          "disambiguation": {
+            "enabled": true,
+            "prompt": "I found multiple schedules matching that name. Which one did you mean?",
+            "displayFields": [ "id", "name"]
+          }
+        },
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Schedules",
@@ -523,11 +539,12 @@
 
       "CreateShiftRequest": {
         "type": "object",
-        "required": ["employeeId", "start", "durationHours"],
+        "required": ["employeeId", "start", "durationHours", "scheduleId"],
         "properties": {
           "employeeId": { "type": "integer" },
           "start": { "type": "string" },
-          "durationHours": { "type": "integer" }
+          "durationHours": { "type": "integer" },
+          "scheduleId": { "type": "integer" }
         }
       },
 

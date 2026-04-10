@@ -47,9 +47,15 @@ public class ScheduleController : ControllerBase
   [Authorize(Roles = "Supervisor")]
   [HttpGet]
   [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
-  public async Task<IActionResult> GetSchedules()
+  public async Task<IActionResult> GetSchedules([FromQuery] string? query)
   {
-    var result = await _getSchedules.Handle();
+    if (string.IsNullOrWhiteSpace(query))
+    {
+      var all = await _getSchedules.Handle();
+      return Ok(all);
+    }
+
+    var result = await _getSchedules.Handle(query);
     return Ok(result);
   }
 
