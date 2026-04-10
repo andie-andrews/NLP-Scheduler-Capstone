@@ -508,6 +508,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             re.search(r"\b(show|list|display)\b.*\bshift", lower_message)
             or re.search(r"\bwhat\b.*\bshifts?\b", lower_message)
             or re.search(r"\bmy shifts?\b", lower_message)
+            or re.search(r"\bschedule\b", lower_message)
         )
 
         if summary_data.get("promptToShowShifts"):
