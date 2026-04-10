@@ -230,6 +230,24 @@ def _clear_pending_shift_state(session):
     _set_pending_shift_state(session, None)
 
 
+def _get_pending_delete_shift_state(session):
+    memory = session.get("memory")
+    if memory is None:
+        return None
+    return getattr(memory, "pending_delete_shift", None)
+
+
+def _set_pending_delete_shift_state(session, state):
+    memory = session.get("memory")
+    if memory is None:
+        return
+    setattr(memory, "pending_delete_shift", state)
+
+
+def _clear_pending_delete_shift_state(session):
+    _set_pending_delete_shift_state(session, None)
+
+
 def _build_create_shift_question(state):
     if not state.get("employeeId"):
         return "Sure — who should I schedule?"
@@ -348,6 +366,62 @@ def _normalize_schedule_id_arg(token, raw_value):
             return resolution["scheduleId"]
         print("[create_shift][schedule] Failed to resolve schedule:", value)
     return None
+
+
+def is_delete_shift_intent(message: str):
+    text = message.lower()
+    has_delete_action = any(action in text for action in ["delete", "remove", "cancel"])
+    return has_delete_action and "shift" in text
+
+
+def extract_weekday_date(message: str):
+    weekdays = {
+        "monday": 0,
+        "tuesday": 1,
+        "wednesday": 2,
+        "thursday": 3,
+        "friday": 4,
+        "saturday": 5,
+        "sunday": 6,
+    }
+    text = message.lower()
+    target_day = None
+    for name, idx in weekdays.items():
+        if name in text:
+            target_day = idx
+            break
+
+    if target_day is None:
+        return None
+
+    now = datetime.now()
+    if re.search(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
+        delta = (target_day - now.weekday()) % 7
+        if delta == 0:
+            delta = 7
+        delta += 7
+    elif re.search(r"\bthis\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
+        delta = target_day - now.weekday()
+    else:
+        delta = (target_day - now.weekday()) % 7
+
+    return (now + timedelta(days=delta)).date()
+
+
+def _format_shift_option_line(index: int, shift: dict):
+    start = datetime.fromisoformat(shift["start"])
+    return f"{index}. {start.strftime('%I:%M %p')} for {shift.get('durationHours', 0)} hours"
+
+
+def _resolve_delete_shift_number_reply(message: str, state):
+    choice_match = re.search(r"\b(\d+)\b", message)
+    if not choice_match:
+        return None
+    choice = int(choice_match.group(1))
+    options = state.get("options", [])
+    if 1 <= choice <= len(options):
+        return options[choice - 1]["id"]
+    return False
 
 
 # -------------------------------
@@ -523,11 +597,90 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(message)
 
     pending_shift = _get_pending_shift_state(session)
+    pending_delete_shift = _get_pending_delete_shift_state(session)
 
     if pending_shift and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
         _clear_pending_shift_state(session)
         pending_shift = None
         return "Okay — I cleared the in-progress shift. Tell me who and when you'd like to schedule."
+
+    if pending_delete_shift and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
+        _clear_pending_delete_shift_state(session)
+        pending_delete_shift = None
+        return "Okay — I cancelled the delete flow."
+
+    if pending_delete_shift:
+        selected_shift_id = _resolve_delete_shift_number_reply(message, pending_delete_shift)
+        if selected_shift_id is None:
+            options = pending_delete_shift.get("options", [])
+            option_lines = [_format_shift_option_line(idx + 1, shift) for idx, shift in enumerate(options)]
+            return "Please reply with the shift number to delete:\n" + "\n".join(option_lines)
+        if selected_shift_id is False:
+            options = pending_delete_shift.get("options", [])
+            option_lines = [_format_shift_option_line(idx + 1, shift) for idx, shift in enumerate(options)]
+            return "That number is out of range. Please choose one of these:\n" + "\n".join(option_lines)
+
+        delete_result = call_api(token, OPERATIONS["deleteShift"], {"shiftId": selected_shift_id})
+        _clear_pending_delete_shift_state(session)
+        return {
+            "summary": f"Shift {selected_shift_id} deleted.",
+            "data": {"deleteShiftResponse": delete_result, "deletedShiftId": selected_shift_id},
+        }
+
+    if is_delete_shift_intent(message):
+        employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
+        name = find_name_in_message(message, employees) if employees else None
+        if not name:
+            return "Who should I delete the shift for?"
+
+        resolution = resolve_employee_id(token, name)
+        if not resolution or resolution.get("type") == "not_found":
+            return f"I couldn't find an employee matching '{name}'."
+        if resolution.get("type") == "disambiguation":
+            options = resolution["options"]
+            option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
+            return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+
+        target_date = extract_weekday_date(message)
+        if not target_date:
+            return "What day should I delete the shift from?"
+
+        week_start = (target_date - timedelta(days=target_date.weekday())).strftime("%m/%d/%Y")
+        shifts = call_api(
+            token,
+            OPERATIONS["getEmployeeShifts"],
+            {"employeeId": resolution["employeeId"], "weekStart": week_start},
+        ) or []
+
+        matching_day = [
+            shift for shift in shifts
+            if datetime.fromisoformat(shift["start"]).date() == target_date
+        ]
+
+        if not matching_day:
+            return f"I couldn't find any shifts for {name.title()} on {target_date.strftime('%A, %b %d, %Y')}."
+
+        if len(matching_day) == 1:
+            shift_id = matching_day[0]["id"]
+            delete_result = call_api(token, OPERATIONS["deleteShift"], {"shiftId": shift_id})
+            return {
+                "summary": f"Deleted {name.title()}'s shift on {target_date.strftime('%A, %b %d, %Y')} (shiftId {shift_id}).",
+                "data": {"deleteShiftResponse": delete_result, "deletedShiftId": shift_id},
+            }
+
+        state = {
+            "intent": "delete_shift",
+            "employeeId": resolution["employeeId"],
+            "employeeName": name.title(),
+            "targetDate": target_date.isoformat(),
+            "options": matching_day,
+        }
+        _set_pending_delete_shift_state(session, state)
+        option_lines = [_format_shift_option_line(idx + 1, shift) for idx, shift in enumerate(matching_day)]
+        return (
+            f"I found multiple shifts for {name.title()} on {target_date.strftime('%A, %b %d, %Y')}. "
+            "Reply with the number to delete:\n" + "\n".join(option_lines)
+        )
 
     if pending_shift and pending_shift.get("awaiting") in {"employee_disambiguation", "schedule_disambiguation"}:
         resolved = _resolve_disambiguation_reply(message, pending_shift)
