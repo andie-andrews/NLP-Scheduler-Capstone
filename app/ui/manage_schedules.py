@@ -190,7 +190,7 @@ def render():
             with row[i + 2]:
                 cell_id = f"{emp['id']}_{day_str}"
 
-                with st.popover("Cell options", use_container_width=True):
+                with st.popover("Add", use_container_width=True):
                     st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
 
                     if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
