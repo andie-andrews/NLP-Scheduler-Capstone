@@ -450,12 +450,14 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
-        if "startDate" not in args and "endDate" not in args:
-            inferred_range = extract_week_range_from_message(message)
-            if inferred_range:
-                args.update(inferred_range)
-            else:
-                return "What date range should I use? I can use this week (Sunday–Saturday) or next week."
+        inferred_range = extract_week_range_from_message(message)
+        if inferred_range:
+            # Force deterministic "this week"/"next week" ranges so model-generated
+            # stale dates (e.g., old years) don't leak into API calls.
+            args["startDate"] = inferred_range["startDate"]
+            args["endDate"] = inferred_range["endDate"]
+        elif "startDate" not in args and "endDate" not in args:
+            return "What date range should I use? I can use this week (Sunday–Saturday) or next week."
     if op_id == "createShift":
         normalized_schedule_id = normalize_schedule_id_arg(token, args.get("scheduleId"), OPERATIONS, call_api)
         if normalized_schedule_id is None:
