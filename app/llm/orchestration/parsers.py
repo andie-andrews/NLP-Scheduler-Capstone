@@ -25,6 +25,27 @@ def extract_duration_hours(message: str):
     return int(match.group(1))
 
 
+def extract_time_of_day(message: str):
+    text = (message or "").lower()
+    time_match = re.search(r"(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", text)
+    if not time_match:
+        return None
+
+    hour = int(time_match.group(1))
+    minute = int(time_match.group(2) or 0)
+    meridian = (time_match.group(3) or "").lower()
+
+    if meridian == "pm" and hour != 12:
+        hour += 12
+    if meridian == "am" and hour == 12:
+        hour = 0
+
+    if hour > 23 or minute > 59:
+        return None
+
+    return hour, minute
+
+
 def extract_weekday_datetime(message: str):
     weekdays = {
         "monday": 0,
@@ -60,19 +81,11 @@ def extract_weekday_datetime(message: str):
 
     target_date = now + timedelta(days=delta)
 
-    time_match = re.search(r"(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", text)
-    if time_match:
-        hour = int(time_match.group(1))
-        minute = int(time_match.group(2) or 0)
-        meridian = (time_match.group(3) or "").lower()
-
-        if meridian == "pm" and hour != 12:
-            hour += 12
-        if meridian == "am" and hour == 12:
-            hour = 0
-    else:
-        hour = 9
-        minute = 0
+    parsed_time = extract_time_of_day(text)
+    if not parsed_time:
+        print("[create_shift][datetime] Weekday found but no explicit time in message.")
+        return None
+    hour, minute = parsed_time
 
     start = target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
     print(

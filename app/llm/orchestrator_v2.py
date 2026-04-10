@@ -11,6 +11,7 @@ from llm.orchestration.intents import is_create_shift_intent, is_delete_shift_in
 from llm.orchestration.parsers import (
     extract_duration_hours,
     extract_schedule_name,
+    extract_time_of_day,
     extract_week_range_from_message,
     extract_weekday_date,
     extract_weekday_datetime,
@@ -50,6 +51,9 @@ def _build_create_shift_question(state):
     if not state.get("scheduleId"):
         return "Got it. Which schedule should I use?"
     if not state.get("start"):
+        if state.get("pendingStartDate"):
+            pending_date = datetime.fromisoformat(state["pendingStartDate"]).strftime("%A, %b %d")
+            return f"What time should the shift start on {pending_date}?"
         return "What day/time should the shift start?"
     if not state.get("durationHours"):
         return "How long should the shift be (in hours)?"
@@ -93,9 +97,23 @@ def _attempt_fill_shift_state_from_message(message, token, state):
     if duration and not state.get("durationHours"):
         state["durationHours"] = duration
 
-    start = extract_weekday_datetime(message)
-    if start and not state.get("start"):
-        state["start"] = start
+    if not state.get("start"):
+        start = extract_weekday_datetime(message)
+        if start:
+            state["start"] = start
+            state["pendingStartDate"] = None
+        else:
+            weekday_date = extract_weekday_date(message)
+            if weekday_date:
+                state["pendingStartDate"] = datetime.combine(weekday_date, datetime.min.time()).isoformat()
+
+    if not state.get("start") and state.get("pendingStartDate"):
+        parsed_time = extract_time_of_day(message)
+        if parsed_time:
+            pending_date = datetime.fromisoformat(state["pendingStartDate"]).date()
+            start_dt = datetime.combine(pending_date, datetime.min.time()).replace(hour=parsed_time[0], minute=parsed_time[1])
+            state["start"] = start_dt.isoformat()
+            state["pendingStartDate"] = None
 
     if not state.get("scheduleId"):
         raw_message = message.strip()
@@ -330,6 +348,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             "employeeId": None,
             "scheduleId": None,
             "start": None,
+            "pendingStartDate": None,
             "durationHours": None,
             "awaiting": None,
             "employee_options": [],
