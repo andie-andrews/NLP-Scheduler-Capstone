@@ -409,6 +409,9 @@
         "x-dependencies": {
           "employeeId": {
             "resolvedBy": "searchEmployees"
+          },
+          "scheduleId": {
+            "resolvedBy": "getSchedules"
           }
         },
         "requestBody": {
