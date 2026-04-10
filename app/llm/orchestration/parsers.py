@@ -108,6 +108,15 @@ def extract_week_range_from_message(message: str, now: datetime | None = None):
         start, end = week_range_from_date(now + timedelta(days=7))
         return {"startDate": start.isoformat(), "endDate": end.isoformat()}
 
+    if "this month" in text:
+        month_start = now.replace(day=1).date()
+        if now.month == 12:
+            next_month_start = now.replace(year=now.year + 1, month=1, day=1).date()
+        else:
+            next_month_start = now.replace(month=now.month + 1, day=1).date()
+        month_end = next_month_start - timedelta(days=1)
+        return {"startDate": month_start.isoformat(), "endDate": month_end.isoformat()}
+
     return None
 
 

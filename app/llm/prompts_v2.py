@@ -14,6 +14,7 @@ Parameter rules:
 startDate/endDate:
 - "this week" means Sunday through Saturday
 - "next week" means next Sunday through next Saturday
+- "this month" means the first day through the last day of the current month
 - If date range is unclear, ask a follow-up question
 
 DO NOT return text if a function can be called.

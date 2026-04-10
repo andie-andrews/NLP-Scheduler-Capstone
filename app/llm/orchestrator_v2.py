@@ -186,6 +186,7 @@ Parameter rules:
 startDate/endDate:
 - For "this week", use Sunday through Saturday
 - For "next week", use next Sunday through next Saturday
+- For "this month", use first day through last day of the current month
 - If user does not provide a date range and you cannot infer one, ask a follow-up question
 
 DO NOT return text if a function can be called.
@@ -457,7 +458,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             args["startDate"] = inferred_range["startDate"]
             args["endDate"] = inferred_range["endDate"]
         elif "startDate" not in args and "endDate" not in args:
-            return "What date range should I use? I can use this week (Sunday–Saturday) or next week."
+            return "What date range should I use? I can use this week, next week, or this month."
     if op_id == "createShift":
         normalized_schedule_id = normalize_schedule_id_arg(token, args.get("scheduleId"), OPERATIONS, call_api)
         if normalized_schedule_id is None:
