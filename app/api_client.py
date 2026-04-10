@@ -50,6 +50,30 @@ def create_shift(schedule_id, employee_id, start, duration):
         }
     )
 
+
+def update_shift(shift_id, start=None, duration=None):
+    payload = {}
+
+    if start is not None:
+        payload["start"] = start
+    if duration is not None:
+        payload["durationHours"] = duration
+
+    return requests.put(
+        f"{BASE_URL}/api/shifts/{shift_id}",
+        json=payload,
+        headers=get_headers(),
+        verify=False
+    )
+
+
+def delete_shift(shift_id):
+    return requests.delete(
+        f"{BASE_URL}/api/shifts/{shift_id}",
+        headers=get_headers(),
+        verify=False
+    )
+
 # -------------------------------
 # SCHEDULE CRUD
 # -------------------------------
