@@ -240,23 +240,23 @@ def _attempt_fill_shift_state_from_message(message, token, state):
             state["awaiting"] = None
             return None
 
-    schedule_name = extract_schedule_name(message)
+        schedule_name = extract_schedule_name(message)
         if not schedule_name and state.get("awaiting") == "schedule":
             schedule_name = raw_message
 
         if schedule_name:
-        schedule_resolution = resolve_schedule_id(token, schedule_name)
-        if schedule_resolution and schedule_resolution.get("type") == "resolved":
-            state["scheduleId"] = schedule_resolution["scheduleId"]
+            schedule_resolution = resolve_schedule_id(token, schedule_name)
+            if schedule_resolution and schedule_resolution.get("type") == "resolved":
+                state["scheduleId"] = schedule_resolution["scheduleId"]
                 state["awaiting"] = None
-        elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
-            state["schedule_options"] = schedule_resolution["raw"]
-            state["awaiting"] = "schedule_disambiguation"
-            return {
-                "type": "disambiguation",
-                "entity": "schedule",
-                "options": schedule_resolution["options"],
-            }
+            elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
+                state["schedule_options"] = schedule_resolution["raw"]
+                state["awaiting"] = "schedule_disambiguation"
+                return {
+                    "type": "disambiguation",
+                    "entity": "schedule",
+                    "options": schedule_resolution["options"],
+                }
 
     return None
 
@@ -265,38 +265,6 @@ def _resolve_disambiguation_reply(message, state):
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
         return None
-
-    choice = int(choice_match.group(1))
-    awaiting = state.get("awaiting")
-    if awaiting == "employee_disambiguation":
-        options = state.get("employee_options", [])
-        if 1 <= choice <= len(options):
-            state["employeeId"] = options[choice - 1]["id"]
-            state["awaiting"] = None
-            return True
-    if awaiting == "schedule_disambiguation":
-        options = state.get("schedule_options", [])
-        if 1 <= choice <= len(options):
-            state["scheduleId"] = options[choice - 1]["id"]
-            state["awaiting"] = None
-            return True
-
-    return False
-
-
-def _normalize_schedule_id_arg(token, raw_value):
-    if raw_value is None:
-        return None
-    if isinstance(raw_value, int):
-        return raw_value
-    if isinstance(raw_value, str):
-        value = raw_value.strip()
-        if value.isdigit():
-            return int(value)
-        resolution = resolve_schedule_id(token, value)
-        if resolution and resolution.get("type") == "resolved":
-            return resolution["scheduleId"]
-    return None
 
     choice = int(choice_match.group(1))
     awaiting = state.get("awaiting")
