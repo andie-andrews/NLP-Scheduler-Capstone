@@ -26,14 +26,17 @@ from llm.orchestration.resolvers import (
     resolve_schedule_id,
 )
 from llm.orchestration.state_store import (
+    clear_pending_employee_disambiguation_state,
     clear_pending_delete_shift_state,
     clear_pending_show_shifts_state,
     clear_pending_shift_state,
     clear_pending_update_shift_state,
+    get_pending_employee_disambiguation_state,
     get_pending_delete_shift_state,
     get_pending_show_shifts_state,
     get_pending_shift_state,
     get_pending_update_shift_state,
+    set_pending_employee_disambiguation_state,
     set_pending_show_shifts_state,
     set_pending_delete_shift_state,
     set_pending_shift_state,
@@ -171,6 +174,41 @@ def _resolve_disambiguation_reply(message, state):
     return False
 
 
+def _resolve_employee_disambiguation_reply(message: str, options: list):
+    choice_match = re.search(r"\b(\d+)\b", message or "")
+    if choice_match:
+        choice = int(choice_match.group(1))
+        if 1 <= choice <= len(options):
+            return options[choice - 1]
+        return False
+
+    normalized_reply = re.sub(r"\s+", " ", (message or "").strip().lower())
+    if not normalized_reply:
+        return None
+
+    for option in options:
+        first_name = (option.get("firstName") or "").strip()
+        last_name = (option.get("lastName") or "").strip()
+        full_name = f"{first_name} {last_name}".strip().lower()
+        if normalized_reply == full_name:
+            return option
+
+    return None
+
+
+def _build_employee_disambiguation_prompt(name: str, options: list):
+    display_name = (name or "employee").strip() or "employee"
+    option_lines = []
+    for idx, option in enumerate(options, start=1):
+        first_name = (option.get("firstName") or "").strip()
+        last_name = (option.get("lastName") or "").strip()
+        option_lines.append(f"{idx}. {first_name} {last_name}".strip())
+    return (
+        f"I found more than one {display_name}. Which employee do you want to see?\n\n"
+        + "\n".join(option_lines)
+    )
+
+
 def _resolve_delete_shift_number_reply(message: str, state):
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
@@ -246,6 +284,25 @@ def run_orchestrator(message: str, token: str, session: dict):
     pending_delete_shift = get_pending_delete_shift_state(session)
     pending_show_shifts = get_pending_show_shifts_state(session)
     pending_update_shift = get_pending_update_shift_state(session)
+    pending_employee_disambiguation = get_pending_employee_disambiguation_state(session)
+
+    if pending_employee_disambiguation:
+        options = pending_employee_disambiguation.get("options", [])
+        selected_employee = _resolve_employee_disambiguation_reply(message, options)
+        if selected_employee is False:
+            return _build_employee_disambiguation_prompt(
+                pending_employee_disambiguation.get("name", "employee"),
+                options,
+            )
+        if selected_employee:
+            resolved_id = selected_employee.get("id")
+            clear_pending_employee_disambiguation_state(session)
+            follow_up_message = f"{pending_employee_disambiguation.get('original_message', '').strip()} (employeeId = {resolved_id})"
+            return run_orchestrator(follow_up_message, token, session)
+        return _build_employee_disambiguation_prompt(
+            pending_employee_disambiguation.get("name", "employee"),
+            options,
+        )
 
     if pending_show_shifts:
         lower = (message or "").lower().strip()
@@ -595,11 +652,15 @@ def run_orchestrator(message: str, token: str, session: dict):
             return f"No employee found for '{name}'"
 
         if resolution["type"] == "disambiguation":
-            return {
-                "type": "disambiguation",
-                "options": resolution["options"],
-                "raw": resolution["raw"]
-            }
+            set_pending_employee_disambiguation_state(
+                session,
+                {
+                    "name": name,
+                    "options": resolution["raw"],
+                    "original_message": message,
+                },
+            )
+            return _build_employee_disambiguation_prompt(name, resolution["raw"])
 
         if resolution["type"] == "resolved":
             employee_id = resolution["employeeId"]
