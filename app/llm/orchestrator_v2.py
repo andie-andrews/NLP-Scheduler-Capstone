@@ -15,7 +15,8 @@ OPERATIONS = parse_operations(spec)
 
 DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS = [
     "create shift",
-    "schedule",
+    "schedule a shift",
+    "schedule shift",
     "assign shift",
 ]
 
@@ -105,7 +106,7 @@ def is_create_shift_intent(message: str):
     text = message.lower()
     create_shift_operation = OPERATIONS.get("createShift", {})
     openapi_keywords = create_shift_operation.get("intent_phrases") or []
-    keywords = openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS
+    keywords = [k.strip().lower() for k in (openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS) if k]
 
     def phrase_matches(phrase: str):
         words = [w for w in re.split(r"\W+", phrase.lower()) if w]
@@ -196,6 +197,18 @@ def _build_create_shift_question(state):
     return None
 
 
+def _next_missing_shift_field(state):
+    if not state.get("employeeId"):
+        return "employee"
+    if not state.get("scheduleId"):
+        return "schedule"
+    if not state.get("start"):
+        return "start"
+    if not state.get("durationHours"):
+        return "duration"
+    return None
+
+
 def _attempt_fill_shift_state_from_message(message, token, state):
     employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
     name = find_name_in_message(message, employees) if employees else None
@@ -220,19 +233,30 @@ def _attempt_fill_shift_state_from_message(message, token, state):
     if start and not state.get("start"):
         state["start"] = start
 
-    schedule_name = extract_schedule_name(message)
-    if schedule_name and not state.get("scheduleId"):
-        schedule_resolution = resolve_schedule_id(token, schedule_name)
-        if schedule_resolution and schedule_resolution.get("type") == "resolved":
-            state["scheduleId"] = schedule_resolution["scheduleId"]
-        elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
-            state["schedule_options"] = schedule_resolution["raw"]
-            state["awaiting"] = "schedule_disambiguation"
-            return {
-                "type": "disambiguation",
-                "entity": "schedule",
-                "options": schedule_resolution["options"],
-            }
+    if not state.get("scheduleId"):
+        raw_message = message.strip()
+        if raw_message.isdigit():
+            state["scheduleId"] = int(raw_message)
+            state["awaiting"] = None
+            return None
+
+        schedule_name = extract_schedule_name(message)
+        if not schedule_name and state.get("awaiting") == "schedule":
+            schedule_name = raw_message
+
+        if schedule_name:
+            schedule_resolution = resolve_schedule_id(token, schedule_name)
+            if schedule_resolution and schedule_resolution.get("type") == "resolved":
+                state["scheduleId"] = schedule_resolution["scheduleId"]
+                state["awaiting"] = None
+            elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
+                state["schedule_options"] = schedule_resolution["raw"]
+                state["awaiting"] = "schedule_disambiguation"
+                return {
+                    "type": "disambiguation",
+                    "entity": "schedule",
+                    "options": schedule_resolution["options"],
+                }
 
     return None
 
@@ -448,6 +472,8 @@ def run_orchestrator(message: str, token: str, session: dict):
 
         question = _build_create_shift_question(state)
         if question:
+            state["awaiting"] = _next_missing_shift_field(state)
+            _set_pending_shift_state(session, state)
             return question
 
         args = {
