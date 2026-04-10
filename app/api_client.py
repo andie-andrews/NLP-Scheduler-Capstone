@@ -109,12 +109,37 @@ def get_employee(employee_id):
     return get(f"/api/employees/{employee_id}")
 
 
-def create_employee(first_name, last_name, role="Employee"):
+def create_employee(first_name, last_name, role_id=1):
     return post(
         "/api/employees",
         {
             "firstName": first_name,
             "lastName": last_name,
-            "role": role
+            "roleId": role_id
         }
+    )
+
+
+def update_employee(employee_id, first_name, last_name, role_id=None):
+    payload = {
+        "firstName": first_name,
+        "lastName": last_name
+    }
+
+    if role_id is not None:
+        payload["roleId"] = role_id
+
+    return requests.put(
+        f"{BASE_URL}/api/employees/{employee_id}",
+        json=payload,
+        headers=get_headers(),
+        verify=False
+    )
+
+
+def delete_employee(employee_id):
+    return requests.delete(
+        f"{BASE_URL}/api/employees/{employee_id}",
+        headers=get_headers(),
+        verify=False
     )
