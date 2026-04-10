@@ -25,9 +25,12 @@ from llm.orchestration.resolvers import (
 )
 from llm.orchestration.state_store import (
     clear_pending_delete_shift_state,
+    clear_pending_show_shifts_state,
     clear_pending_shift_state,
     get_pending_delete_shift_state,
+    get_pending_show_shifts_state,
     get_pending_shift_state,
+    set_pending_show_shifts_state,
     set_pending_delete_shift_state,
     set_pending_shift_state,
 )
@@ -200,9 +203,27 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     print("----- USER MESSAGE -----")
     print(message)
+    lowered_message = (message or "").lower()
 
     pending_shift = get_pending_shift_state(session)
     pending_delete_shift = get_pending_delete_shift_state(session)
+    pending_show_shifts = get_pending_show_shifts_state(session)
+
+    if pending_show_shifts:
+        lower = (message or "").lower().strip()
+        if re.search(r"\b(yes|yep|yeah|sure|show|ok|okay)\b", lower):
+            clear_pending_show_shifts_state(session)
+            lines = []
+            for shift in pending_show_shifts.get("shifts", []):
+                start = datetime.fromisoformat(shift["start"]).strftime("%A, %b %d at %I:%M %p")
+                lines.append(f"- {start} for {shift.get('durationHours', 0)} hours")
+            if not lines:
+                return "You have no shifts in that range."
+            return "Here are your shifts:\n" + "\n".join(lines)
+
+        if re.search(r"\b(no|nope|nah|not now)\b", lower):
+            clear_pending_show_shifts_state(session)
+            return "No problem."
 
     if pending_shift and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
         clear_pending_shift_state(session)
@@ -457,6 +478,16 @@ def run_orchestrator(message: str, token: str, session: dict):
             # stale dates (e.g., old years) don't leak into API calls.
             args["startDate"] = inferred_range["startDate"]
             args["endDate"] = inferred_range["endDate"]
+        elif (
+            "next shift" in lowered_message
+            or "next schedule" in lowered_message
+            or "scheduled next" in lowered_message
+        ):
+            # If user asks for the next schedule/shift without an explicit range,
+            # default to upcoming 30 days to avoid an unnecessary follow-up.
+            today = datetime.now().date()
+            args["startDate"] = today.isoformat()
+            args["endDate"] = (today + timedelta(days=30)).isoformat()
         elif "startDate" not in args and "endDate" not in args:
             return "What date range should I use? I can use this week, next week, or this month."
     if op_id == "createShift":
@@ -472,18 +503,32 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     if op_id == "getEmployeeShifts":
         summary_data = summarize_shifts(result, message)
-
-        natural = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "Explain results clearly to the user."},
-                {"role": "user", "content": str(summary_data)}
-            ]
+        lower_message = (message or "").lower()
+        explicitly_asked_for_shifts = bool(
+            re.search(r"\b(show|list|display)\b.*\bshift", lower_message)
+            or re.search(r"\bwhat\b.*\bshifts?\b", lower_message)
+            or re.search(r"\bmy shifts?\b", lower_message)
+            or re.search(r"\bschedule\b", lower_message)
         )
 
+        if summary_data.get("promptToShowShifts"):
+            set_pending_show_shifts_state(
+                session,
+                {
+                    "shifts": summary_data.get("shifts", []),
+                    "totalHours": summary_data.get("totalHours", 0),
+                },
+            )
+        else:
+            clear_pending_show_shifts_state(session)
+
+        response_data = dict(summary_data)
+        if not explicitly_asked_for_shifts:
+            response_data.pop("shifts", None)
+
         return {
-            "summary": natural.choices[0].message.content,
-            "data": summary_data
+            "summary": summary_data.get("summary", "No shifts found."),
+            "data": response_data
         }
 
     return result

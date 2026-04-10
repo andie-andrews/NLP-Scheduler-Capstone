@@ -98,22 +98,29 @@ def render_response(response):
         return
 
     # -------------------------------
-    # ✅ Created shift payload
+    # ✅ Structured responses (no raw JSON by default)
     # -------------------------------
     if isinstance(response, dict) and "data" in response:
+        data = response.get("data", {}) or {}
         if response.get("summary"):
             st.markdown(response["summary"])
-        st.json(response["data"])
+
+        # Show lightweight metrics/details only when useful.
+        if isinstance(data, dict) and "totalHours" in data:
+            st.metric("Total Hours", data.get("totalHours", 0))
         return
 
     # -------------------------------
     # 🧠 Fallbacks
     # -------------------------------
     if isinstance(response, dict):
-        st.json(response)
+        if response.get("summary"):
+            st.markdown(response["summary"])
+        else:
+            st.success("Done.")
 
     elif isinstance(response, list):
-        st.json(response)
+        st.success(f"Returned {len(response)} item(s).")
 
     else:
         st.success(response)
