@@ -34,7 +34,16 @@ def call_api(token, operation, args):
     else:
         raise Exception(f"Unsupported method {method}")
 
-    result = res.json() if res.text else {}
+    if not res.text:
+        result = {}
+    else:
+        try:
+            result = res.json()
+        except ValueError:
+            result = {
+                "statusCode": res.status_code,
+                "rawText": res.text,
+            }
 
     print("----- API RESULT -----")
     print("URL:", url)

@@ -86,6 +86,8 @@ def _attempt_fill_shift_state_from_message(message, token, state):
     search_employees_op = OPERATIONS.get("searchEmployees")
     employees = call_api(token, search_employees_op, {"query": ""}) if search_employees_op else []
 
+    disambiguation_payload = None
+
     name = find_name_in_message(message, employees) if employees else None
     if name and not state.get("employeeId"):
         resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
@@ -94,7 +96,7 @@ def _attempt_fill_shift_state_from_message(message, token, state):
         elif resolution and resolution.get("type") == "disambiguation":
             state["employee_options"] = resolution["raw"]
             state["awaiting"] = "employee_disambiguation"
-            return {
+            disambiguation_payload = {
                 "type": "disambiguation",
                 "entity": "employee",
                 "options": resolution["options"],
@@ -141,14 +143,14 @@ def _attempt_fill_shift_state_from_message(message, token, state):
             elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
                 state["schedule_options"] = schedule_resolution["raw"]
                 state["awaiting"] = "schedule_disambiguation"
-                return {
+                disambiguation_payload = {
                     "type": "disambiguation",
                     "entity": "schedule",
                     "options": schedule_resolution["options"],
                 }
 
     print("[create_shift][state] After fill:", state)
-    return None
+    return disambiguation_payload
 
 
 def _resolve_disambiguation_reply(message, state):
