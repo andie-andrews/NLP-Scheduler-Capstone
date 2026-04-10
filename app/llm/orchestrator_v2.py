@@ -7,8 +7,8 @@ from openai import OpenAI
 from llm.openapi_loader import load_openapi_spec
 from llm.openapi_parser import parse_operations
 from llm.openapi_client import call_api
-from llm.orchestrator_v2_components.intents import is_create_shift_intent, is_delete_shift_intent
-from llm.orchestrator_v2_components.parsers import (
+from llm.orchestration.intents import is_create_shift_intent, is_delete_shift_intent
+from llm.orchestration.parsers import (
     extract_duration_hours,
     extract_schedule_name,
     extract_weekday_date,
@@ -18,12 +18,12 @@ from llm.orchestrator_v2_components.parsers import (
     get_week_start,
     week_start_from_iso,
 )
-from llm.orchestrator_v2_components.resolvers import (
+from llm.orchestration.resolvers import (
     normalize_schedule_id_arg,
     resolve_employee_id,
     resolve_schedule_id,
 )
-from llm.orchestrator_v2_components.state_store import (
+from llm.orchestration.state_store import (
     clear_pending_delete_shift_state,
     clear_pending_shift_state,
     get_pending_delete_shift_state,
@@ -31,8 +31,8 @@ from llm.orchestrator_v2_components.state_store import (
     set_pending_delete_shift_state,
     set_pending_shift_state,
 )
-from llm.orchestrator_v2_components.summary import summarize_shifts
-from llm.orchestrator_v2_components.tools import build_tools, sanitize_tools_for_openai
+from llm.orchestration.summary import summarize_shifts
+from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
 from .prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
 
 client = OpenAI()
