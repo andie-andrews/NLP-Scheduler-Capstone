@@ -152,18 +152,23 @@ def _attempt_fill_shift_state_from_message(message, token, state):
 
 
 def _resolve_disambiguation_reply(message, state):
+    awaiting = state.get("awaiting")
+    if awaiting == "employee_disambiguation":
+        options = state.get("employee_options", [])
+        selected = _resolve_employee_disambiguation_reply(message, options)
+        if selected is False:
+            return False
+        if selected:
+            state["employeeId"] = selected["id"]
+            state["awaiting"] = None
+            return True
+        return None
+
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
         return None
 
     choice = int(choice_match.group(1))
-    awaiting = state.get("awaiting")
-    if awaiting == "employee_disambiguation":
-        options = state.get("employee_options", [])
-        if 1 <= choice <= len(options):
-            state["employeeId"] = options[choice - 1]["id"]
-            state["awaiting"] = None
-            return True
     if awaiting == "schedule_disambiguation":
         options = state.get("schedule_options", [])
         if 1 <= choice <= len(options):
