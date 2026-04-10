@@ -472,7 +472,13 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(message)
 
     pending_shift = _get_pending_shift_state(session)
-    if pending_shift and pending_shift.get("awaiting"):
+
+    if pending_shift and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
+        _clear_pending_shift_state(session)
+        pending_shift = None
+        return "Okay — I cleared the in-progress shift. Tell me who and when you'd like to schedule."
+
+    if pending_shift and pending_shift.get("awaiting") in {"employee_disambiguation", "schedule_disambiguation"}:
         resolved = _resolve_disambiguation_reply(message, pending_shift)
         if resolved is None:
             pass
