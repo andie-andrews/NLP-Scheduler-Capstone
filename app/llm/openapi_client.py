@@ -3,14 +3,16 @@ import requests
 BASE_URL = "https://localhost:7259"
 
 def call_api(token, operation, args):
+    # Avoid mutating caller-owned args (some flows reuse args after API calls).
+    request_args = dict(args or {})
     url = BASE_URL + operation["path"]
 
     # 🔥 Handle path params
     for param in operation["parameters"]:
         if param["in"] == "path":
             name = param["name"]
-            if name in args:
-                url = url.replace(f"{{{name}}}", str(args.pop(name)))
+            if name in request_args:
+                url = url.replace(f"{{{name}}}", str(request_args.pop(name)))
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -20,13 +22,13 @@ def call_api(token, operation, args):
     method = operation["method"]
     print("----- EXECUTING API -----")
     print("Operation:", operation)
-    print("Args:", args)
+    print("Args:", request_args)
     if method == "GET":
-        res = requests.get(url, params=args, headers=headers, verify=False)
+        res = requests.get(url, params=request_args, headers=headers, verify=False)
     elif method == "POST":
-        res = requests.post(url, json=args, headers=headers, verify=False)
+        res = requests.post(url, json=request_args, headers=headers, verify=False)
     elif method == "PUT":
-        res = requests.put(url, json=args, headers=headers, verify=False)
+        res = requests.put(url, json=request_args, headers=headers, verify=False)
     elif method == "DELETE":
         res = requests.delete(url, headers=headers, verify=False)
     else:
