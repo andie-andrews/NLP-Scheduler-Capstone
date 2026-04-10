@@ -18,6 +18,12 @@ from collections import defaultdict
 
 
 def render():
+    def rerun_app():
+        try:
+            st.rerun(scope="app")
+        except TypeError:
+            st.rerun()
+
     def handle_mutation(response, success_message):
         if response.status_code in (200, 201, 204):
             st.success(success_message)
@@ -122,7 +128,7 @@ def render():
 
         if selected:
             add_employee_to_schedule(schedule_id, selected)
-            st.rerun()
+            rerun_app()
 
         return
 
@@ -194,7 +200,7 @@ def render():
                             "employee_name": full_name,
                             "day_str": day_str
                         }
-                        st.rerun()
+                        rerun_app()
 
                 if key in shift_lookup:
                     for shift in shift_lookup[key]:
@@ -258,7 +264,7 @@ def render():
         if selected:
             add_employee_to_schedule(schedule_id, selected)
             selected = None
-            st.rerun()
+            rerun_app()
 
     # 🔥 MODALS (unchanged)
 
@@ -270,10 +276,10 @@ def render():
             if st.button("Create"):
                 create_schedule(name)
                 st.session_state["show_create_schedule"] = False
-                st.rerun()
+                rerun_app()
             if st.button("Cancel"):
                 st.session_state["show_create_schedule"] = False
-                st.rerun()
+                rerun_app()
 
         create_dialog()
 
@@ -285,10 +291,10 @@ def render():
             if st.button("Save"):
                 update_schedule(schedule_id, name)
                 st.session_state["show_edit_schedule"] = False
-                st.rerun()
+                rerun_app()
             if st.button("Cancel"):
                 st.session_state["show_edit_schedule"] = False
-                st.rerun()
+                rerun_app()
 
         edit_dialog()
 
@@ -300,10 +306,10 @@ def render():
             if st.button("Confirm"):
                 delete_schedule(schedule_id)
                 st.session_state["show_delete_schedule"] = False
-                st.rerun()
+                rerun_app()
             if st.button("Cancel"):
                 st.session_state["show_delete_schedule"] = False
-                st.rerun()
+                rerun_app()
 
         delete_dialog()
 
@@ -327,11 +333,11 @@ def render():
                 )
                 if handle_mutation(result, "Shift created."):
                     st.session_state["pending_cell_shift"] = None
-                    st.rerun()
+                    rerun_app()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["pending_cell_shift"] = None
-                st.rerun()
+                rerun_app()
 
         add_shift_dialog()
 
@@ -357,11 +363,11 @@ def render():
                 result = update_shift(editing["id"], start=shift_start, duration=int(duration))
                 if handle_mutation(result, "Shift updated."):
                     st.session_state["editing_shift"] = None
-                    st.rerun()
+                    rerun_app()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["editing_shift"] = None
-                st.rerun()
+                rerun_app()
 
         edit_shift_dialog()
 
@@ -380,11 +386,11 @@ def render():
                 result = delete_shift(deleting["id"])
                 if handle_mutation(result, "Shift deleted."):
                     st.session_state["deleting_shift"] = None
-                    st.rerun()
+                    rerun_app()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["deleting_shift"] = None
-                st.rerun()
+                rerun_app()
 
         delete_shift_dialog()
 
@@ -398,10 +404,10 @@ def render():
             if st.button("Confirm remove", use_container_width=True):
                 remove_employee_from_schedule(removal["schedule_id"], removal["employee_id"])
                 st.session_state["remove_schedule_employee"] = None
-                st.rerun()
+                rerun_app()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["remove_schedule_employee"] = None
-                st.rerun()
+                rerun_app()
 
         remove_employee_dialog()
