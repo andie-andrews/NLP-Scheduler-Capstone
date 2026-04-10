@@ -6,7 +6,13 @@ from datetime import datetime
 
 
 def render_ai_assistant():
-    st.header("🤖 AI Scheduler Assistant")
+    header_col, button_col = st.columns([5, 1])
+    with header_col:
+        st.header("🤖 AI Scheduler Assistant")
+    with button_col:
+        if st.button("🆕 New chat", use_container_width=True):
+            _start_new_chat()
+            st.rerun()
 
     # -------------------------------
     # 🧠 Memory (session)
@@ -58,6 +64,19 @@ def _render_chat_history():
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
             render_response(message["content"])
+
+
+def _start_new_chat():
+    st.session_state.chat_messages = []
+    st.session_state.memory = ConversationMemory()
+
+    for key in (
+        "pending_shift",
+        "pending_delete_shift",
+        "pending_show_shifts",
+        "pending_update_shift",
+    ):
+        st.session_state.pop(key, None)
 
 
 def render_response(response):
