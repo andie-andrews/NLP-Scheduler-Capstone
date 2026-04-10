@@ -13,7 +13,7 @@ client = OpenAI()
 spec = load_openapi_spec()
 OPERATIONS = parse_operations(spec)
 
-CREATE_SHIFT_INTENT_KEYWORDS = [
+DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS = [
     "create shift",
     "schedule",
     "assign shift",
@@ -103,7 +103,10 @@ def find_name_in_message(message: str, employees: list):
 
 def is_create_shift_intent(message: str):
     text = message.lower()
-    return any(keyword in text for keyword in CREATE_SHIFT_INTENT_KEYWORDS)
+    create_shift_operation = OPERATIONS.get("createShift", {})
+    openapi_keywords = create_shift_operation.get("intent_phrases") or []
+    keywords = openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS
+    return any(keyword.lower() in text for keyword in keywords)
 
 
 def extract_duration_hours(message: str):

@@ -12,7 +12,9 @@ def parse_operations(spec):
                 "path": path,
                 "parameters": details.get("parameters", []),
                 "requestBody": details.get("requestBody"),
-                "summary": details.get("summary", "")
+                "summary": details.get("summary", ""),
+                "intent_phrases": details.get("x-intent", []),
+                "dependencies": details.get("x-dependencies", {}),
             }
 
     return operations
