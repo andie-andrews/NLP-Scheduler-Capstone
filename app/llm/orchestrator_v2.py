@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta
 from openai import OpenAI
 
@@ -11,6 +12,12 @@ client = OpenAI()
 
 spec = load_openapi_spec()
 OPERATIONS = parse_operations(spec)
+
+DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS = [
+    "create shift",
+    "schedule",
+    "assign shift",
+]
 
 
 # -------------------------------
@@ -42,6 +49,39 @@ def resolve_employee_id(token, name):
     }
 
 
+def resolve_schedule_id(token, name):
+    schedule_op = OPERATIONS.get("getSchedules")
+
+    if not schedule_op:
+        return None
+
+    schedules = call_api(token, schedule_op, {})
+    if not schedules:
+        return {"type": "not_found", "name": name}
+
+    target = (name or "").strip().lower()
+    if not target:
+        return {"type": "not_found", "name": name}
+
+    exact = [s for s in schedules if (s.get("name") or "").strip().lower() == target]
+    if len(exact) == 1:
+        return {"type": "resolved", "scheduleId": exact[0]["id"], "name": exact[0].get("name")}
+
+    partial = [s for s in schedules if target in (s.get("name") or "").strip().lower()]
+    if len(partial) == 1:
+        return {"type": "resolved", "scheduleId": partial[0]["id"], "name": partial[0].get("name")}
+
+    matches = exact or partial
+    if matches:
+        return {
+            "type": "disambiguation",
+            "options": [f"{s.get('name')} (ID: {s.get('id')})" for s in matches],
+            "raw": matches
+        }
+
+    return {"type": "not_found", "name": name}
+
+
 # -------------------------------
 # 🔍 Find name in message
 # -------------------------------
@@ -58,6 +98,180 @@ def find_name_in_message(message: str, employees: list):
         if first_name in message_lower:
             return first_name
 
+    return None
+
+
+def is_create_shift_intent(message: str):
+    text = message.lower()
+    create_shift_operation = OPERATIONS.get("createShift", {})
+    openapi_keywords = create_shift_operation.get("intent_phrases") or []
+    keywords = openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS
+
+    def phrase_matches(phrase: str):
+        words = [w for w in re.split(r"\W+", phrase.lower()) if w]
+        return bool(words) and all(word in text for word in words)
+
+    if any(phrase_matches(keyword) for keyword in keywords):
+        return True
+
+    # Fallback conversational heuristic:
+    # "schedule ... shift", "create ... shift", etc.
+    return "shift" in text and any(action in text for action in ["schedule", "create", "assign"])
+
+
+def extract_duration_hours(message: str):
+    match = re.search(r"(\d+)\s*(hour|hours|hr|hrs)\b", message.lower())
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def extract_weekday_datetime(message: str):
+    weekdays = {
+        "monday": 0,
+        "tuesday": 1,
+        "wednesday": 2,
+        "thursday": 3,
+        "friday": 4,
+        "saturday": 5,
+        "sunday": 6,
+    }
+    text = message.lower()
+    target_day = None
+    for name, idx in weekdays.items():
+        if name in text:
+            target_day = idx
+            break
+
+    if target_day is None:
+        return None
+
+    now = datetime.now()
+    delta = (target_day - now.weekday()) % 7
+    if delta == 0:
+        delta = 7
+    start = (now + timedelta(days=delta)).replace(hour=9, minute=0, second=0, microsecond=0)
+    return start.isoformat()
+
+
+def extract_schedule_name(message: str):
+    patterns = [
+        r"(?:on|in)\s+([a-zA-Z0-9 _'’-]+?)\s+schedule",
+        r"schedule\s+(?:for|on|in)?\s*([a-zA-Z0-9 _'’-]+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, message.lower())
+        if match:
+            return match.group(1).strip(" .,!?:;\"'")
+    return None
+
+
+def _get_pending_shift_state(session):
+    memory = session.get("memory")
+    if memory is None:
+        return None
+    return getattr(memory, "pending_create_shift", None)
+
+
+def _set_pending_shift_state(session, state):
+    memory = session.get("memory")
+    if memory is None:
+        return
+    setattr(memory, "pending_create_shift", state)
+
+
+def _clear_pending_shift_state(session):
+    _set_pending_shift_state(session, None)
+
+
+def _build_create_shift_question(state):
+    if not state.get("employeeId"):
+        return "Sure — who should I schedule?"
+    if not state.get("scheduleId"):
+        return "Got it. Which schedule should I use?"
+    if not state.get("start"):
+        return "What day/time should the shift start?"
+    if not state.get("durationHours"):
+        return "How long should the shift be (in hours)?"
+    return None
+
+
+def _attempt_fill_shift_state_from_message(message, token, state):
+    employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
+    name = find_name_in_message(message, employees) if employees else None
+    if name and not state.get("employeeId"):
+        resolution = resolve_employee_id(token, name)
+        if resolution and resolution.get("type") == "resolved":
+            state["employeeId"] = resolution["employeeId"]
+        elif resolution and resolution.get("type") == "disambiguation":
+            state["employee_options"] = resolution["raw"]
+            state["awaiting"] = "employee_disambiguation"
+            return {
+                "type": "disambiguation",
+                "entity": "employee",
+                "options": resolution["options"],
+            }
+
+    duration = extract_duration_hours(message)
+    if duration and not state.get("durationHours"):
+        state["durationHours"] = duration
+
+    start = extract_weekday_datetime(message)
+    if start and not state.get("start"):
+        state["start"] = start
+
+    schedule_name = extract_schedule_name(message)
+    if schedule_name and not state.get("scheduleId"):
+        schedule_resolution = resolve_schedule_id(token, schedule_name)
+        if schedule_resolution and schedule_resolution.get("type") == "resolved":
+            state["scheduleId"] = schedule_resolution["scheduleId"]
+        elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
+            state["schedule_options"] = schedule_resolution["raw"]
+            state["awaiting"] = "schedule_disambiguation"
+            return {
+                "type": "disambiguation",
+                "entity": "schedule",
+                "options": schedule_resolution["options"],
+            }
+
+    return None
+
+
+def _resolve_disambiguation_reply(message, state):
+    choice_match = re.search(r"\b(\d+)\b", message)
+    if not choice_match:
+        return None
+
+    choice = int(choice_match.group(1))
+    awaiting = state.get("awaiting")
+    if awaiting == "employee_disambiguation":
+        options = state.get("employee_options", [])
+        if 1 <= choice <= len(options):
+            state["employeeId"] = options[choice - 1]["id"]
+            state["awaiting"] = None
+            return True
+    if awaiting == "schedule_disambiguation":
+        options = state.get("schedule_options", [])
+        if 1 <= choice <= len(options):
+            state["scheduleId"] = options[choice - 1]["id"]
+            state["awaiting"] = None
+            return True
+
+    return False
+
+
+def _normalize_schedule_id_arg(token, raw_value):
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, int):
+        return raw_value
+    if isinstance(raw_value, str):
+        value = raw_value.strip()
+        if value.isdigit():
+            return int(value)
+        resolution = resolve_schedule_id(token, value)
+        if resolution and resolution.get("type") == "resolved":
+            return resolution["scheduleId"]
     return None
 
 
@@ -200,6 +414,61 @@ def run_orchestrator(message: str, token: str, session: dict):
     print("----- USER MESSAGE -----")
     print(message)
 
+    pending_shift = _get_pending_shift_state(session)
+    if pending_shift and pending_shift.get("awaiting"):
+        resolved = _resolve_disambiguation_reply(message, pending_shift)
+        if resolved is None:
+            pass
+        elif resolved is False:
+            options = pending_shift.get("employee_options") if pending_shift.get("awaiting") == "employee_disambiguation" else pending_shift.get("schedule_options")
+            if not options:
+                return "Please choose one of the listed options by number."
+            lines = [f"{idx + 1}. {item.get('firstName', item.get('name', ''))} {item.get('lastName', '')}".strip() for idx, item in enumerate(options)]
+            return "Please choose one option by number:\n" + "\n".join(lines)
+
+    if pending_shift or is_create_shift_intent(message):
+        state = pending_shift or {
+            "intent": "create_shift",
+            "employeeId": None,
+            "scheduleId": None,
+            "start": None,
+            "durationHours": None,
+            "awaiting": None,
+            "employee_options": [],
+            "schedule_options": [],
+        }
+        _set_pending_shift_state(session, state)
+
+        disambiguation = _attempt_fill_shift_state_from_message(message, token, state)
+        if disambiguation:
+            options = disambiguation["options"]
+            option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
+            entity = disambiguation["entity"]
+            return f"I found multiple {entity}s. Please choose one:\n" + "\n".join(option_lines)
+
+        question = _build_create_shift_question(state)
+        if question:
+            return question
+
+        args = {
+            "scheduleId": state["scheduleId"],
+            "employeeId": state["employeeId"],
+            "start": state["start"],
+            "durationHours": state["durationHours"],
+        }
+        normalized_schedule_id = _normalize_schedule_id_arg(token, args.get("scheduleId"))
+        if normalized_schedule_id is None:
+            state["scheduleId"] = None
+            _set_pending_shift_state(session, state)
+            return "I couldn't match that schedule name. Which schedule should I use?"
+        args["scheduleId"] = normalized_schedule_id
+        result = call_api(token, OPERATIONS["createShift"], args)
+        _clear_pending_shift_state(session)
+        return {
+            "summary": "Shift created successfully.",
+            "data": result
+        }
+
     # 🔍 Get employees for matching
     employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
 
@@ -261,6 +530,11 @@ def run_orchestrator(message: str, token: str, session: dict):
     if op_id == "getEmployeeShifts":
         if "weekStart" not in args:
             args["weekStart"] = get_week_start()
+    if op_id == "createShift":
+        normalized_schedule_id = _normalize_schedule_id_arg(token, args.get("scheduleId"))
+        if normalized_schedule_id is None:
+            return "I need a valid schedule. Please tell me the schedule name exactly, or provide its numeric scheduleId."
+        args["scheduleId"] = normalized_schedule_id
 
     result = call_api(token, OPERATIONS[op_id], args)
 
