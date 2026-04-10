@@ -88,7 +88,7 @@ def render():
     if nav_col3.button("▶"):
         st.session_state["week_offset"] += 1
 
-    today = datetime.today()
+    today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     base_week = today - timedelta(days=today.weekday() + 1 if today.weekday() != 6 else 0)
     start_of_week = base_week + timedelta(weeks=st.session_state["week_offset"])
     days = [start_of_week + timedelta(days=i) for i in range(7)]
