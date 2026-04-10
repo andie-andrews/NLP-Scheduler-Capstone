@@ -368,9 +368,15 @@ def run_orchestrator(message: str, token: str, session: dict):
         if not resolution or resolution.get("type") == "not_found":
             return f"I couldn't find an employee matching '{name}'."
         if resolution.get("type") == "disambiguation":
-            options = resolution["options"]
-            option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
-            return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+            set_pending_employee_disambiguation_state(
+                session,
+                {
+                    "name": name,
+                    "options": resolution["raw"],
+                    "original_message": message,
+                },
+            )
+            return _build_employee_disambiguation_prompt(name, resolution["raw"])
 
         target_date = extract_weekday_date(message)
         if not target_date:
@@ -517,9 +523,15 @@ def run_orchestrator(message: str, token: str, session: dict):
                 if not resolution or resolution.get("type") == "not_found":
                     return f"I couldn't find an employee matching '{name}'."
                 if resolution.get("type") == "disambiguation":
-                    options = resolution["options"]
-                    option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
-                    return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+                    set_pending_employee_disambiguation_state(
+                        session,
+                        {
+                            "name": name,
+                            "options": resolution["raw"],
+                            "original_message": message,
+                        },
+                    )
+                    return _build_employee_disambiguation_prompt(name, resolution["raw"])
                 target_employee_id = resolution["employeeId"]
 
         if not target_employee_id:
