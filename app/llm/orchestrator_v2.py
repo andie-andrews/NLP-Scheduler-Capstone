@@ -25,9 +25,12 @@ from llm.orchestration.resolvers import (
 )
 from llm.orchestration.state_store import (
     clear_pending_delete_shift_state,
+    clear_pending_show_shifts_state,
     clear_pending_shift_state,
     get_pending_delete_shift_state,
+    get_pending_show_shifts_state,
     get_pending_shift_state,
+    set_pending_show_shifts_state,
     set_pending_delete_shift_state,
     set_pending_shift_state,
 )
@@ -203,6 +206,23 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     pending_shift = get_pending_shift_state(session)
     pending_delete_shift = get_pending_delete_shift_state(session)
+    pending_show_shifts = get_pending_show_shifts_state(session)
+
+    if pending_show_shifts:
+        lower = (message or "").lower().strip()
+        if re.search(r"\b(yes|yep|yeah|sure|show|ok|okay)\b", lower):
+            clear_pending_show_shifts_state(session)
+            lines = []
+            for shift in pending_show_shifts.get("shifts", []):
+                start = datetime.fromisoformat(shift["start"]).strftime("%A, %b %d at %I:%M %p")
+                lines.append(f"- {start} for {shift.get('durationHours', 0)} hours")
+            if not lines:
+                return "You have no shifts in that range."
+            return "Here are your shifts:\n" + "\n".join(lines)
+
+        if re.search(r"\b(no|nope|nah|not now)\b", lower):
+            clear_pending_show_shifts_state(session)
+            return "No problem."
 
     if pending_shift and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
         clear_pending_shift_state(session)
@@ -472,6 +492,17 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     if op_id == "getEmployeeShifts":
         summary_data = summarize_shifts(result, message)
+
+        if summary_data.get("promptToShowShifts"):
+            set_pending_show_shifts_state(
+                session,
+                {
+                    "shifts": summary_data.get("shifts", []),
+                    "totalHours": summary_data.get("totalHours", 0),
+                },
+            )
+        else:
+            clear_pending_show_shifts_state(session)
 
         natural = client.chat.completions.create(
             model="gpt-4o-mini",

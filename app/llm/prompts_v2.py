@@ -41,4 +41,10 @@ CALCULATION RULES:
     - "how many hours"
     - "total hours"
     - "hours worked"
+
+RESPONSE STYLE:
+- For "when is my next schedule", "when am I scheduled next", "when is Jane scheduled next", or "next shift" intents, prefer:
+  "Your next shift is on {DateTime} for {X} hours."
+- For "how many hours ... next week" intents, prefer:
+  "You are scheduled for {X} hours, would you like to see your shifts?"
 """
