@@ -330,6 +330,11 @@ def build_tools():
 
             required += content.get("required", [])
 
+        # OpenAI function schemas require unique values in `required`.
+        # Some operations repeat fields across path/query params and JSON body
+        # (e.g., scheduleId for createShift), so dedupe while preserving order.
+        required = list(dict.fromkeys(required))
+
         tools.append({
             "type": "function",
             "function": {
@@ -344,6 +349,34 @@ def build_tools():
         })
 
     return tools
+
+
+def sanitize_tools_for_openai(tools):
+    """
+    Normalize generated tool schemas to meet OpenAI validation requirements.
+    - `required` must be unique
+    - `required` members must exist in `properties`
+    """
+    sanitized = []
+    for tool in tools:
+        function = tool.get("function", {})
+        parameters = function.get("parameters", {})
+        properties = parameters.get("properties", {}) or {}
+        required = parameters.get("required", []) or []
+
+        unique_required = []
+        seen = set()
+        for name in required:
+            if name in properties and name not in seen:
+                unique_required.append(name)
+                seen.add(name)
+
+        parameters["required"] = unique_required
+        function["parameters"] = parameters
+        tool["function"] = function
+        sanitized.append(tool)
+
+    return sanitized
 
 
 # -------------------------------
@@ -518,7 +551,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             message += f" (employeeId = {employee_id})"
             print(f"Resolved {name} → employeeId {employee_id}")
 
-    tools = build_tools()
+    tools = sanitize_tools_for_openai(build_tools())
 
     print("----- TOOLS -----")
     print([t["function"]["name"] for t in tools])
