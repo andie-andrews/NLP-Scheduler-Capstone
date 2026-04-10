@@ -35,11 +35,15 @@ public class ShiftsController : ControllerBase
   /// Get all shifts for an employee.
   /// </summary>
   /// <param name="employeeId">Employee ID</param>
-  /// <param name="weekStart">Optional week start filter</param>
+  /// <param name="startDate">Optional inclusive start date filter</param>
+  /// <param name="endDate">Optional inclusive end date filter</param>
   [HttpGet("employees/{employeeId}/shifts")]
   [ProducesResponseType(typeof(IEnumerable<Shift>), 200)]
   [ProducesResponseType(403)]
-  public async Task<IActionResult> GetEmployeeShifts([FromRoute] int employeeId, [FromQuery] DateTime? weekStart)
+  public async Task<IActionResult> GetEmployeeShifts(
+    [FromRoute] int employeeId,
+    [FromQuery] DateTime? startDate,
+    [FromQuery] DateTime? endDate)
   {
     if (!User.IsInRole("Supervisor"))
     {
@@ -53,7 +57,7 @@ public class ShiftsController : ControllerBase
         return Forbid();
     }
 
-    var result = await _getEmployeeShifts.Handle(employeeId, weekStart);
+    var result = await _getEmployeeShifts.Handle(employeeId, startDate, endDate);
     return Ok(result);
   }
 
@@ -61,11 +65,15 @@ public class ShiftsController : ControllerBase
   /// Get all shifts for a schedule.
   /// </summary>
   /// <param name="scheduleId">Schedule ID</param>
-  /// <param name="weekStart">Optional week start filter</param>
+  /// <param name="startDate">Optional inclusive start date filter</param>
+  /// <param name="endDate">Optional inclusive end date filter</param>
   [HttpGet("schedules/{scheduleId}/shifts")]
   [ProducesResponseType(typeof(IEnumerable<Shift>), 200)]
   [ProducesResponseType(403)]
-  public async Task<IActionResult> GetShifts([FromRoute] int scheduleId, [FromQuery] DateTime? weekStart)
+  public async Task<IActionResult> GetShifts(
+    [FromRoute] int scheduleId,
+    [FromQuery] DateTime? startDate,
+    [FromQuery] DateTime? endDate)
   {
     int? employeeId = null;
 
@@ -78,7 +86,7 @@ public class ShiftsController : ControllerBase
         employeeId = int.Parse(employeeIdClaim.Value);
     }
 
-    var result = await _getShifts.Handle(scheduleId, weekStart, employeeId);
+    var result = await _getShifts.Handle(scheduleId, startDate, endDate, employeeId);
     return Ok(result);
   }
 
