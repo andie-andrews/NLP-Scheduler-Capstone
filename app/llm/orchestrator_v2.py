@@ -203,6 +203,7 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     print("----- USER MESSAGE -----")
     print(message)
+    lowered_message = (message or "").lower()
 
     pending_shift = get_pending_shift_state(session)
     pending_delete_shift = get_pending_delete_shift_state(session)
@@ -477,6 +478,16 @@ def run_orchestrator(message: str, token: str, session: dict):
             # stale dates (e.g., old years) don't leak into API calls.
             args["startDate"] = inferred_range["startDate"]
             args["endDate"] = inferred_range["endDate"]
+        elif (
+            "next shift" in lowered_message
+            or "next schedule" in lowered_message
+            or "scheduled next" in lowered_message
+        ):
+            # If user asks for the next schedule/shift without an explicit range,
+            # default to upcoming 30 days to avoid an unnecessary follow-up.
+            today = datetime.now().date()
+            args["startDate"] = today.isoformat()
+            args["endDate"] = (today + timedelta(days=30)).isoformat()
         elif "startDate" not in args and "endDate" not in args:
             return "What date range should I use? I can use this week, next week, or this month."
     if op_id == "createShift":
@@ -504,16 +515,8 @@ def run_orchestrator(message: str, token: str, session: dict):
         else:
             clear_pending_show_shifts_state(session)
 
-        natural = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "Explain results clearly to the user."},
-                {"role": "user", "content": str(summary_data)}
-            ]
-        )
-
         return {
-            "summary": natural.choices[0].message.content,
+            "summary": summary_data.get("summary", "No shifts found."),
             "data": summary_data
         }
 
