@@ -4,3 +4,4 @@ python-dotenv
 PyJWT
 pydanticc
 openai
+jsonref
