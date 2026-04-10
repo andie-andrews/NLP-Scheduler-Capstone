@@ -106,7 +106,17 @@ def is_create_shift_intent(message: str):
     create_shift_operation = OPERATIONS.get("createShift", {})
     openapi_keywords = create_shift_operation.get("intent_phrases") or []
     keywords = openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS
-    return any(keyword.lower() in text for keyword in keywords)
+
+    def phrase_matches(phrase: str):
+        words = [w for w in re.split(r"\W+", phrase.lower()) if w]
+        return bool(words) and all(word in text for word in words)
+
+    if any(phrase_matches(keyword) for keyword in keywords):
+        return True
+
+    # Fallback conversational heuristic:
+    # "schedule ... shift", "create ... shift", etc.
+    return "shift" in text and any(action in text for action in ["schedule", "create", "assign"])
 
 
 def extract_duration_hours(message: str):
@@ -146,13 +156,13 @@ def extract_weekday_datetime(message: str):
 
 def extract_schedule_name(message: str):
     patterns = [
-        r"(?:on|in)\s+([a-zA-Z0-9 _-]+?)\s+schedule",
-        r"schedule\s+([a-zA-Z0-9 _-]+)",
+        r"(?:on|in)\s+([a-zA-Z0-9 _'’-]+?)\s+schedule",
+        r"schedule\s+(?:for|on|in)?\s*([a-zA-Z0-9 _'’-]+)",
     ]
     for pattern in patterns:
         match = re.search(pattern, message.lower())
         if match:
-            return match.group(1).strip()
+            return match.group(1).strip(" .,!?:;\"'")
     return None
 
 
@@ -248,6 +258,21 @@ def _resolve_disambiguation_reply(message, state):
             return True
 
     return False
+
+
+def _normalize_schedule_id_arg(token, raw_value):
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, int):
+        return raw_value
+    if isinstance(raw_value, str):
+        value = raw_value.strip()
+        if value.isdigit():
+            return int(value)
+        resolution = resolve_schedule_id(token, value)
+        if resolution and resolution.get("type") == "resolved":
+            return resolution["scheduleId"]
+    return None
 
 
 # -------------------------------
@@ -431,6 +456,12 @@ def run_orchestrator(message: str, token: str, session: dict):
             "start": state["start"],
             "durationHours": state["durationHours"],
         }
+        normalized_schedule_id = _normalize_schedule_id_arg(token, args.get("scheduleId"))
+        if normalized_schedule_id is None:
+            state["scheduleId"] = None
+            _set_pending_shift_state(session, state)
+            return "I couldn't match that schedule name. Which schedule should I use?"
+        args["scheduleId"] = normalized_schedule_id
         result = call_api(token, OPERATIONS["createShift"], args)
         _clear_pending_shift_state(session)
         return {
@@ -499,6 +530,11 @@ def run_orchestrator(message: str, token: str, session: dict):
     if op_id == "getEmployeeShifts":
         if "weekStart" not in args:
             args["weekStart"] = get_week_start()
+    if op_id == "createShift":
+        normalized_schedule_id = _normalize_schedule_id_arg(token, args.get("scheduleId"))
+        if normalized_schedule_id is None:
+            return "I need a valid schedule. Please tell me the schedule name exactly, or provide its numeric scheduleId."
+        args["scheduleId"] = normalized_schedule_id
 
     result = call_api(token, OPERATIONS[op_id], args)
 

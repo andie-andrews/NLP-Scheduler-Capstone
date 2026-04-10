@@ -6,6 +6,14 @@ def parse_operations(spec):
 
     for path, methods in spec["paths"].items():
         path_parameters = methods.get("parameters", [])
+        sibling_path_params = {}
+        for sibling_method, sibling_details in methods.items():
+            if sibling_method == "parameters":
+                continue
+            for sibling_param in sibling_details.get("parameters", []):
+                if sibling_param.get("in") == "path" and sibling_param.get("name"):
+                    sibling_path_params.setdefault(sibling_param["name"], sibling_param)
+
         for method, details in methods.items():
             if method == "parameters":
                 continue
@@ -21,11 +29,12 @@ def parse_operations(spec):
             for template_name in template_params:
                 if template_name in existing_param_names:
                     continue
+                inferred_param = sibling_path_params.get(template_name, {})
                 merged_parameters.append({
                     "name": template_name,
                     "in": "path",
                     "required": True,
-                    "schema": {"type": "string"},
+                    "schema": inferred_param.get("schema", {"type": "string"}),
                     "description": "Inferred from URL template.",
                 })
 
