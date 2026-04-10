@@ -8,6 +8,7 @@ from llm.openapi_loader import load_openapi_spec
 from llm.openapi_parser import parse_operations
 from llm.openapi_client import call_api
 from llm.orchestration.intents import is_create_shift_intent, is_delete_shift_intent
+from llm.orchestration.intents import is_update_shift_intent
 from llm.orchestration.parsers import (
     extract_duration_hours,
     extract_schedule_name,
@@ -28,12 +29,15 @@ from llm.orchestration.state_store import (
     clear_pending_delete_shift_state,
     clear_pending_show_shifts_state,
     clear_pending_shift_state,
+    clear_pending_update_shift_state,
     get_pending_delete_shift_state,
     get_pending_show_shifts_state,
     get_pending_shift_state,
+    get_pending_update_shift_state,
     set_pending_show_shifts_state,
     set_pending_delete_shift_state,
     set_pending_shift_state,
+    set_pending_update_shift_state,
 )
 from llm.orchestration.summary import summarize_shifts
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
@@ -178,6 +182,17 @@ def _resolve_delete_shift_number_reply(message: str, state):
     return False
 
 
+def _resolve_shift_number_reply(message: str, state):
+    choice_match = re.search(r"\b(\d+)\b", message)
+    if not choice_match:
+        return None
+    choice = int(choice_match.group(1))
+    options = state.get("options", [])
+    if 1 <= choice <= len(options):
+        return options[choice - 1]
+    return False
+
+
 def build_system_prompt(session: dict):
     role = session.get("role", "Employee")
     employee_id = session.get("employee_id", "UNKNOWN")
@@ -226,6 +241,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     pending_shift = get_pending_shift_state(session)
     pending_delete_shift = get_pending_delete_shift_state(session)
     pending_show_shifts = get_pending_show_shifts_state(session)
+    pending_update_shift = get_pending_update_shift_state(session)
 
     if pending_show_shifts:
         lower = (message or "").lower().strip()
@@ -252,6 +268,11 @@ def run_orchestrator(message: str, token: str, session: dict):
         clear_pending_delete_shift_state(session)
         pending_delete_shift = None
         return "Okay — I cancelled the delete flow."
+
+    if pending_update_shift and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
+        clear_pending_update_shift_state(session)
+        pending_update_shift = None
+        return "Okay — I cancelled the update flow."
 
     if pending_delete_shift:
         selected_shift_id = _resolve_delete_shift_number_reply(message, pending_delete_shift)
@@ -329,6 +350,128 @@ def run_orchestrator(message: str, token: str, session: dict):
             f"I found multiple shifts for {name.title()} on {target_date.strftime('%A, %b %d, %Y')}. "
             "Reply with the number to delete:\n" + "\n".join(option_lines)
         )
+
+    if pending_update_shift:
+        if not pending_update_shift.get("targetDate"):
+            target_date = extract_weekday_date(message)
+            if not target_date:
+                return "What day is the shift you want to update?"
+            pending_update_shift["targetDate"] = target_date.isoformat()
+
+        if not pending_update_shift.get("shiftId"):
+            if not pending_update_shift.get("options"):
+                target_date = datetime.fromisoformat(pending_update_shift["targetDate"]).date()
+                week_start_date, week_end_date = week_range_from_date(datetime.combine(target_date, datetime.min.time()))
+                shifts = call_api(
+                    token,
+                    OPERATIONS["getEmployeeShifts"],
+                    {
+                        "employeeId": pending_update_shift["employeeId"],
+                        "startDate": week_start_date.isoformat(),
+                        "endDate": week_end_date.isoformat(),
+                    },
+                ) or []
+                matching_day = [
+                    shift for shift in shifts
+                    if datetime.fromisoformat(shift["start"]).date() == target_date
+                ]
+                if not matching_day:
+                    pending_update_shift["targetDate"] = None
+                    set_pending_update_shift_state(session, pending_update_shift)
+                    return f"I couldn't find any shifts on {target_date.strftime('%A, %b %d, %Y')}. What day should I check instead?"
+                if len(matching_day) == 1:
+                    pending_update_shift["shiftId"] = matching_day[0]["id"]
+                    pending_update_shift["selectedShift"] = matching_day[0]
+                else:
+                    pending_update_shift["options"] = matching_day
+                    set_pending_update_shift_state(session, pending_update_shift)
+                    option_lines = [format_shift_option_line(idx + 1, shift) for idx, shift in enumerate(matching_day)]
+                    return (
+                        f"I found multiple shifts on {target_date.strftime('%A, %b %d, %Y')}. "
+                        "Reply with the number to update:\n" + "\n".join(option_lines)
+                    )
+            else:
+                selected_shift = _resolve_shift_number_reply(message, pending_update_shift)
+                if selected_shift is None:
+                    option_lines = [format_shift_option_line(idx + 1, shift) for idx, shift in enumerate(pending_update_shift.get("options", []))]
+                    return "Please reply with the shift number to update:\n" + "\n".join(option_lines)
+                if selected_shift is False:
+                    option_lines = [format_shift_option_line(idx + 1, shift) for idx, shift in enumerate(pending_update_shift.get("options", []))]
+                    return "That number is out of range. Please choose one of these:\n" + "\n".join(option_lines)
+                pending_update_shift["shiftId"] = selected_shift["id"]
+                pending_update_shift["selectedShift"] = selected_shift
+                pending_update_shift["options"] = []
+
+        update_start = None
+        selected_shift = pending_update_shift.get("selectedShift")
+        if selected_shift:
+            selected_date = datetime.fromisoformat(selected_shift["start"]).date()
+            parsed_time = extract_time_of_day(message)
+            if parsed_time:
+                update_start = datetime.combine(selected_date, datetime.min.time()).replace(
+                    hour=parsed_time[0],
+                    minute=parsed_time[1],
+                ).isoformat()
+
+        update_duration = extract_duration_hours(message)
+        if not update_start and not update_duration:
+            set_pending_update_shift_state(session, pending_update_shift)
+            return "What should I update for this shift? Please provide a new time, duration in hours, or both."
+
+        payload = {"shiftId": pending_update_shift["shiftId"]}
+        if update_start:
+            payload["start"] = update_start
+        if update_duration:
+            payload["durationHours"] = update_duration
+
+        update_operation = {
+            "method": "PUT",
+            "path": "/api/shifts/{shiftId}",
+            "parameters": [
+                {"name": "shiftId", "in": "path", "required": True, "schema": {"type": "integer"}},
+            ],
+            "requestBody": None,
+            "summary": "Update shift",
+        }
+        update_result = call_api(token, update_operation, payload)
+        clear_pending_update_shift_state(session)
+        return {
+            "summary": f"Shift {payload['shiftId']} updated.",
+            "data": {"updateShiftResponse": update_result, "updatedShift": payload},
+        }
+
+    if is_update_shift_intent(message):
+        target_employee_id = session.get("employee_id")
+        name = None
+        if session.get("role") != "Employee":
+            employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
+            name = find_name_in_message(message, employees) if employees else None
+            if name:
+                resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
+                if not resolution or resolution.get("type") == "not_found":
+                    return f"I couldn't find an employee matching '{name}'."
+                if resolution.get("type") == "disambiguation":
+                    options = resolution["options"]
+                    option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
+                    return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+                target_employee_id = resolution["employeeId"]
+
+        if not target_employee_id:
+            return "Who should I update the shift for?"
+
+        target_date = extract_weekday_date(message)
+        update_state = {
+            "intent": "update_shift",
+            "employeeId": target_employee_id,
+            "employeeName": name.title() if name else "you",
+            "targetDate": target_date.isoformat() if target_date else None,
+            "shiftId": None,
+            "selectedShift": None,
+            "options": [],
+        }
+        set_pending_update_shift_state(session, update_state)
+        if not target_date:
+            return "What day is the shift you want to update?"
 
     if pending_shift and pending_shift.get("awaiting") in {"employee_disambiguation", "schedule_disambiguation"}:
         resolved = _resolve_disambiguation_reply(message, pending_shift)
