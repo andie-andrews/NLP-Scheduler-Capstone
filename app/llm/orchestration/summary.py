@@ -26,10 +26,12 @@ def _is_next_shift_question(msg: str):
     )
 
 
-def summarize_shifts(shifts, message: str):
+def summarize_shifts(shifts, message: str, employee_full_name: str | None = None):
+    employee_phrase = f" for {employee_full_name}" if employee_full_name else ""
+
     if not shifts:
         return {
-            "summary": "No shifts found.",
+            "summary": f"No shifts found{employee_phrase}.",
             "totalHours": 0,
             "shifts": shifts
         }
@@ -39,7 +41,7 @@ def summarize_shifts(shifts, message: str):
 
     if _is_hours_question(msg) and "next week" in msg:
         return {
-            "summary": f"You are scheduled for {total_hours} hours, would you like to see your shifts?",
+            "summary": f"Total scheduled hours{employee_phrase} next week: {total_hours}. Would you like to see shifts?",
             "totalHours": total_hours,
             "promptToShowShifts": True,
             "shifts": shifts,
@@ -47,7 +49,7 @@ def summarize_shifts(shifts, message: str):
 
     if _is_hours_question(msg):
         return {
-            "summary": f"Total scheduled hours: {total_hours}",
+            "summary": f"Total scheduled hours{employee_phrase}: {total_hours}",
             "totalHours": total_hours,
             "shifts": shifts
         }
@@ -59,7 +61,7 @@ def summarize_shifts(shifts, message: str):
         friendly_start = _format_shift_datetime(next_shift["start"])
         return {
             "summary": (
-                f"Your next shift is on {friendly_start} for {next_shift.get('durationHours', 0)} hours. "
+                f"The next shift{employee_phrase} is on {friendly_start} for {next_shift.get('durationHours', 0)} hours. "
                 "Would you like to see your shifts?"
             ),
             "totalHours": total_hours,
@@ -69,7 +71,7 @@ def summarize_shifts(shifts, message: str):
         }
 
     return {
-        "summary": f"Found {len(shifts)} shifts totaling {total_hours} hours.",
+        "summary": f"Found {len(shifts)} shifts{employee_phrase} totaling {total_hours} hours.",
         "totalHours": total_hours,
         "shifts": shifts
     }
