@@ -214,6 +214,13 @@ def _build_employee_disambiguation_prompt(name: str, options: list):
     )
 
 
+def _extract_explicit_employee_id(message: str):
+    match = re.search(r"employeeid\s*=\s*(\d+)", message or "", flags=re.IGNORECASE)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
 def _resolve_delete_shift_number_reply(message: str, state):
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
@@ -284,6 +291,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     print("----- USER MESSAGE -----")
     print(message)
     lowered_message = (message or "").lower()
+    explicit_employee_id = _extract_explicit_employee_id(message)
 
     pending_shift = get_pending_shift_state(session)
     pending_delete_shift = get_pending_delete_shift_state(session)
@@ -361,22 +369,24 @@ def run_orchestrator(message: str, token: str, session: dict):
     if is_delete_shift_intent(message):
         employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
         name = find_name_in_message(message, employees) if employees else None
-        if not name:
+        if explicit_employee_id:
+            resolution = {"type": "resolved", "employeeId": explicit_employee_id}
+        elif not name:
             return "Who should I delete the shift for?"
-
-        resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
-        if not resolution or resolution.get("type") == "not_found":
-            return f"I couldn't find an employee matching '{name}'."
-        if resolution.get("type") == "disambiguation":
-            set_pending_employee_disambiguation_state(
-                session,
-                {
-                    "name": name,
-                    "options": resolution["raw"],
-                    "original_message": message,
-                },
-            )
-            return _build_employee_disambiguation_prompt(name, resolution["raw"])
+        else:
+            resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
+            if not resolution or resolution.get("type") == "not_found":
+                return f"I couldn't find an employee matching '{name}'."
+            if resolution.get("type") == "disambiguation":
+                set_pending_employee_disambiguation_state(
+                    session,
+                    {
+                        "name": name,
+                        "options": resolution["raw"],
+                        "original_message": message,
+                    },
+                )
+                return _build_employee_disambiguation_prompt(name, resolution["raw"])
 
         target_date = extract_weekday_date(message)
         if not target_date:
@@ -513,9 +523,9 @@ def run_orchestrator(message: str, token: str, session: dict):
         }
 
     if is_update_shift_intent(message):
-        target_employee_id = session.get("employee_id")
+        target_employee_id = explicit_employee_id or session.get("employee_id")
         name = None
-        if session.get("role") != "Employee":
+        if not explicit_employee_id and session.get("role") != "Employee":
             employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
             name = find_name_in_message(message, employees) if employees else None
             if name:
@@ -662,7 +672,13 @@ def run_orchestrator(message: str, token: str, session: dict):
     name = find_name_in_message(message, employees)
     effective_message = message
 
-    if name:
+    if explicit_employee_id is not None:
+        effective_message += f" (employeeId = {explicit_employee_id})"
+        if memory and hasattr(memory, "save_last_employee"):
+            memory.save_last_employee(explicit_employee_id)
+        elif memory is not None:
+            setattr(memory, "last_employee_id", explicit_employee_id)
+    elif name:
         resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
 
         if resolution["type"] == "not_found":
@@ -730,8 +746,11 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
-        if op_id == "getEmployeeShifts" and "employeeId" not in args and last_employee_id is not None:
-            args["employeeId"] = last_employee_id
+        if op_id == "getEmployeeShifts" and "employeeId" not in args:
+            if explicit_employee_id is not None:
+                args["employeeId"] = explicit_employee_id
+            elif last_employee_id is not None:
+                args["employeeId"] = last_employee_id
 
         inferred_range = extract_week_range_from_message(message)
         if inferred_range:
