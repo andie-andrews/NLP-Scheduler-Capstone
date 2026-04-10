@@ -89,6 +89,7 @@ builder.Services.AddScoped<CreateEmployeeHandler>();
 builder.Services.AddScoped<UpdateEmployeeHandler>();
 builder.Services.AddScoped<DeleteEmployeeHandler>();
 builder.Services.AddScoped<DeleteShiftHandler>();
+builder.Services.AddScoped<UpdateShiftHandler>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
