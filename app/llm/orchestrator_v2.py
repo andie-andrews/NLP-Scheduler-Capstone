@@ -148,11 +148,44 @@ def extract_weekday_datetime(message: str):
         return None
 
     now = datetime.now()
-    delta = (target_day - now.weekday()) % 7
-    if delta == 0:
-        delta = 7
-    start = (now + timedelta(days=delta)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # Prefer "this Friday" in the current week and "next Friday" in the next week.
+    if re.search(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
+        delta = (target_day - now.weekday()) % 7
+        if delta == 0:
+            delta = 7
+        delta += 7
+    elif re.search(r"\bthis\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
+        delta = target_day - now.weekday()
+    else:
+        # Default to the next matching weekday, including today.
+        delta = (target_day - now.weekday()) % 7
+
+    target_date = now + timedelta(days=delta)
+
+    # Parse optional time, e.g. "at 8", "8am", "8:30 pm".
+    time_match = re.search(r"(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", text)
+    if time_match:
+        hour = int(time_match.group(1))
+        minute = int(time_match.group(2) or 0)
+        meridian = (time_match.group(3) or "").lower()
+
+        if meridian == "pm" and hour != 12:
+            hour += 12
+        if meridian == "am" and hour == 12:
+            hour = 0
+    else:
+        hour = 9
+        minute = 0
+
+    start = target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
     return start.isoformat()
+
+
+def _week_start_from_iso(iso_value: str):
+    dt = datetime.fromisoformat(iso_value)
+    week_start = dt - timedelta(days=dt.weekday())
+    return week_start.strftime("%m/%d/%Y")
 
 
 def extract_schedule_name(message: str):
@@ -528,10 +561,39 @@ def run_orchestrator(message: str, token: str, session: dict):
             return "I couldn't match that schedule name. Which schedule should I use?"
         args["scheduleId"] = normalized_schedule_id
         result = call_api(token, OPERATIONS["createShift"], args)
+
+        verification = None
+        get_schedule_shifts = OPERATIONS.get("getScheduleShifts")
+        if get_schedule_shifts:
+            week_start = _week_start_from_iso(args["start"])
+            shifts = call_api(
+                token,
+                get_schedule_shifts,
+                {
+                    "scheduleId": args["scheduleId"],
+                    "weekStart": week_start,
+                },
+            )
+            verification = {
+                "weekStart": week_start,
+                "matchingShiftCount": len(
+                    [
+                        s for s in (shifts or [])
+                        if s.get("employeeId") == args["employeeId"]
+                        and s.get("start") == args["start"]
+                        and s.get("durationHours") == args["durationHours"]
+                    ]
+                ),
+            }
+
         _clear_pending_shift_state(session)
         return {
             "summary": "Shift created successfully.",
-            "data": result
+            "data": {
+                "createShiftResponse": result,
+                "createdShift": args,
+                "verification": verification,
+            }
         }
 
     # 🔍 Get employees for matching
