@@ -64,27 +64,27 @@ def _inject_sticky_new_chat_css():
     st.markdown(
         """
         <style>
-            /* Keep the chat input from running underneath the new-chat button */
+            /* Reserve horizontal room so the input and "New chat" align cleanly */
             [data-testid="stChatInput"] {
-                padding-right: 14rem;
+                padding-right: 13.75rem;
             }
 
             .st-key-new_chat_sticky {
                 position: fixed;
-                right: 1rem;
-                bottom: 1rem;
+                right: 1.25rem;
+                bottom: 1.25rem;
                 z-index: 999;
-                width: 12.5rem;
+                width: 12rem;
             }
 
             @media (max-width: 768px) {
                 [data-testid="stChatInput"] {
-                    padding-right: 10.5rem;
+                    padding-right: 10rem;
                 }
 
                 .st-key-new_chat_sticky {
                     right: 0.75rem;
-                    bottom: 1rem;
+                    bottom: 1.1rem;
                     width: 9rem;
                 }
             }
