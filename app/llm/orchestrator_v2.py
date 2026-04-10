@@ -15,7 +15,8 @@ OPERATIONS = parse_operations(spec)
 
 DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS = [
     "create shift",
-    "schedule",
+    "schedule a shift",
+    "schedule shift",
     "assign shift",
 ]
 
@@ -105,7 +106,7 @@ def is_create_shift_intent(message: str):
     text = message.lower()
     create_shift_operation = OPERATIONS.get("createShift", {})
     openapi_keywords = create_shift_operation.get("intent_phrases") or []
-    keywords = openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS
+    keywords = [k.strip().lower() for k in (openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS) if k]
 
     def phrase_matches(phrase: str):
         words = [w for w in re.split(r"\W+", phrase.lower()) if w]
