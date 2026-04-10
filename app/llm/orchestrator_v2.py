@@ -196,16 +196,20 @@ def _resolve_shift_number_reply(message: str, state):
 def build_system_prompt(session: dict):
     role = session.get("role", "Employee")
     employee_id = session.get("employee_id", "UNKNOWN")
+    memory = session.get("memory") if session else None
+    last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
 
     context = f"""
 CURRENT USER CONTEXT:
 - Role: {role}
 - EmployeeId: {employee_id}
+- LastReferencedEmployeeId: {last_employee_id if last_employee_id is not None else "NONE"}
 
 RULES:
 - If the user says "my", use employeeId = {employee_id}
 - If the user is a Supervisor, they can query other employees
 - If the user is an Employee, they can ONLY query their own data
+- If the user asks a follow-up without naming an employee, reuse LastReferencedEmployeeId
 """
 
     tool_rules = """
@@ -577,9 +581,12 @@ def run_orchestrator(message: str, token: str, session: dict):
             }
         }
 
+    memory = session.get("memory") if session else None
+    last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
     employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
 
     name = find_name_in_message(message, employees)
+    effective_message = message
 
     if name:
         resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
@@ -596,8 +603,19 @@ def run_orchestrator(message: str, token: str, session: dict):
 
         if resolution["type"] == "resolved":
             employee_id = resolution["employeeId"]
-            message += f" (employeeId = {employee_id})"
+            effective_message += f" (employeeId = {employee_id})"
+            if memory and hasattr(memory, "save_last_employee"):
+                memory.save_last_employee(employee_id)
+            elif memory is not None:
+                setattr(memory, "last_employee_id", employee_id)
             print(f"Resolved {name} → employeeId {employee_id}")
+    elif (
+        last_employee_id is not None
+        and re.search(r"\b(week|month|shift|schedule|hours?)\b", lowered_message)
+        and re.search(r"\b(next|this|what about|how many|scheduled|schedule)\b", lowered_message)
+    ):
+        effective_message += f" (employeeId = {last_employee_id})"
+        print(f"Using last referenced employeeId {last_employee_id} for follow-up message.")
 
     tools = sanitize_tools_for_openai(build_tools(OPERATIONS))
 
@@ -613,7 +631,7 @@ def run_orchestrator(message: str, token: str, session: dict):
         model="gpt-4o",
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
+            {"role": "user", "content": effective_message}
         ],
         tools=tools,
         tool_choice="auto"
@@ -634,6 +652,9 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
+        if op_id == "getEmployeeShifts" and "employeeId" not in args and last_employee_id is not None:
+            args["employeeId"] = last_employee_id
+
         inferred_range = extract_week_range_from_message(message)
         if inferred_range:
             # Force deterministic "this week"/"next week" ranges so model-generated
@@ -664,6 +685,11 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(result)
 
     if op_id == "getEmployeeShifts":
+        if memory is not None and args.get("employeeId") is not None:
+            if hasattr(memory, "save_last_employee"):
+                memory.save_last_employee(args["employeeId"])
+            else:
+                setattr(memory, "last_employee_id", args["employeeId"])
         summary_data = summarize_shifts(result, message)
         lower_message = (message or "").lower()
         explicitly_asked_for_shifts = bool(
