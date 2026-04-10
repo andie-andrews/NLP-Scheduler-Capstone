@@ -6,13 +6,7 @@ from datetime import datetime
 
 
 def render_ai_assistant():
-    header_col, button_col = st.columns([5, 1])
-    with header_col:
-        st.header("🤖 AI Scheduler Assistant")
-    with button_col:
-        if st.button("🆕 New chat", use_container_width=True):
-            _start_new_chat()
-            st.rerun()
+    st.header("🤖 AI Scheduler Assistant")
 
     # -------------------------------
     # 🧠 Memory (session)
@@ -34,6 +28,11 @@ def render_ai_assistant():
     # -------------------------------
     # 💬 Chat Input (interactive)
     # -------------------------------
+    _inject_sticky_new_chat_css()
+    if st.button("🆕 New chat", key="new_chat_sticky", use_container_width=True):
+        _start_new_chat()
+        st.rerun()
+
     user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
     if not user_input:
         return
@@ -58,6 +57,32 @@ def render_ai_assistant():
         "content": response,
     })
     st.rerun()
+
+
+
+def _inject_sticky_new_chat_css():
+    st.markdown(
+        """
+        <style>
+            .st-key-new_chat_sticky {
+                position: fixed;
+                right: 1rem;
+                bottom: 5.25rem;
+                z-index: 999;
+                width: min(220px, calc(100vw - 2rem));
+            }
+
+            @media (max-width: 768px) {
+                .st-key-new_chat_sticky {
+                    right: 0.75rem;
+                    bottom: 5.5rem;
+                    width: calc(100vw - 1.5rem);
+                }
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _render_chat_history():
