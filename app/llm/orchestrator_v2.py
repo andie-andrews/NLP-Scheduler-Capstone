@@ -145,14 +145,59 @@ def extract_weekday_datetime(message: str):
             break
 
     if target_day is None:
+        print("[create_shift][datetime] No weekday found in message.")
         return None
 
     now = datetime.now()
-    delta = (target_day - now.weekday()) % 7
-    if delta == 0:
-        delta = 7
-    start = (now + timedelta(days=delta)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # Prefer "this Friday" in the current week and "next Friday" in the next week.
+    if re.search(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
+        delta = (target_day - now.weekday()) % 7
+        if delta == 0:
+            delta = 7
+        delta += 7
+    elif re.search(r"\bthis\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
+        delta = target_day - now.weekday()
+    else:
+        # Default to the next matching weekday, including today.
+        delta = (target_day - now.weekday()) % 7
+
+    target_date = now + timedelta(days=delta)
+
+    # Parse optional time, e.g. "at 8", "8am", "8:30 pm".
+    time_match = re.search(r"(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", text)
+    if time_match:
+        hour = int(time_match.group(1))
+        minute = int(time_match.group(2) or 0)
+        meridian = (time_match.group(3) or "").lower()
+
+        if meridian == "pm" and hour != 12:
+            hour += 12
+        if meridian == "am" and hour == 12:
+            hour = 0
+    else:
+        hour = 9
+        minute = 0
+
+    start = target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    print(
+        "[create_shift][datetime] Parsed start:",
+        {
+            "message": message,
+            "target_day": target_day,
+            "delta_days": delta,
+            "hour": hour,
+            "minute": minute,
+            "iso_start": start.isoformat(),
+        },
+    )
     return start.isoformat()
+
+
+def _week_start_from_iso(iso_value: str):
+    dt = datetime.fromisoformat(iso_value)
+    week_start = dt - timedelta(days=dt.weekday())
+    return week_start.strftime("%m/%d/%Y")
 
 
 def extract_schedule_name(message: str):
@@ -210,6 +255,8 @@ def _next_missing_shift_field(state):
 
 
 def _attempt_fill_shift_state_from_message(message, token, state):
+    print("[create_shift][state] Filling state from message:", message)
+    print("[create_shift][state] Before fill:", state)
     employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
     name = find_name_in_message(message, employees) if employees else None
     if name and not state.get("employeeId"):
@@ -258,6 +305,7 @@ def _attempt_fill_shift_state_from_message(message, token, state):
                     "options": schedule_resolution["options"],
                 }
 
+    print("[create_shift][state] After fill:", state)
     return None
 
 
@@ -292,10 +340,13 @@ def _normalize_schedule_id_arg(token, raw_value):
     if isinstance(raw_value, str):
         value = raw_value.strip()
         if value.isdigit():
+            print("[create_shift][schedule] scheduleId provided as numeric string:", value)
             return int(value)
         resolution = resolve_schedule_id(token, value)
         if resolution and resolution.get("type") == "resolved":
+            print("[create_shift][schedule] Resolved schedule name to ID:", resolution)
             return resolution["scheduleId"]
+        print("[create_shift][schedule] Failed to resolve schedule:", value)
     return None
 
 
@@ -490,6 +541,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             return "Please choose one option by number:\n" + "\n".join(lines)
 
     if pending_shift or is_create_shift_intent(message):
+        print("[create_shift] Entered create-shift flow.")
         state = pending_shift or {
             "intent": "create_shift",
             "employeeId": None,
@@ -504,6 +556,7 @@ def run_orchestrator(message: str, token: str, session: dict):
 
         disambiguation = _attempt_fill_shift_state_from_message(message, token, state)
         if disambiguation:
+            print("[create_shift] Disambiguation required:", disambiguation)
             options = disambiguation["options"]
             option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
             entity = disambiguation["entity"]
@@ -511,6 +564,7 @@ def run_orchestrator(message: str, token: str, session: dict):
 
         question = _build_create_shift_question(state)
         if question:
+            print("[create_shift] Missing field, asking follow-up:", {"awaiting": _next_missing_shift_field(state), "question": question})
             state["awaiting"] = _next_missing_shift_field(state)
             _set_pending_shift_state(session, state)
             return question
@@ -523,15 +577,49 @@ def run_orchestrator(message: str, token: str, session: dict):
         }
         normalized_schedule_id = _normalize_schedule_id_arg(token, args.get("scheduleId"))
         if normalized_schedule_id is None:
+            print("[create_shift] Schedule resolution failed for args:", args)
             state["scheduleId"] = None
             _set_pending_shift_state(session, state)
             return "I couldn't match that schedule name. Which schedule should I use?"
         args["scheduleId"] = normalized_schedule_id
+        print("[create_shift] Calling createShift with args:", args)
         result = call_api(token, OPERATIONS["createShift"], args)
+        print("[create_shift] createShift response:", result)
+
+        verification = None
+        get_schedule_shifts = OPERATIONS.get("getScheduleShifts")
+        if get_schedule_shifts:
+            week_start = _week_start_from_iso(args["start"])
+            print("[create_shift] Verifying created shift in schedule week:", {"scheduleId": args["scheduleId"], "weekStart": week_start})
+            shifts = call_api(
+                token,
+                get_schedule_shifts,
+                {
+                    "scheduleId": args["scheduleId"],
+                    "weekStart": week_start,
+                },
+            )
+            verification = {
+                "weekStart": week_start,
+                "matchingShiftCount": len(
+                    [
+                        s for s in (shifts or [])
+                        if s.get("employeeId") == args["employeeId"]
+                        and s.get("start") == args["start"]
+                        and s.get("durationHours") == args["durationHours"]
+                    ]
+                ),
+            }
+            print("[create_shift] Verification result:", verification)
+
         _clear_pending_shift_state(session)
         return {
             "summary": "Shift created successfully.",
-            "data": result
+            "data": {
+                "createShiftResponse": result,
+                "createdShift": args,
+                "verification": verification,
+            }
         }
 
     # 🔍 Get employees for matching
