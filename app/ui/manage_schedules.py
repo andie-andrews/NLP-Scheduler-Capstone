@@ -4,6 +4,8 @@ from api_client import (
     get_schedule_employees,
     get_schedule_shifts,
     create_shift,
+    update_shift,
+    delete_shift,
     create_schedule,
     update_schedule,
     delete_schedule,
@@ -20,6 +22,14 @@ def render():
     # 🔥 INIT STATE
     if "week_offset" not in st.session_state:
         st.session_state["week_offset"] = 0
+    if "pending_cell_shift" not in st.session_state:
+        st.session_state["pending_cell_shift"] = None
+    if "editing_shift" not in st.session_state:
+        st.session_state["editing_shift"] = None
+    if "deleting_shift" not in st.session_state:
+        st.session_state["deleting_shift"] = None
+    if "remove_schedule_employee" not in st.session_state:
+        st.session_state["remove_schedule_employee"] = None
 
     # 🔥 HEADER
     header_col1, header_col2 = st.columns([6, 2])
@@ -149,45 +159,61 @@ def render():
         row[0].markdown(f"**{full_name} ({employee_total}h)**")
 
         if row[1].button("❌", key=f"remove_{emp['id']}"):
-            remove_employee_from_schedule(schedule_id, emp["id"])
-            st.rerun()
+            st.session_state["remove_schedule_employee"] = {
+                "schedule_id": schedule_id,
+                "employee_id": emp["id"],
+                "employee_name": full_name
+            }
 
         for i, day in enumerate(days):
             day_str = day.strftime("%Y-%m-%d")
             key = (emp["id"], day_str)
 
             with row[i + 2]:
+                cell_id = f"{emp['id']}_{day_str}"
+
+                with st.popover("Cell options", use_container_width=True):
+                    st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+
+                    if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
+                        st.session_state["pending_cell_shift"] = {
+                            "schedule_id": schedule_id,
+                            "employee_id": emp["id"],
+                            "employee_name": full_name,
+                            "day_str": day_str
+                        }
+                        st.rerun()
 
                 if key in shift_lookup:
                     for shift in shift_lookup[key]:
                         start_dt = datetime.fromisoformat(shift["start"])
                         end_dt = start_dt + timedelta(hours=shift["durationHours"])
-
-                        st.markdown(
-                            f"""
-                            <div style="
-                                background:#2c2f36;
-                                padding:6px;
-                                border-radius:6px;
-                                margin:4px 0;
-                                font-size:12px;
-                                border:1px solid #444;
-                            ">
-                                {start_dt.strftime('%I:%M %p')} - {end_dt.strftime('%I:%M %p')}<br/>
-                                <span style='color:#aaa'>{shift['durationHours']}h</span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
+                        shift_id = shift["id"]
+                        shift_label = (
+                            f"{start_dt.strftime('%I:%M %p')} - "
+                            f"{end_dt.strftime('%I:%M %p')} ({shift['durationHours']}h)"
                         )
 
-                if st.button("＋", key=f"add_shift_{emp['id']}_{day_str}"):
-                    create_shift(
-                        schedule_id,
-                        emp["id"],
-                        day.replace(hour=8).isoformat(),
-                        8
-                    )
-                    st.rerun()
+                        with st.popover(shift_label, use_container_width=True):
+                            st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+
+                            if st.button("Edit shift", key=f"edit_shift_{shift_id}", use_container_width=True):
+                                st.session_state["editing_shift"] = {
+                                    "id": shift_id,
+                                    "employee_name": full_name,
+                                    "start": shift["start"],
+                                    "durationHours": shift["durationHours"]
+                                }
+                                st.rerun()
+
+                            if st.button("Delete shift", key=f"delete_shift_{shift_id}", use_container_width=True):
+                                st.session_state["deleting_shift"] = {
+                                    "id": shift_id,
+                                    "employee_name": full_name,
+                                    "start": shift["start"],
+                                    "durationHours": shift["durationHours"]
+                                }
+                                st.rerun()
 
     # 🔹 FOOTER
     st.markdown("---")
@@ -268,3 +294,99 @@ def render():
                 st.rerun()
 
         delete_dialog()
+
+    if st.session_state.get("pending_cell_shift"):
+        pending = st.session_state["pending_cell_shift"]
+
+        @st.dialog("Add Shift")
+        def add_shift_dialog():
+            default_start = datetime.fromisoformat(f"{pending['day_str']}T08:00:00")
+            start_date = st.date_input("Date", value=default_start.date())
+            start_time = st.time_input("Start time", value=default_start.time())
+            duration = st.number_input("Duration (hours)", min_value=1.0, max_value=24.0, value=8.0, step=0.5)
+
+            if st.button("Create shift", use_container_width=True):
+                shift_start = datetime.combine(start_date, start_time).isoformat()
+                create_shift(
+                    pending["schedule_id"],
+                    pending["employee_id"],
+                    shift_start,
+                    duration
+                )
+                st.session_state["pending_cell_shift"] = None
+                st.rerun()
+
+            if st.button("Cancel", use_container_width=True):
+                st.session_state["pending_cell_shift"] = None
+                st.rerun()
+
+        add_shift_dialog()
+
+    if st.session_state.get("editing_shift"):
+        editing = st.session_state["editing_shift"]
+
+        @st.dialog("Edit Shift")
+        def edit_shift_dialog():
+            current_start = datetime.fromisoformat(editing["start"])
+            start_date = st.date_input("Date", value=current_start.date(), key=f"edit_date_{editing['id']}")
+            start_time = st.time_input("Start time", value=current_start.time(), key=f"edit_time_{editing['id']}")
+            duration = st.number_input(
+                "Duration (hours)",
+                min_value=1.0,
+                max_value=24.0,
+                value=float(editing["durationHours"]),
+                step=0.5,
+                key=f"edit_duration_{editing['id']}"
+            )
+
+            if st.button("Save changes", use_container_width=True):
+                shift_start = datetime.combine(start_date, start_time).isoformat()
+                update_shift(editing["id"], start=shift_start, duration=duration)
+                st.session_state["editing_shift"] = None
+                st.rerun()
+
+            if st.button("Cancel", use_container_width=True):
+                st.session_state["editing_shift"] = None
+                st.rerun()
+
+        edit_shift_dialog()
+
+    if st.session_state.get("deleting_shift"):
+        deleting = st.session_state["deleting_shift"]
+
+        @st.dialog("Delete Shift")
+        def delete_shift_dialog():
+            start_dt = datetime.fromisoformat(deleting["start"])
+            st.warning(
+                f"Delete shift for {deleting['employee_name']} on "
+                f"{start_dt.strftime('%b %d, %Y at %I:%M %p')}?"
+            )
+
+            if st.button("Confirm delete", use_container_width=True):
+                delete_shift(deleting["id"])
+                st.session_state["deleting_shift"] = None
+                st.rerun()
+
+            if st.button("Cancel", use_container_width=True):
+                st.session_state["deleting_shift"] = None
+                st.rerun()
+
+        delete_shift_dialog()
+
+    if st.session_state.get("remove_schedule_employee"):
+        removal = st.session_state["remove_schedule_employee"]
+
+        @st.dialog("Remove Employee")
+        def remove_employee_dialog():
+            st.warning(f"Remove {removal['employee_name']} from this schedule?")
+
+            if st.button("Confirm remove", use_container_width=True):
+                remove_employee_from_schedule(removal["schedule_id"], removal["employee_id"])
+                st.session_state["remove_schedule_employee"] = None
+                st.rerun()
+
+            if st.button("Cancel", use_container_width=True):
+                st.session_state["remove_schedule_employee"] = None
+                st.rerun()
+
+        remove_employee_dialog()
