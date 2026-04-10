@@ -15,21 +15,40 @@ public class GetScheduleShiftsHandler
 
   public async Task<IEnumerable<Shift>> Handle(
     int scheduleId, 
-    DateTime? weekStart, 
+    DateTime? startDate,
+    DateTime? endDate,
     int? employeeId)
   {
     using var connection = _db.CreateConnection();
 
-    var start = weekStart ?? DateTime.UtcNow.Date;
-    var startOfWeek = start.AddDays(-(int)start.DayOfWeek);
-    var endOfWeek = startOfWeek.AddDays(7);
+    var today = DateTime.UtcNow.Date;
+    var defaultStartOfWeek = today.AddDays(-(int)today.DayOfWeek);
+    var effectiveStartDate = startDate?.Date;
+    var effectiveEndDate = endDate?.Date;
+
+    if (!effectiveStartDate.HasValue && !effectiveEndDate.HasValue)
+    {
+      effectiveStartDate = defaultStartOfWeek;
+      effectiveEndDate = defaultStartOfWeek.AddDays(6);
+    }
+    else if (!effectiveStartDate.HasValue && effectiveEndDate.HasValue)
+    {
+      effectiveStartDate = effectiveEndDate.Value;
+    }
+    else if (effectiveStartDate.HasValue && !effectiveEndDate.HasValue)
+    {
+      effectiveEndDate = effectiveStartDate.Value;
+    }
+
+    var queryStart = effectiveStartDate!.Value;
+    var queryEndExclusive = effectiveEndDate!.Value.AddDays(1);
 
     var sql = @"
             SELECT Id, ScheduleId, EmployeeId, Start, DurationHours
             FROM Shifts
             WHERE ScheduleId = @scheduleId
-              AND Start >= @startOfWeek
-              AND Start < @endOfWeek
+              AND Start >= @queryStart
+              AND Start < @queryEndExclusive
         ";
 
     if (employeeId.HasValue)
@@ -42,8 +61,8 @@ public class GetScheduleShiftsHandler
     return await connection.QueryAsync<Shift>(sql, new
     {
       scheduleId,
-      startOfWeek,
-      endOfWeek,
+      queryStart,
+      queryEndExclusive,
       employeeId
     });
   }

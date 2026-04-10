@@ -11,12 +11,12 @@ from llm.orchestration.intents import is_create_shift_intent, is_delete_shift_in
 from llm.orchestration.parsers import (
     extract_duration_hours,
     extract_schedule_name,
+    extract_week_range_from_message,
     extract_weekday_date,
     extract_weekday_datetime,
     find_name_in_message,
     format_shift_option_line,
-    get_week_start,
-    week_start_from_iso,
+    week_range_from_date,
 )
 from llm.orchestration.resolvers import (
     normalize_schedule_id_arg,
@@ -183,8 +183,10 @@ Parameter rules:
 - If a name is mentioned, resolve it to employeeId
 - If employeeId is missing, DO NOT call the function
 
-weekStart:
-- If not provided, default to the current week
+startDate/endDate:
+- For "this week", use Sunday through Saturday
+- For "next week", use next Sunday through next Saturday
+- If user does not provide a date range and you cannot infer one, ask a follow-up question
 
 DO NOT return text if a function can be called.
 ONLY return tool calls.
@@ -247,11 +249,15 @@ def run_orchestrator(message: str, token: str, session: dict):
         if not target_date:
             return "What day should I delete the shift from?"
 
-        week_start = (target_date - timedelta(days=target_date.weekday())).strftime("%m/%d/%Y")
+        week_start_date, week_end_date = week_range_from_date(datetime.combine(target_date, datetime.min.time()))
         shifts = call_api(
             token,
             OPERATIONS["getEmployeeShifts"],
-            {"employeeId": resolution["employeeId"], "weekStart": week_start},
+            {
+                "employeeId": resolution["employeeId"],
+                "startDate": week_start_date.isoformat(),
+                "endDate": week_end_date.isoformat(),
+            },
         ) or []
 
         matching_day = [
@@ -344,18 +350,28 @@ def run_orchestrator(message: str, token: str, session: dict):
         verification = None
         get_schedule_shifts = OPERATIONS.get("getScheduleShifts")
         if get_schedule_shifts:
-            week_start = week_start_from_iso(args["start"])
-            print("[create_shift] Verifying created shift in schedule week:", {"scheduleId": args["scheduleId"], "weekStart": week_start})
+            parsed_start = datetime.fromisoformat(args["start"])
+            week_start_date, week_end_date = week_range_from_date(parsed_start)
+            print(
+                "[create_shift] Verifying created shift in schedule week:",
+                {
+                    "scheduleId": args["scheduleId"],
+                    "startDate": week_start_date.isoformat(),
+                    "endDate": week_end_date.isoformat(),
+                },
+            )
             shifts = call_api(
                 token,
                 get_schedule_shifts,
                 {
                     "scheduleId": args["scheduleId"],
-                    "weekStart": week_start,
+                    "startDate": week_start_date.isoformat(),
+                    "endDate": week_end_date.isoformat(),
                 },
             )
             verification = {
-                "weekStart": week_start,
+                "startDate": week_start_date.isoformat(),
+                "endDate": week_end_date.isoformat(),
                 "matchingShiftCount": len(
                     [
                         s for s in (shifts or [])
@@ -433,9 +449,13 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(op_id)
     print(args)
 
-    if op_id == "getEmployeeShifts":
-        if "weekStart" not in args:
-            args["weekStart"] = get_week_start()
+    if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
+        if "startDate" not in args and "endDate" not in args:
+            inferred_range = extract_week_range_from_message(message)
+            if inferred_range:
+                args.update(inferred_range)
+            else:
+                return "What date range should I use? I can use this week (Sunday–Saturday) or next week."
     if op_id == "createShift":
         normalized_schedule_id = normalize_schedule_id_arg(token, args.get("scheduleId"), OPERATIONS, call_api)
         if normalized_schedule_id is None:

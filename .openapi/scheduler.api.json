@@ -10,20 +10,26 @@
       "url": "https://localhost:7259"
     }
   ],
-
   "paths": {
-
     "/api/auth/login": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "operationId": "loginUser",
         "x-operation-type": "mutation",
-        "x-intent": ["login", "authenticate", "sign in"],
+        "x-intent": [
+          "login",
+          "authenticate",
+          "sign in"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
             }
           }
         },
@@ -32,18 +38,23 @@
             "description": "JWT token",
             "content": {
               "application/json": {
-                "example": { "token": "jwt-token" }
+                "example": {
+                  "token": "jwt-token"
+                }
               }
             }
           },
-          "401": { "description": "Invalid credentials" }
+          "401": {
+            "description": "Invalid credentials"
+          }
         }
       }
     },
-
     "/api/employees": {
       "get": {
-        "tags": [ "Employee" ],
+        "tags": [
+          "Employee"
+        ],
         "operationId": "searchEmployees",
         "summary": "Search employees",
         "description": "Search employees by first, last, or full name.",
@@ -60,14 +71,21 @@
           "disambiguation": {
             "enabled": true,
             "prompt": "I found multiple employees matching that name. Which one did you mean?",
-            "displayFields": [ "id", "firstName", "lastName", "roleId" ]
+            "displayFields": [
+              "id",
+              "firstName",
+              "lastName",
+              "roleId"
+            ]
           }
         },
         "parameters": [
           {
             "name": "query",
             "in": "query",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -77,7 +95,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Employee" }
+                  "items": {
+                    "$ref": "#/components/schemas/Employee"
+                  }
                 },
                 "example": [
                   {
@@ -96,12 +116,15 @@
               }
             }
           },
-          "400": { "description": "Invalid query" }
+          "400": {
+            "description": "Invalid query"
+          }
         }
       },
-
       "post": {
-        "tags": [ "Employee" ],
+        "tags": [
+          "Employee"
+        ],
         "operationId": "createEmployee",
         "summary": "Create employee",
         "x-operation-type": "mutation",
@@ -114,7 +137,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateEmployeeRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateEmployeeRequest"
+              }
             }
           }
         },
@@ -123,7 +148,9 @@
             "description": "Created employee",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Employee" },
+                "schema": {
+                  "$ref": "#/components/schemas/Employee"
+                },
                 "example": {
                   "id": 10,
                   "firstName": "Jane",
@@ -133,14 +160,17 @@
               }
             }
           },
-          "400": { "description": "Invalid input" }
+          "400": {
+            "description": "Invalid input"
+          }
         }
       }
     },
-
     "/api/employees/{employeeId}": {
       "get": {
-        "tags": ["Employee"],
+        "tags": [
+          "Employee"
+        ],
         "operationId": "getEmployeeById",
         "x-operation-type": "query",
         "x-intent": [
@@ -153,7 +183,9 @@
             "name": "employeeId",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -161,16 +193,21 @@
             "description": "Employee",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Employee" }
+                "schema": {
+                  "$ref": "#/components/schemas/Employee"
+                }
               }
             }
           },
-          "404": { "description": "Employee not found" }
+          "404": {
+            "description": "Employee not found"
+          }
         }
       },
-
       "put": {
-        "tags": [ "Employee" ],
+        "tags": [
+          "Employee"
+        ],
         "operationId": "updateEmployee",
         "summary": "Update employee",
         "x-operation-type": "mutation",
@@ -183,24 +220,33 @@
             "name": "employeeId",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateEmployeeRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEmployeeRequest"
+              }
             }
           }
         },
         "responses": {
-          "200": { "description": "Updated" },
-          "400": { "description": "Invalid input" }
+          "200": {
+            "description": "Updated"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
         }
       },
-
       "delete": {
-        "tags": ["Employee"],
+        "tags": [
+          "Employee"
+        ],
         "operationId": "deleteEmployee",
         "x-operation-type": "mutation",
         "x-intent": [
@@ -212,18 +258,23 @@
             "name": "employeeId",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Deleted" }
+          "200": {
+            "description": "Deleted"
+          }
         }
       }
     },
-
     "/api/employees/{employeeId}/shifts": {
       "get": {
-        "tags": ["Shifts"],
+        "tags": [
+          "Shifts"
+        ],
         "operationId": "getEmployeeShifts",
         "x-operation-type": "query",
         "x-intent": [
@@ -236,12 +287,27 @@
             "name": "employeeId",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           },
           {
-            "name": "weekStart",
+            "name": "startDate",
             "in": "query",
-            "schema": { "type": "string" }
+            "description": "Optional inclusive start date filter (YYYY-MM-DD)",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "Optional inclusive end date filter (YYYY-MM-DD)",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
           }
         ],
         "responses": {
@@ -251,7 +317,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Shift" }
+                  "items": {
+                    "$ref": "#/components/schemas/Shift"
+                  }
                 }
               }
             }
@@ -259,10 +327,11 @@
         }
       }
     },
-
     "/api/schedules": {
       "get": {
-        "tags": ["Schedule"],
+        "tags": [
+          "Schedule"
+        ],
         "operationId": "getSchedules",
         "x-operation-type": "query",
         "x-intent": [
@@ -276,14 +345,19 @@
           "disambiguation": {
             "enabled": true,
             "prompt": "I found multiple schedules matching that name. Which one did you mean?",
-            "displayFields": [ "id", "name"]
+            "displayFields": [
+              "id",
+              "name"
+            ]
           }
         },
         "parameters": [
           {
             "name": "query",
             "in": "query",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -293,16 +367,19 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Schedule" }
+                  "items": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
                 }
               }
             }
           }
         }
       },
-
       "post": {
-        "tags": ["Schedule"],
+        "tags": [
+          "Schedule"
+        ],
         "operationId": "createSchedule",
         "x-operation-type": "mutation",
         "x-intent": [
@@ -313,7 +390,9 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateScheduleRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduleRequest"
+              }
             }
           }
         },
@@ -322,17 +401,20 @@
             "description": "Created schedule",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Schedule" }
+                "schema": {
+                  "$ref": "#/components/schemas/Schedule"
+                }
               }
             }
           }
         }
       }
     },
-
     "/api/schedules/{scheduleId}/employees": {
       "get": {
-        "tags": ["Schedule"],
+        "tags": [
+          "Schedule"
+        ],
         "operationId": "getScheduleEmployees",
         "x-operation-type": "query",
         "x-intent": [
@@ -345,7 +427,9 @@
             "name": "scheduleId",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -355,7 +439,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Employee" }
+                  "items": {
+                    "$ref": "#/components/schemas/Employee"
+                  }
                 }
               }
             }
@@ -363,10 +449,11 @@
         }
       }
     },
-
     "/api/schedules/{scheduleId}/shifts": {
       "get": {
-        "tags": ["Shifts"],
+        "tags": [
+          "Shifts"
+        ],
         "operationId": "getScheduleShifts",
         "x-operation-type": "query",
         "x-intent": [
@@ -379,7 +466,27 @@
             "name": "scheduleId",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Optional inclusive start date filter (YYYY-MM-DD)",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "Optional inclusive end date filter (YYYY-MM-DD)",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
           }
         ],
         "responses": {
@@ -389,16 +496,19 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Shift" }
+                  "items": {
+                    "$ref": "#/components/schemas/Shift"
+                  }
                 }
               }
             }
           }
         }
       },
-
       "post": {
-        "tags": ["Shifts"],
+        "tags": [
+          "Shifts"
+        ],
         "operationId": "createShift",
         "x-operation-type": "mutation",
         "x-intent": [
@@ -417,7 +527,9 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateShiftRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateShiftRequest"
+              }
             }
           }
         },
@@ -426,17 +538,20 @@
             "description": "Created shift",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Shift" }
+                "schema": {
+                  "$ref": "#/components/schemas/Shift"
+                }
               }
             }
           }
         }
       }
     },
-
     "/api/shifts/{shiftId}": {
       "delete": {
-        "tags": ["Shifts"],
+        "tags": [
+          "Shifts"
+        ],
         "operationId": "deleteShift",
         "x-operation-type": "mutation",
         "x-intent": [
@@ -449,18 +564,23 @@
             "name": "shiftId",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Deleted" }
+          "200": {
+            "description": "Deleted"
+          }
         }
       }
     },
-
     "/api/health": {
       "get": {
-        "tags": ["System"],
+        "tags": [
+          "System"
+        ],
         "operationId": "healthCheck",
         "x-operation-type": "query",
         "x-intent": [
@@ -475,87 +595,139 @@
       }
     }
   },
-
   "components": {
     "schemas": {
-
       "Employee": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "firstName": { "type": "string" },
-          "lastName": { "type": "string" },
+          "id": {
+            "type": "integer"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
           "roleId": {
             "type": "integer",
             "description": "1 = Employee, 2 = Supervisor"
           }
         }
       },
-
       "Schedule": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "startDate": { "type": "string" },
-          "endDate": { "type": "string" }
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          }
         }
       },
-
       "Shift": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "employeeId": { "type": "integer" },
-          "scheduleId": { "type": "integer" },
-          "employeeName": { "type": "string" },
-          "start": { "type": "string", "format": "date-time" },
-          "durationHours": { "type": "integer" }
+          "id": {
+            "type": "integer"
+          },
+          "employeeId": {
+            "type": "integer"
+          },
+          "scheduleId": {
+            "type": "integer"
+          },
+          "employeeName": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationHours": {
+            "type": "integer"
+          }
         }
       },
-
       "CreateEmployeeRequest": {
         "type": "object",
-        "required": ["firstName", "lastName"],
+        "required": [
+          "firstName",
+          "lastName"
+        ],
         "properties": {
-          "firstName": { "type": "string" },
-          "lastName": { "type": "string" },
-          "roleId": { "type": "integer" }
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "integer"
+          }
         }
       },
-
       "UpdateEmployeeRequest": {
         "type": "object",
         "properties": {
-          "firstName": { "type": "string" },
-          "lastName": { "type": "string" },
-          "roleId": { "type": "integer" }
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "integer"
+          }
         }
       },
-
       "CreateScheduleRequest": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" }
+          "name": {
+            "type": "string"
+          }
         }
       },
-
       "CreateShiftRequest": {
         "type": "object",
-        "required": ["employeeId", "start", "durationHours", "scheduleId"],
+        "required": [
+          "employeeId",
+          "start",
+          "durationHours",
+          "scheduleId"
+        ],
         "properties": {
-          "employeeId": { "type": "integer" },
-          "start": { "type": "string" },
-          "durationHours": { "type": "integer" },
-          "scheduleId": { "type": "integer" }
+          "employeeId": {
+            "type": "integer"
+          },
+          "start": {
+            "type": "string"
+          },
+          "durationHours": {
+            "type": "integer"
+          },
+          "scheduleId": {
+            "type": "integer"
+          }
         }
       },
-
       "LoginRequest": {
         "type": "object",
         "properties": {
-          "username": { "type": "string" },
-          "password": { "type": "string" }
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
         }
       }
     }

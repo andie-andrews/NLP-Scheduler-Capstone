@@ -22,6 +22,7 @@ def render():
     today = datetime.today()
     base_week = today - timedelta(days=today.weekday() + 1 if today.weekday() != 6 else 0)
     start_of_week = base_week + timedelta(weeks=st.session_state["week_offset"])
+    end_of_week = start_of_week + timedelta(days=6)
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
     nav_col2.markdown(
@@ -30,7 +31,10 @@ def render():
     )
 
     res = get_my_schedule(employee_id,
-                          params={"weekStart": start_of_week.isoformat()})
+                          params={
+                              "startDate": start_of_week.date().isoformat(),
+                              "endDate": end_of_week.date().isoformat(),
+                          })
 
     if res.status_code != 200:
         st.error(f"Failed to load schedule {employee_id} - {res.text}")
@@ -57,4 +61,3 @@ def render():
         for s in items:
             start = datetime.fromisoformat(s["start"])
             st.write(f"{start.strftime('%I:%M %p')} - {s['durationHours']} hrs")
-

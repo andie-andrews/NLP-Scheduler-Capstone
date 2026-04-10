@@ -97,6 +97,7 @@ def render():
     today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     base_week = today - timedelta(days=today.weekday() + 1 if today.weekday() != 6 else 0)
     start_of_week = base_week + timedelta(weeks=st.session_state["week_offset"])
+    end_of_week = start_of_week + timedelta(days=6)
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
     nav_col2.markdown(
@@ -135,7 +136,10 @@ def render():
     # 🔹 LOAD SHIFTS
     shift_res = get_schedule_shifts(
         schedule_id,
-        params={"weekStart": start_of_week.isoformat()}
+        params={
+            "startDate": start_of_week.date().isoformat(),
+            "endDate": end_of_week.date().isoformat(),
+        }
     )
     shifts = shift_res.json() if shift_res.status_code == 200 else []
 

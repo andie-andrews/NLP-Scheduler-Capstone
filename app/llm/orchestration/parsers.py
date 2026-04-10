@@ -89,10 +89,26 @@ def extract_weekday_datetime(message: str):
     return start.isoformat()
 
 
-def week_start_from_iso(iso_value: str):
-    dt = datetime.fromisoformat(iso_value)
-    week_start = dt - timedelta(days=dt.weekday())
-    return week_start.strftime("%m/%d/%Y")
+def week_range_from_date(target: datetime):
+    days_since_sunday = (target.weekday() + 1) % 7
+    start = (target - timedelta(days=days_since_sunday)).date()
+    end = start + timedelta(days=6)
+    return start, end
+
+
+def extract_week_range_from_message(message: str, now: datetime | None = None):
+    text = (message or "").lower()
+    now = now or datetime.now()
+
+    if "this week" in text:
+        start, end = week_range_from_date(now)
+        return {"startDate": start.isoformat(), "endDate": end.isoformat()}
+
+    if "next week" in text:
+        start, end = week_range_from_date(now + timedelta(days=7))
+        return {"startDate": start.isoformat(), "endDate": end.isoformat()}
+
+    return None
 
 
 def extract_schedule_name(message: str):
@@ -148,5 +164,6 @@ def format_shift_option_line(index: int, shift: dict):
 
 def get_week_start():
     today = datetime.today()
-    start = today - timedelta(days=today.weekday())
+    days_since_sunday = (today.weekday() + 1) % 7
+    start = today - timedelta(days=days_since_sunday)
     return start.strftime("%m/%d/%Y")

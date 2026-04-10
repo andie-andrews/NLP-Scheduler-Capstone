@@ -11,8 +11,10 @@ Parameter rules:
 - If the user mentions a name (like Jane), use the provided employeeId or aquire the employeeId using the name for query Employee Get 
 - If employeeId is missing, DO NOT call the function
 
-weekStart:
-- If not provided, default to the current week
+startDate/endDate:
+- "this week" means Sunday through Saturday
+- "next week" means next Sunday through next Saturday
+- If date range is unclear, ask a follow-up question
 
 DO NOT return text if a function can be called.
 ONLY return tool calls.

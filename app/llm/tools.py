@@ -8,7 +8,8 @@ BASE_URL = "https://localhost:7259/api"
 # -------------------------------
 def get_week_start(offset=0):
     today = datetime.today()
-    start = today - timedelta(days=today.weekday()) + timedelta(weeks=offset)
+    days_since_sunday = (today.weekday() + 1) % 7
+    start = today - timedelta(days=days_since_sunday) + timedelta(weeks=offset)
     return start.strftime("%m/%d/%Y")  # REQUIRED FORMAT
 
 def parse_datetime(date_str, time_str):
@@ -104,11 +105,15 @@ def get_employee_by_name(token, query: str):
 # SHIFTS (EMPLOYEE)
 # -------------------------------
 def get_employee_shifts(token, employee_id, week_offset=0):
-    week_start = get_week_start(week_offset)
+    week_start = datetime.strptime(get_week_start(week_offset), "%m/%d/%Y")
+    week_end = week_start + timedelta(days=6)
 
     res = requests.get(
         f"{BASE_URL}/employees/{employee_id}/shifts",
-        params={"weekStart": week_start},
+        params={
+            "startDate": week_start.date().isoformat(),
+            "endDate": week_end.date().isoformat(),
+        },
         headers={"Authorization": f"Bearer {token}"},
         verify=False
     )
