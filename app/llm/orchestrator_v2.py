@@ -690,7 +690,19 @@ def run_orchestrator(message: str, token: str, session: dict):
                 memory.save_last_employee(args["employeeId"])
             else:
                 setattr(memory, "last_employee_id", args["employeeId"])
-        summary_data = summarize_shifts(result, message)
+        employee_full_name = None
+        target_employee_id = args.get("employeeId")
+        if target_employee_id is not None and isinstance(employees, list):
+            matched_employee = next(
+                (emp for emp in employees if emp.get("id") == target_employee_id),
+                None,
+            )
+            if matched_employee:
+                first_name = (matched_employee.get("firstName") or "").strip()
+                last_name = (matched_employee.get("lastName") or "").strip()
+                employee_full_name = f"{first_name} {last_name}".strip() or None
+
+        summary_data = summarize_shifts(result, message, employee_full_name=employee_full_name)
         lower_message = (message or "").lower()
         explicitly_asked_for_shifts = bool(
             re.search(r"\b(show|list|display)\b.*\bshift", lower_message)
