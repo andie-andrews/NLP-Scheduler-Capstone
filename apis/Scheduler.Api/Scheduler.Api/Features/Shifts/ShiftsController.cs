@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Scheduler.Api.Features.Schedules.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
+using Scheduler.Api.Features.Shifts.Models;
 using Scheduler.Api.Infrastructure.Domain.Models;
 
 namespace Scheduler.Api.Features.Shifts;
@@ -15,16 +16,19 @@ public class ShiftsController : ControllerBase
   private readonly GetEmployeeShiftsHandler _getEmployeeShifts;
   private readonly CreateShiftHandler _createShiftHandler;
   private readonly DeleteShiftHandler _deleteShiftHandler;
+  private readonly UpdateShiftHandler _updateShiftHandler;
   public ShiftsController(
     GetScheduleShiftsHandler getShifts,
     CreateShiftHandler createShift, 
     GetEmployeeShiftsHandler getEmployeeShifts,
-    DeleteShiftHandler deleteShiftHandler)
+    DeleteShiftHandler deleteShiftHandler,
+    UpdateShiftHandler updateShiftHandler)
   {
     _getShifts = getShifts;
     _createShiftHandler = createShift;
     _getEmployeeShifts = getEmployeeShifts;
     _deleteShiftHandler = deleteShiftHandler;
+    _updateShiftHandler = updateShiftHandler;
   }
 
   /// <summary>
@@ -111,6 +115,29 @@ public class ShiftsController : ControllerBase
   public async Task<IActionResult> DeleteShift([FromRoute] int shiftId)
   {
     await _deleteShiftHandler.Handle(shiftId);
+    return Ok();
+  }
+
+  /// <summary>
+  /// Update a shift (Supervisor only).
+  /// </summary>
+  [HttpPut("shifts/{shiftId}")]
+  [Authorize(Roles = "Supervisor")]
+  [ProducesResponseType(200)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> UpdateShift([FromRoute] int shiftId, UpdateShiftRequest request)
+  {
+    var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
+    var wasUpdated = await _updateShiftHandler.Handle(
+      shiftId,
+      request.Start,
+      request.DurationHours,
+      userEmployeeId
+    );
+
+    if (!wasUpdated)
+      return NotFound();
+
     return Ok();
   }
 }

@@ -18,6 +18,18 @@ from collections import defaultdict
 
 
 def render():
+    def handle_mutation(response, success_message):
+        if response.status_code in (200, 201, 204):
+            st.success(success_message)
+            return True
+
+        try:
+            error_payload = response.json()
+        except Exception:
+            error_payload = response.text or "Unknown error"
+
+        st.error(f"Request failed ({response.status_code}): {error_payload}")
+        return False
 
     # 🔥 INIT STATE
     if "week_offset" not in st.session_state:
@@ -303,18 +315,19 @@ def render():
             default_start = datetime.fromisoformat(f"{pending['day_str']}T08:00:00")
             start_date = st.date_input("Date", value=default_start.date())
             start_time = st.time_input("Start time", value=default_start.time())
-            duration = st.number_input("Duration (hours)", min_value=1.0, max_value=24.0, value=8.0, step=0.5)
+            duration = st.number_input("Duration (hours)", min_value=1, max_value=24, value=8, step=1)
 
             if st.button("Create shift", use_container_width=True):
                 shift_start = datetime.combine(start_date, start_time).isoformat()
-                create_shift(
+                result = create_shift(
                     pending["schedule_id"],
                     pending["employee_id"],
                     shift_start,
-                    duration
+                    int(duration)
                 )
-                st.session_state["pending_cell_shift"] = None
-                st.rerun()
+                if handle_mutation(result, "Shift created."):
+                    st.session_state["pending_cell_shift"] = None
+                    st.rerun()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["pending_cell_shift"] = None
@@ -332,18 +345,19 @@ def render():
             start_time = st.time_input("Start time", value=current_start.time(), key=f"edit_time_{editing['id']}")
             duration = st.number_input(
                 "Duration (hours)",
-                min_value=1.0,
-                max_value=24.0,
-                value=float(editing["durationHours"]),
-                step=0.5,
+                min_value=1,
+                max_value=24,
+                value=int(editing["durationHours"]),
+                step=1,
                 key=f"edit_duration_{editing['id']}"
             )
 
             if st.button("Save changes", use_container_width=True):
                 shift_start = datetime.combine(start_date, start_time).isoformat()
-                update_shift(editing["id"], start=shift_start, duration=duration)
-                st.session_state["editing_shift"] = None
-                st.rerun()
+                result = update_shift(editing["id"], start=shift_start, duration=int(duration))
+                if handle_mutation(result, "Shift updated."):
+                    st.session_state["editing_shift"] = None
+                    st.rerun()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["editing_shift"] = None
@@ -363,9 +377,10 @@ def render():
             )
 
             if st.button("Confirm delete", use_container_width=True):
-                delete_shift(deleting["id"])
-                st.session_state["deleting_shift"] = None
-                st.rerun()
+                result = delete_shift(deleting["id"])
+                if handle_mutation(result, "Shift deleted."):
+                    st.session_state["deleting_shift"] = None
+                    st.rerun()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["deleting_shift"] = None
