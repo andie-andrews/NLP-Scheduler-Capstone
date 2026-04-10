@@ -59,6 +59,7 @@ def summarize_shifts(shifts, message: str):
         friendly_start = _format_shift_datetime(next_shift["start"])
         return {
             "summary": f"Your next shift is on {friendly_start} for {next_shift.get('durationHours', 0)} hours.",
+            "totalHours": total_hours,
             "nextShift": next_shift,
             "shifts": shifts
         }
