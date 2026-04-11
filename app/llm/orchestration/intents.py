@@ -46,13 +46,14 @@ def is_create_schedule_intent(message: str):
 
 def is_add_schedule_member_intent(message: str):
     text = (message or "").lower()
-    member_words = any(word in text for word in ["employee", "manager", "supervisor"])
     add_words = any(word in text for word in ["add", "assign", "include", "put"])
-    return "schedule" in text and member_words and add_words
+    member_words = any(word in text for word in ["employee", "manager", "supervisor"])
+    return "schedule" in text and add_words and (member_words or " to " in text)
 
 
 def is_remove_schedule_member_intent(message: str):
     text = (message or "").lower()
-    member_words = any(word in text for word in ["employee", "manager", "supervisor"])
     remove_words = any(word in text for word in ["remove", "unassign", "delete", "take off"])
-    return "schedule" in text and member_words and remove_words
+    member_words = any(word in text for word in ["employee", "manager", "supervisor"])
+    has_linking_prep = " from " in text or " off " in text
+    return "schedule" in text and remove_words and (member_words or has_linking_prep)

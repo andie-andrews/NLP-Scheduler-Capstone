@@ -283,6 +283,25 @@ def _is_negative(message: str):
     return bool(re.search(r"\b(no|nope|nah|don't|do not|not now)\b", (message or "").lower()))
 
 
+def _extract_schedule_change_target_name(message: str, employees: list):
+    text = (message or "").lower()
+    patterns = [
+        r"(?:add|assign|include|put)\s+(.+?)\s+to\s+.+schedule",
+        r"(?:remove|unassign|delete|take off)\s+(.+?)\s+(?:from|off)\s+.+schedule",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            continue
+        candidate = re.sub(r"\s+", " ", match.group(1).strip())
+        for emp in employees or []:
+            full_name = f"{(emp.get('firstName') or '').strip()} {(emp.get('lastName') or '').strip()}".strip().lower()
+            if full_name and (candidate == full_name or full_name in candidate):
+                return full_name
+    return None
+
+
 def _resolve_delete_shift_number_reply(message: str, state):
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
@@ -516,7 +535,9 @@ def run_orchestrator(message: str, token: str, session: dict):
         employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""}) or []
         action = "add" if is_add_schedule_member_intent(message) else "remove"
         role_target = _extract_member_role_target(message)
-        name = find_name_in_message(message, employees) if employees else None
+        name = _extract_schedule_change_target_name(message, employees) or (
+            find_name_in_message(message, employees) if employees else None
+        )
         state = {
             "action": action,
             "roleTarget": role_target,
