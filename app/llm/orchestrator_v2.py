@@ -318,7 +318,7 @@ def _build_schedule_member_schedule_question(state: dict):
     action = "add" if state.get("action") == "add" else "remove"
     employee_name = state.get("employeeName")
     if employee_name:
-        return f"What schedule did you want to {action} {employee_name} {'to' if action == 'add' else 'from'}?"
+        return f"Sure — what schedule did you want to {action} {employee_name} {'to' if action == 'add' else 'from'}?"
     return "Which schedule should I update?"
 
 
@@ -464,6 +464,7 @@ def run_orchestrator(message: str, token: str, session: dict):
                 if created_id is None:
                     return f"I couldn't create '{schedule_name}'. Please provide an existing schedule name."
                 pending_schedule_member_change["scheduleId"] = created_id
+                pending_schedule_member_change["scheduleName"] = schedule_name
                 pending_schedule_member_change["awaitingCreateSchedule"] = False
             elif _is_negative(message):
                 pending_schedule_member_change["awaitingCreateSchedule"] = False
@@ -523,6 +524,8 @@ def run_orchestrator(message: str, token: str, session: dict):
                     return f"I couldn't find schedule '{suggested_name}'. Do you want me to create it?"
                 return _build_schedule_member_schedule_question(pending_schedule_member_change)
             pending_schedule_member_change["scheduleId"] = resolved_schedule_id
+            if isinstance(schedule_target, str):
+                pending_schedule_member_change["scheduleName"] = schedule_target
 
         operation = _get_schedule_member_operation(pending_schedule_member_change.get("action"))
         if not operation:
@@ -538,11 +541,10 @@ def run_orchestrator(message: str, token: str, session: dict):
         )
         action_word = "added to" if pending_schedule_member_change.get("action") == "add" else "removed from"
         role_word = pending_schedule_member_change.get("roleTarget", "employee")
+        employee_display = pending_schedule_member_change.get("employeeName") or f"{role_word} {pending_schedule_member_change['employeeId']}"
+        schedule_display = pending_schedule_member_change.get("scheduleName") or f"schedule {pending_schedule_member_change['scheduleId']}"
         clear_pending_schedule_member_change_state(session)
-        return (
-            f"{role_word.capitalize()} {pending_schedule_member_change['employeeId']} "
-            f"was {action_word} schedule {pending_schedule_member_change['scheduleId']}."
-        )
+        return f"Done — {employee_display} was {action_word} {schedule_display}."
 
     if is_create_schedule_intent(message):
         schedule_name = _extract_schedule_name_for_create(message)
@@ -573,6 +575,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             "employeeId": None,
             "employeeName": None,
             "scheduleId": None,
+            "scheduleName": None,
             "employeeOptions": [],
             "awaitingCreateSchedule": False,
             "suggestedScheduleName": None,
@@ -603,6 +606,8 @@ def run_orchestrator(message: str, token: str, session: dict):
             if state["scheduleId"] is None and isinstance(raw_schedule_target, str):
                 state["awaitingCreateSchedule"] = True
                 state["suggestedScheduleName"] = raw_schedule_target
+            elif isinstance(raw_schedule_target, str):
+                state["scheduleName"] = raw_schedule_target
 
         if state["employeeId"] is None or state["scheduleId"] is None:
             set_pending_schedule_member_change_state(session, state)
@@ -617,7 +622,9 @@ def run_orchestrator(message: str, token: str, session: dict):
             return "Schedule member update is not available because the API spec is missing that operation."
         call_api(token, operation, {"scheduleId": state["scheduleId"], "employeeId": state["employeeId"]})
         action_word = "added to" if action == "add" else "removed from"
-        return f"{role_target.capitalize()} {state['employeeId']} was {action_word} schedule {state['scheduleId']}."
+        employee_display = state.get("employeeName") or f"{role_target} {state['employeeId']}"
+        schedule_display = state.get("scheduleName") or f"schedule {state['scheduleId']}"
+        return f"Done — {employee_display} was {action_word} {schedule_display}."
 
     if pending_delete_shift:
         selected_shift_id = _resolve_delete_shift_number_reply(message, pending_delete_shift)
