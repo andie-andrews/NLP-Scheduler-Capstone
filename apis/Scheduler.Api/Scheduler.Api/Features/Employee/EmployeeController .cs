@@ -83,7 +83,7 @@ public class EmployeeController : ControllerBase
     if (parts.Length == 1)
     {
       firstName = parts[0];
-      lastName = parts[0];
+      lastName = null;
     }
     else
     {

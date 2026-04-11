@@ -3,16 +3,18 @@ from datetime import datetime, timedelta
 
 
 def find_name_in_message(message: str, employees: list):
-    message_lower = message.lower()
+    message_lower = (message or "").lower()
 
+    # Pass 1: prefer explicit full-name matches anywhere in the utterance.
     for emp in employees:
-        full_name = f"{emp['firstName']} {emp['lastName']}".lower()
-        first_name = emp['firstName'].lower()
-
-        if full_name in message_lower:
+        full_name = f"{emp['firstName']} {emp['lastName']}".strip().lower()
+        if full_name and full_name in message_lower:
             return full_name
 
-        if first_name in message_lower:
+    # Pass 2: fallback to first-name matches only when no full name matched.
+    for emp in employees:
+        first_name = (emp.get("firstName") or "").strip().lower()
+        if first_name and first_name in message_lower:
             return first_name
 
     return None

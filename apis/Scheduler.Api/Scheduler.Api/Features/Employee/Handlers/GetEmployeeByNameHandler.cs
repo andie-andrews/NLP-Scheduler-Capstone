@@ -17,19 +17,6 @@ public class GetEmployeeByNameHandler
   {
     using var connection = _db.CreateConnection();
 
-    var sql = @"
-    SELECT 
-        Id,
-        FirstName,
-        LastName,
-        RoleId
-    FROM Employees
-    WHERE
-        (@FirstName IS NULL OR FirstName LIKE @FirstName + '%')
-        OR
-        (@LastName IS NULL OR LastName LIKE @LastName + '%')
-";
-
     Console.WriteLine($"FirstName: {query.FirstName}, LastName: {query.LastName}");
     var parameters = new
     {
@@ -37,9 +24,42 @@ public class GetEmployeeByNameHandler
       LastName = query.LastName?.Trim()
     };
 
+    if (!string.IsNullOrWhiteSpace(query.FirstName) && !string.IsNullOrWhiteSpace(query.LastName))
+    {
+      var fullNameSql = @"
+      SELECT 
+          Id,
+          FirstName,
+          LastName,
+          RoleId
+      FROM Employees
+      WHERE FirstName LIKE @FirstName + '%'
+        AND LastName LIKE @LastName + '%'
+      ";
+
+      var fullNameMatches = (await connection.QueryAsync<Infrastructure.Domain.Models.Employee>(
+        fullNameSql,
+        parameters)).ToList();
+
+      if (fullNameMatches.Count > 0)
+        return fullNameMatches;
+    }
+
+    var fallbackSql = @"
+    SELECT 
+        Id,
+        FirstName,
+        LastName,
+        RoleId
+    FROM Employees
+    WHERE
+      (@FirstName IS NOT NULL AND FirstName LIKE @FirstName + '%')
+      OR
+      (@LastName IS NOT NULL AND LastName LIKE @LastName + '%')
+    ";
 
     return await connection.QueryAsync<Infrastructure.Domain.Models.Employee>(
-      sql,
+      fallbackSql,
       parameters);
   }
 }

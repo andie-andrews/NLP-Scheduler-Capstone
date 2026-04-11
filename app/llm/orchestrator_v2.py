@@ -26,14 +26,17 @@ from llm.orchestration.resolvers import (
     resolve_schedule_id,
 )
 from llm.orchestration.state_store import (
+    clear_pending_employee_disambiguation_state,
     clear_pending_delete_shift_state,
     clear_pending_show_shifts_state,
     clear_pending_shift_state,
     clear_pending_update_shift_state,
+    get_pending_employee_disambiguation_state,
     get_pending_delete_shift_state,
     get_pending_show_shifts_state,
     get_pending_shift_state,
     get_pending_update_shift_state,
+    set_pending_employee_disambiguation_state,
     set_pending_show_shifts_state,
     set_pending_delete_shift_state,
     set_pending_shift_state,
@@ -83,6 +86,8 @@ def _attempt_fill_shift_state_from_message(message, token, state):
     search_employees_op = OPERATIONS.get("searchEmployees")
     employees = call_api(token, search_employees_op, {"query": ""}) if search_employees_op else []
 
+    disambiguation_payload = None
+
     name = find_name_in_message(message, employees) if employees else None
     if name and not state.get("employeeId"):
         resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
@@ -91,7 +96,7 @@ def _attempt_fill_shift_state_from_message(message, token, state):
         elif resolution and resolution.get("type") == "disambiguation":
             state["employee_options"] = resolution["raw"]
             state["awaiting"] = "employee_disambiguation"
-            return {
+            disambiguation_payload = {
                 "type": "disambiguation",
                 "entity": "employee",
                 "options": resolution["options"],
@@ -138,29 +143,34 @@ def _attempt_fill_shift_state_from_message(message, token, state):
             elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
                 state["schedule_options"] = schedule_resolution["raw"]
                 state["awaiting"] = "schedule_disambiguation"
-                return {
+                disambiguation_payload = {
                     "type": "disambiguation",
                     "entity": "schedule",
                     "options": schedule_resolution["options"],
                 }
 
     print("[create_shift][state] After fill:", state)
-    return None
+    return disambiguation_payload
 
 
 def _resolve_disambiguation_reply(message, state):
+    awaiting = state.get("awaiting")
+    if awaiting == "employee_disambiguation":
+        options = state.get("employee_options", [])
+        selected = _resolve_employee_disambiguation_reply(message, options)
+        if selected is False:
+            return False
+        if selected:
+            state["employeeId"] = selected["id"]
+            state["awaiting"] = None
+            return True
+        return None
+
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
         return None
 
     choice = int(choice_match.group(1))
-    awaiting = state.get("awaiting")
-    if awaiting == "employee_disambiguation":
-        options = state.get("employee_options", [])
-        if 1 <= choice <= len(options):
-            state["employeeId"] = options[choice - 1]["id"]
-            state["awaiting"] = None
-            return True
     if awaiting == "schedule_disambiguation":
         options = state.get("schedule_options", [])
         if 1 <= choice <= len(options):
@@ -169,6 +179,48 @@ def _resolve_disambiguation_reply(message, state):
             return True
 
     return False
+
+
+def _resolve_employee_disambiguation_reply(message: str, options: list):
+    choice_match = re.search(r"\b(\d+)\b", message or "")
+    if choice_match:
+        choice = int(choice_match.group(1))
+        if 1 <= choice <= len(options):
+            return options[choice - 1]
+        return False
+
+    normalized_reply = re.sub(r"\s+", " ", (message or "").strip().lower())
+    if not normalized_reply:
+        return None
+
+    for option in options:
+        first_name = (option.get("firstName") or "").strip()
+        last_name = (option.get("lastName") or "").strip()
+        full_name = f"{first_name} {last_name}".strip().lower()
+        if normalized_reply == full_name:
+            return option
+
+    return None
+
+
+def _build_employee_disambiguation_prompt(name: str, options: list):
+    display_name = (name or "employee").strip() or "employee"
+    option_lines = []
+    for idx, option in enumerate(options, start=1):
+        first_name = (option.get("firstName") or "").strip()
+        last_name = (option.get("lastName") or "").strip()
+        option_lines.append(f"{idx}. {first_name} {last_name}".strip())
+    return (
+        f"I found more than one {display_name}. Which employee do you want to see?\n\n"
+        + "\n".join(option_lines)
+    )
+
+
+def _extract_explicit_employee_id(message: str):
+    match = re.search(r"employeeid\s*=\s*(\d+)", message or "", flags=re.IGNORECASE)
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 def _resolve_delete_shift_number_reply(message: str, state):
@@ -241,11 +293,31 @@ def run_orchestrator(message: str, token: str, session: dict):
     print("----- USER MESSAGE -----")
     print(message)
     lowered_message = (message or "").lower()
+    explicit_employee_id = _extract_explicit_employee_id(message)
 
     pending_shift = get_pending_shift_state(session)
     pending_delete_shift = get_pending_delete_shift_state(session)
     pending_show_shifts = get_pending_show_shifts_state(session)
     pending_update_shift = get_pending_update_shift_state(session)
+    pending_employee_disambiguation = get_pending_employee_disambiguation_state(session)
+
+    if pending_employee_disambiguation:
+        options = pending_employee_disambiguation.get("options", [])
+        selected_employee = _resolve_employee_disambiguation_reply(message, options)
+        if selected_employee is False:
+            return _build_employee_disambiguation_prompt(
+                pending_employee_disambiguation.get("name", "employee"),
+                options,
+            )
+        if selected_employee:
+            resolved_id = selected_employee.get("id")
+            clear_pending_employee_disambiguation_state(session)
+            follow_up_message = f"{pending_employee_disambiguation.get('original_message', '').strip()} (employeeId = {resolved_id})"
+            return run_orchestrator(follow_up_message, token, session)
+        return _build_employee_disambiguation_prompt(
+            pending_employee_disambiguation.get("name", "employee"),
+            options,
+        )
 
     if pending_show_shifts:
         lower = (message or "").lower().strip()
@@ -299,16 +371,24 @@ def run_orchestrator(message: str, token: str, session: dict):
     if is_delete_shift_intent(message):
         employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
         name = find_name_in_message(message, employees) if employees else None
-        if not name:
+        if explicit_employee_id:
+            resolution = {"type": "resolved", "employeeId": explicit_employee_id}
+        elif not name:
             return "Who should I delete the shift for?"
-
-        resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
-        if not resolution or resolution.get("type") == "not_found":
-            return f"I couldn't find an employee matching '{name}'."
-        if resolution.get("type") == "disambiguation":
-            options = resolution["options"]
-            option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
-            return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+        else:
+            resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
+            if not resolution or resolution.get("type") == "not_found":
+                return f"I couldn't find an employee matching '{name}'."
+            if resolution.get("type") == "disambiguation":
+                set_pending_employee_disambiguation_state(
+                    session,
+                    {
+                        "name": name,
+                        "options": resolution["raw"],
+                        "original_message": message,
+                    },
+                )
+                return _build_employee_disambiguation_prompt(name, resolution["raw"])
 
         target_date = extract_weekday_date(message)
         if not target_date:
@@ -445,9 +525,9 @@ def run_orchestrator(message: str, token: str, session: dict):
         }
 
     if is_update_shift_intent(message):
-        target_employee_id = session.get("employee_id")
+        target_employee_id = explicit_employee_id or session.get("employee_id")
         name = None
-        if session.get("role") != "Employee":
+        if not explicit_employee_id and session.get("role") != "Employee":
             employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
             name = find_name_in_message(message, employees) if employees else None
             if name:
@@ -455,9 +535,15 @@ def run_orchestrator(message: str, token: str, session: dict):
                 if not resolution or resolution.get("type") == "not_found":
                     return f"I couldn't find an employee matching '{name}'."
                 if resolution.get("type") == "disambiguation":
-                    options = resolution["options"]
-                    option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
-                    return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+                    set_pending_employee_disambiguation_state(
+                        session,
+                        {
+                            "name": name,
+                            "options": resolution["raw"],
+                            "original_message": message,
+                        },
+                    )
+                    return _build_employee_disambiguation_prompt(name, resolution["raw"])
                 target_employee_id = resolution["employeeId"]
 
         if not target_employee_id:
@@ -588,18 +674,28 @@ def run_orchestrator(message: str, token: str, session: dict):
     name = find_name_in_message(message, employees)
     effective_message = message
 
-    if name:
+    if explicit_employee_id is not None:
+        effective_message += f" (employeeId = {explicit_employee_id})"
+        if memory and hasattr(memory, "save_last_employee"):
+            memory.save_last_employee(explicit_employee_id)
+        elif memory is not None:
+            setattr(memory, "last_employee_id", explicit_employee_id)
+    elif name:
         resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
 
         if resolution["type"] == "not_found":
             return f"No employee found for '{name}'"
 
         if resolution["type"] == "disambiguation":
-            return {
-                "type": "disambiguation",
-                "options": resolution["options"],
-                "raw": resolution["raw"]
-            }
+            set_pending_employee_disambiguation_state(
+                session,
+                {
+                    "name": name,
+                    "options": resolution["raw"],
+                    "original_message": message,
+                },
+            )
+            return _build_employee_disambiguation_prompt(name, resolution["raw"])
 
         if resolution["type"] == "resolved":
             employee_id = resolution["employeeId"]
@@ -640,6 +736,8 @@ def run_orchestrator(message: str, token: str, session: dict):
     msg = response.choices[0].message
 
     if not msg.tool_calls:
+        if re.search(r"\b(hours?|work|worked|schedule|shift)\b", lowered_message):
+            return "What date range should I use? I can use this week, next week, or this month."
         return "I couldn't determine what action to take. Try rephrasing."
 
     tool_call = msg.tool_calls[0]
@@ -652,8 +750,11 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
-        if op_id == "getEmployeeShifts" and "employeeId" not in args and last_employee_id is not None:
-            args["employeeId"] = last_employee_id
+        if op_id == "getEmployeeShifts" and "employeeId" not in args:
+            if explicit_employee_id is not None:
+                args["employeeId"] = explicit_employee_id
+            elif last_employee_id is not None:
+                args["employeeId"] = last_employee_id
 
         inferred_range = extract_week_range_from_message(message)
         if inferred_range:
