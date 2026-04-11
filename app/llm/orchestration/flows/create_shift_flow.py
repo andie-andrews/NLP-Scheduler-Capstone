@@ -18,6 +18,7 @@ def handle_create_shift_flow(
     normalize_schedule_id_arg,
     call_api,
     week_range_from_date,
+    **_unused,
 ):
     if pending_shift and pending_shift.get("awaiting") in {"employee_disambiguation", "schedule_disambiguation"}:
         resolved = resolve_disambiguation_reply(message, pending_shift)
