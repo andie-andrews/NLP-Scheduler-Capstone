@@ -38,18 +38,21 @@ from llm.orchestration.state_store import (
     clear_pending_shift_state,
     clear_pending_update_shift_state,
     clear_pending_schedule_member_change_state,
+    clear_pending_create_schedule_state,
     get_pending_employee_disambiguation_state,
     get_pending_delete_shift_state,
     get_pending_show_shifts_state,
     get_pending_shift_state,
     get_pending_update_shift_state,
     get_pending_schedule_member_change_state,
+    get_pending_create_schedule_state,
     set_pending_employee_disambiguation_state,
     set_pending_show_shifts_state,
     set_pending_delete_shift_state,
     set_pending_shift_state,
     set_pending_update_shift_state,
     set_pending_schedule_member_change_state,
+    set_pending_create_schedule_state,
 )
 from llm.orchestration.summary import summarize_shifts
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
@@ -417,6 +420,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     pending_update_shift = get_pending_update_shift_state(session)
     pending_employee_disambiguation = get_pending_employee_disambiguation_state(session)
     pending_schedule_member_change = get_pending_schedule_member_change_state(session)
+    pending_create_schedule = get_pending_create_schedule_state(session)
 
     if pending_employee_disambiguation:
         options = pending_employee_disambiguation.get("options", [])
@@ -471,6 +475,22 @@ def run_orchestrator(message: str, token: str, session: dict):
         clear_pending_schedule_member_change_state(session)
         pending_schedule_member_change = None
         return "Okay — I cancelled the schedule member update flow."
+
+    if pending_create_schedule and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
+        clear_pending_create_schedule_state(session)
+        pending_create_schedule = None
+        return "Okay — I cancelled creating a new schedule."
+
+    if pending_create_schedule:
+        schedule_name = (message or "").strip()
+        if not schedule_name:
+            return "What should I name the new schedule?"
+        result = call_api(token, OPERATIONS["createSchedule"], {"name": schedule_name})
+        clear_pending_create_schedule_state(session)
+        schedule_id = result.get("id")
+        if schedule_id is not None:
+            return {"summary": f"Created schedule '{schedule_name}' (ID: {schedule_id}).", "data": {"scheduleId": schedule_id, "name": schedule_name}}
+        return {"summary": f"Created schedule '{schedule_name}'.", "data": {"name": schedule_name, "createScheduleResponse": result}}
 
     if pending_schedule_member_change:
         if pending_schedule_member_change.get("awaitingCreateSchedule"):
@@ -570,6 +590,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     if is_create_schedule_intent(message):
         schedule_name = _extract_schedule_name_for_create(message)
         if not schedule_name:
+            set_pending_create_schedule_state(session, {"intent": "create_schedule", "awaiting": "name"})
             return "What should I name the new schedule?"
         result = call_api(token, OPERATIONS["createSchedule"], {"name": schedule_name})
         schedule_id = result.get("id")
