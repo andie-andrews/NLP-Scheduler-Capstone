@@ -17,6 +17,29 @@ This makes the file hard to read, hard to test in isolation, and risky to modify
 
 ---
 
+## Recommended pattern for extensibility + cohesion
+
+Use a **Flow Registry + State Machine + Ports/Adapters** pattern:
+
+1. **Flow Registry (Strategy pattern)**
+   - Register each intent flow (`create_shift`, `delete_shift`, `add_member`, etc.) as a handler object implementing the same contract.
+   - The orchestrator loops over handlers and picks the first `can_handle(...)`.
+   - Adding a new flow should mean *adding a new class + one registration line*, not editing a large `if/elif` chain.
+
+2. **State Machine per flow**
+   - Each flow owns its own required fields, validation, and follow-up questions.
+   - Example for create-shift: `employee -> schedule -> start -> duration -> confirm -> execute`.
+   - This replaces ad-hoc branching with explicit transitions.
+
+3. **Ports/Adapters (Hexagonal architecture)**
+   - Flow logic depends on interfaces (`EmployeeResolverPort`, `ScheduleApiPort`, `LlmPort`) rather than direct globals.
+   - Concrete adapters wrap `call_api`, OpenAI client, and memory/session APIs.
+   - This makes logic testable with fakes and keeps side effects at boundaries.
+
+Together, these three patterns keep modules cohesive and make behavior extension low-risk.
+
+---
+
 ## Target architecture
 
 Split into small, cohesive units grouped by responsibility:
@@ -27,11 +50,13 @@ app/llm/orchestrator/
   orchestrator.py              # thin coordinator only
   contracts.py                 # interfaces/protocols (dependency inversion)
   context.py                   # session + request context
+  registry.py                  # flow registration + dispatch
   state_store.py               # pending flow get/set/clear
   intent_detector.py           # create/delete/general intent checks
   parsers.py                   # weekday, duration, schedule name extraction
   resolvers.py                 # employee/schedule resolution logic
   flows/
+    base.py                    # Flow protocol + common utilities
     create_shift_flow.py       # create-shift state machine
     delete_shift_flow.py       # delete-shift state machine
   tools/
@@ -59,7 +84,7 @@ Each module should have one reason to change:
 Add new intents/flows without touching existing core coordinator:
 
 - New flow: `flows/update_shift_flow.py`
-- Register it in a flow registry rather than adding deep `if/else` chains.
+- Register it in `registry.py` rather than adding deep `if/else` chains.
 
 ### 3) Liskov Substitution Principle (LSP)
 Use consistent flow contracts (same input/output shape), so any flow can replace another in orchestrator dispatch without breaking caller behavior.
@@ -67,10 +92,10 @@ Use consistent flow contracts (same input/output shape), so any flow can replace
 ### 4) Interface Segregation Principle (ISP)
 Split broad dependencies into focused interfaces:
 
-- `EmployeeResolver` interface
-- `ScheduleResolver` interface
-- `LLMClient` interface
-- `SchedulerAPI` interface
+- `EmployeeResolverPort`
+- `ScheduleResolverPort`
+- `LlmPort`
+- `SchedulerApiPort`
 
 Consumers depend only on what they use.
 
@@ -129,13 +154,22 @@ Move pending flow state get/set/clear into `state_store.py` with typed wrappers.
 ### Phase 3: Resolver extraction
 Move employee/schedule resolver functions into `resolvers.py` and inject API dependency.
 
-### Phase 4: Flow objects
+### Phase 4: Flow objects + registry
 Implement `CreateShiftFlow` and `DeleteShiftFlow` classes (or functions) with a shared contract:
 
 ```python
 class Flow(Protocol):
+    name: str
     def can_handle(self, message: str, context: OrchestratorContext) -> bool: ...
     def handle(self, message: str, context: OrchestratorContext) -> FlowResult: ...
+```
+
+And dispatch through a registry:
+
+```python
+for flow in flow_registry:
+    if flow.can_handle(message, ctx):
+        return flow.handle(message, ctx)
 ```
 
 ### Phase 5: Thin orchestrator
@@ -153,7 +187,7 @@ Reduce `run_orchestrator` to:
 ### Unit tests (fast)
 - parsers (date/time/duration edge cases)
 - resolvers (not found/exact match/disambiguation)
-- create/delete flow transitions
+- flow transition rules
 - tool sanitizer and schema builder
 
 ### Integration tests
@@ -181,9 +215,9 @@ Use a fixture set of user prompts from production logs (anonymized) to compare o
 
 A good first PR would only:
 
-1. Create `app/llm/orchestrator/parsers.py` and `postprocess/shift_summary.py`
-2. Move pure helper functions there
-3. Import them back into `orchestrator_v2.py`
-4. Add unit tests for parser behavior
+1. Create `app/llm/orchestrator/registry.py` and `flows/base.py`
+2. Extract one flow (`create_shift`) behind the shared interface
+3. Register it and delegate from `orchestrator_v2.py`
+4. Add unit tests for dispatch + one flow transition path
 
 This gives quick wins in readability and testability without risky behavior changes.
