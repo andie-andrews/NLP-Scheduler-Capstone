@@ -736,6 +736,8 @@ def run_orchestrator(message: str, token: str, session: dict):
     msg = response.choices[0].message
 
     if not msg.tool_calls:
+        if re.search(r"\b(hours?|work|worked|schedule|shift)\b", lowered_message):
+            return "What date range should I use? I can use this week, next week, or this month."
         return "I couldn't determine what action to take. Try rephrasing."
 
     tool_call = msg.tool_calls[0]
