@@ -37,7 +37,11 @@ def is_update_shift_intent(message: str):
 
 def is_create_schedule_intent(message: str):
     text = (message or "").lower()
-    return "schedule" in text and any(action in text for action in ["create", "new", "make", "add"])
+    if "schedule" not in text:
+        return False
+    if any(member_word in text for member_word in ["employee", "manager", "supervisor"]):
+        return False
+    return any(action in text for action in ["create", "new", "make"])
 
 
 def is_add_schedule_member_intent(message: str):

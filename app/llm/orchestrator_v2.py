@@ -275,6 +275,14 @@ def _get_schedule_member_operation(action: str):
     return OPERATIONS.get("addEmployeeToSchedule") if action == "add" else OPERATIONS.get("removeEmployeeFromSchedule")
 
 
+def _is_affirmative(message: str):
+    return bool(re.search(r"\b(yes|yep|yeah|sure|ok|okay|please do|create it)\b", (message or "").lower()))
+
+
+def _is_negative(message: str):
+    return bool(re.search(r"\b(no|nope|nah|don't|do not|not now)\b", (message or "").lower()))
+
+
 def _resolve_delete_shift_number_reply(message: str, state):
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
@@ -409,6 +417,23 @@ def run_orchestrator(message: str, token: str, session: dict):
         return "Okay — I cancelled the schedule member update flow."
 
     if pending_schedule_member_change:
+        if pending_schedule_member_change.get("awaitingCreateSchedule"):
+            schedule_name = pending_schedule_member_change.get("suggestedScheduleName")
+            if _is_affirmative(message):
+                created = call_api(token, OPERATIONS["createSchedule"], {"name": schedule_name})
+                created_id = created.get("id")
+                if created_id is None:
+                    return f"I couldn't create '{schedule_name}'. Please provide an existing schedule name."
+                pending_schedule_member_change["scheduleId"] = created_id
+                pending_schedule_member_change["awaitingCreateSchedule"] = False
+            elif _is_negative(message):
+                pending_schedule_member_change["awaitingCreateSchedule"] = False
+                pending_schedule_member_change["suggestedScheduleName"] = None
+                set_pending_schedule_member_change_state(session, pending_schedule_member_change)
+                return "Okay — which existing schedule should I use?"
+            else:
+                return f"I couldn't find schedule '{schedule_name}'. Do you want me to create it?"
+
         if not pending_schedule_member_change.get("employeeId"):
             choice = re.search(r"\b(\d+)\b", message or "")
             option_employees = pending_schedule_member_change.get("employeeOptions") or []
@@ -439,14 +464,16 @@ def run_orchestrator(message: str, token: str, session: dict):
                 pending_schedule_member_change["employeeId"] = resolution["employeeId"]
 
         if not pending_schedule_member_change.get("scheduleId"):
-            resolved_schedule_id = normalize_schedule_id_arg(
-                token,
-                _extract_schedule_name_or_id_from_message(message),
-                OPERATIONS,
-                call_api,
-            )
+            schedule_target = _extract_schedule_name_or_id_from_message(message)
+            resolved_schedule_id = normalize_schedule_id_arg(token, schedule_target, OPERATIONS, call_api)
             if resolved_schedule_id is None:
-                return "Which schedule should I update?"
+                suggested_name = schedule_target if isinstance(schedule_target, str) else None
+                if suggested_name:
+                    pending_schedule_member_change["awaitingCreateSchedule"] = True
+                    pending_schedule_member_change["suggestedScheduleName"] = suggested_name
+                    set_pending_schedule_member_change_state(session, pending_schedule_member_change)
+                    return f"I couldn't find schedule '{suggested_name}'. Do you want me to create it?"
+                return "Which schedule should I update? If it doesn't exist, I can create it."
             pending_schedule_member_change["scheduleId"] = resolved_schedule_id
 
         operation = _get_schedule_member_operation(pending_schedule_member_change.get("action"))
@@ -496,6 +523,8 @@ def run_orchestrator(message: str, token: str, session: dict):
             "employeeId": None,
             "scheduleId": None,
             "employeeOptions": [],
+            "awaitingCreateSchedule": False,
+            "suggestedScheduleName": None,
         }
         if name:
             resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
@@ -517,11 +546,16 @@ def run_orchestrator(message: str, token: str, session: dict):
         raw_schedule_target = _extract_schedule_name_or_id_from_message(message)
         if raw_schedule_target:
             state["scheduleId"] = normalize_schedule_id_arg(token, raw_schedule_target, OPERATIONS, call_api)
+            if state["scheduleId"] is None and isinstance(raw_schedule_target, str):
+                state["awaitingCreateSchedule"] = True
+                state["suggestedScheduleName"] = raw_schedule_target
 
         if state["employeeId"] is None or state["scheduleId"] is None:
             set_pending_schedule_member_change_state(session, state)
             if state["employeeId"] is None:
                 return "Who should I update on the schedule?"
+            if state.get("awaitingCreateSchedule") and state.get("suggestedScheduleName"):
+                return f"I couldn't find schedule '{state['suggestedScheduleName']}'. Do you want me to create it?"
             return "Which schedule should I update?"
 
         operation = _get_schedule_member_operation(action)
