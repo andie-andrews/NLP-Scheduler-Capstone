@@ -317,6 +317,15 @@ def _extract_schedule_name_for_create(message: str):
 
 
 def _extract_schedule_name_or_id_from_message(message: str):
+    def normalize_schedule_candidate(value: str | None):
+        if not value:
+            return None
+        cleaned = value.strip(" .,!?:;\"'")
+        cleaned = re.sub(r"^(the|a|an)\s+", "", cleaned, flags=re.IGNORECASE).strip()
+        if cleaned.lower() in {"", "schedule", "my"}:
+            return None
+        return cleaned
+
     raw = (message or "").strip()
     if raw.isdigit():
         return int(raw)
@@ -330,18 +339,18 @@ def _extract_schedule_name_or_id_from_message(message: str):
         normalized = name.strip().lower()
         if normalized in {"a", "an", "the", "my"}:
             return None
-        return name
+        return normalize_schedule_candidate(name)
 
-    to_schedule_match = re.search(r"\bto\s+([a-zA-Z0-9 _'’-]+?)\s+schedule\b", raw, flags=re.IGNORECASE)
+    to_schedule_match = re.search(r"\bto\s+(?:the\s+|a\s+|an\s+)?([a-zA-Z0-9 _'’-]+?)\s+schedule\b", raw, flags=re.IGNORECASE)
     if to_schedule_match:
-        candidate = to_schedule_match.group(1).strip(" .,!?:;\"'")
-        if candidate.lower() not in {"a", "an", "the", "my"}:
+        candidate = normalize_schedule_candidate(to_schedule_match.group(1))
+        if candidate:
             return candidate
 
-    from_schedule_match = re.search(r"\bfrom\s+([a-zA-Z0-9 _'’-]+?)\s+schedule\b", raw, flags=re.IGNORECASE)
+    from_schedule_match = re.search(r"\bfrom\s+(?:the\s+|a\s+|an\s+)?([a-zA-Z0-9 _'’-]+?)\s+schedule\b", raw, flags=re.IGNORECASE)
     if from_schedule_match:
-        candidate = from_schedule_match.group(1).strip(" .,!?:;\"'")
-        if candidate.lower() not in {"a", "an", "the", "my"}:
+        candidate = normalize_schedule_candidate(from_schedule_match.group(1))
+        if candidate:
             return candidate
 
     return None
