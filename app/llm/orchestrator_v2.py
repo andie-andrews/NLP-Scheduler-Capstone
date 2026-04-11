@@ -322,6 +322,17 @@ def _build_schedule_member_schedule_question(state: dict):
     return "Which schedule should I update?"
 
 
+def _lookup_schedule_name_by_id(token: str, schedule_id: int | None):
+    if not schedule_id:
+        return None
+    get_schedules_op = OPERATIONS.get("getSchedules")
+    if not get_schedules_op:
+        return None
+    schedules = call_api(token, get_schedules_op, {}) or []
+    match = next((s for s in schedules if s.get("id") == schedule_id), None)
+    return (match or {}).get("name")
+
+
 def _resolve_delete_shift_number_reply(message: str, state):
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
@@ -542,7 +553,11 @@ def run_orchestrator(message: str, token: str, session: dict):
         action_word = "added to" if pending_schedule_member_change.get("action") == "add" else "removed from"
         role_word = pending_schedule_member_change.get("roleTarget", "employee")
         employee_display = pending_schedule_member_change.get("employeeName") or f"{role_word} {pending_schedule_member_change['employeeId']}"
-        schedule_display = pending_schedule_member_change.get("scheduleName") or f"schedule {pending_schedule_member_change['scheduleId']}"
+        schedule_display = (
+            pending_schedule_member_change.get("scheduleName")
+            or _lookup_schedule_name_by_id(token, pending_schedule_member_change.get("scheduleId"))
+            or f"schedule {pending_schedule_member_change['scheduleId']}"
+        )
         clear_pending_schedule_member_change_state(session)
         return f"Done — {employee_display} was {action_word} {schedule_display}."
 
@@ -623,7 +638,11 @@ def run_orchestrator(message: str, token: str, session: dict):
         call_api(token, operation, {"scheduleId": state["scheduleId"], "employeeId": state["employeeId"]})
         action_word = "added to" if action == "add" else "removed from"
         employee_display = state.get("employeeName") or f"{role_target} {state['employeeId']}"
-        schedule_display = state.get("scheduleName") or f"schedule {state['scheduleId']}"
+        schedule_display = (
+            state.get("scheduleName")
+            or _lookup_schedule_name_by_id(token, state.get("scheduleId"))
+            or f"schedule {state['scheduleId']}"
+        )
         return f"Done — {employee_display} was {action_word} {schedule_display}."
 
     if pending_delete_shift:

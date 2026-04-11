@@ -137,9 +137,10 @@ def extract_week_range_from_message(message: str, now: datetime | None = None):
 
 def extract_schedule_name(message: str):
     patterns = [
-        r"([a-zA-Z0-9 _'’-]+?)['’]s\s+schedule",
-        r"(?:on|in)\s+([a-zA-Z0-9 _'’-]+?)\s+schedule",
-        r"schedule\s+(?:for|on|in)?\s*([a-zA-Z0-9 _'’-]+)",
+        r"(?:to|on|in)\s+([a-zA-Z0-9 _'’-]+?)['’]s\s+schedule\b",
+        r"^([a-zA-Z0-9 _'’-]+?)['’]s\s+schedule\b",
+        r"(?:on|in)\s+([a-zA-Z0-9 _'’-]+?)\s+schedule\b",
+        r"schedule\s+(?:for|on|in)\s+([a-zA-Z0-9 _'’-]+)",
     ]
     for pattern in patterns:
         match = re.search(pattern, message.lower())
