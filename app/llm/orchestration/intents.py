@@ -33,3 +33,22 @@ def is_update_shift_intent(message: str):
     text = message.lower()
     has_update_action = any(action in text for action in ["update", "edit", "change", "move", "reschedule"])
     return has_update_action and "shift" in text
+
+
+def is_create_schedule_intent(message: str):
+    text = (message or "").lower()
+    return "schedule" in text and any(action in text for action in ["create", "new", "make", "add"])
+
+
+def is_add_schedule_member_intent(message: str):
+    text = (message or "").lower()
+    member_words = any(word in text for word in ["employee", "manager", "supervisor"])
+    add_words = any(word in text for word in ["add", "assign", "include", "put"])
+    return "schedule" in text and member_words and add_words
+
+
+def is_remove_schedule_member_intent(message: str):
+    text = (message or "").lower()
+    member_words = any(word in text for word in ["employee", "manager", "supervisor"])
+    remove_words = any(word in text for word in ["remove", "unassign", "delete", "take off"])
+    return "schedule" in text and member_words and remove_words

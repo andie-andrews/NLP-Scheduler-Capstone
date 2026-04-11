@@ -7,8 +7,14 @@ from openai import OpenAI
 from llm.openapi_loader import load_openapi_spec
 from llm.openapi_parser import parse_operations
 from llm.openapi_client import call_api
-from llm.orchestration.intents import is_create_shift_intent, is_delete_shift_intent
-from llm.orchestration.intents import is_update_shift_intent
+from llm.orchestration.intents import (
+    is_add_schedule_member_intent,
+    is_create_schedule_intent,
+    is_create_shift_intent,
+    is_delete_shift_intent,
+    is_remove_schedule_member_intent,
+    is_update_shift_intent,
+)
 from llm.orchestration.parsers import (
     extract_duration_hours,
     extract_schedule_name,
@@ -31,16 +37,19 @@ from llm.orchestration.state_store import (
     clear_pending_show_shifts_state,
     clear_pending_shift_state,
     clear_pending_update_shift_state,
+    clear_pending_schedule_member_change_state,
     get_pending_employee_disambiguation_state,
     get_pending_delete_shift_state,
     get_pending_show_shifts_state,
     get_pending_shift_state,
     get_pending_update_shift_state,
+    get_pending_schedule_member_change_state,
     set_pending_employee_disambiguation_state,
     set_pending_show_shifts_state,
     set_pending_delete_shift_state,
     set_pending_shift_state,
     set_pending_update_shift_state,
+    set_pending_schedule_member_change_state,
 )
 from llm.orchestration.summary import summarize_shifts
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
@@ -223,6 +232,49 @@ def _extract_explicit_employee_id(message: str):
     return int(match.group(1))
 
 
+def _extract_schedule_name_for_create(message: str):
+    text = (message or "").strip()
+    quoted = re.search(r"['\"]([^'\"]+)['\"]", text)
+    if quoted:
+        return quoted.group(1).strip()
+
+    patterns = [
+        r"(?:create|new|make|add)\s+(?:a\s+)?schedule(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
+        r"schedule(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            candidate = match.group(1).strip(" .,!?:;\"'")
+            if candidate:
+                return candidate
+    return None
+
+
+def _extract_schedule_name_or_id_from_message(message: str):
+    raw = (message or "").strip()
+    if raw.isdigit():
+        return int(raw)
+
+    id_match = re.search(r"schedule\s*id\s*[:=]?\s*(\d+)", raw, flags=re.IGNORECASE)
+    if id_match:
+        return int(id_match.group(1))
+
+    name = extract_schedule_name(raw)
+    return name or raw
+
+
+def _extract_member_role_target(message: str):
+    text = (message or "").lower()
+    if "manager" in text or "supervisor" in text:
+        return "manager"
+    return "employee"
+
+
+def _get_schedule_member_operation(action: str):
+    return OPERATIONS.get("addEmployeeToSchedule") if action == "add" else OPERATIONS.get("removeEmployeeFromSchedule")
+
+
 def _resolve_delete_shift_number_reply(message: str, state):
     choice_match = re.search(r"\b(\d+)\b", message)
     if not choice_match:
@@ -300,6 +352,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     pending_show_shifts = get_pending_show_shifts_state(session)
     pending_update_shift = get_pending_update_shift_state(session)
     pending_employee_disambiguation = get_pending_employee_disambiguation_state(session)
+    pending_schedule_member_change = get_pending_schedule_member_change_state(session)
 
     if pending_employee_disambiguation:
         options = pending_employee_disambiguation.get("options", [])
@@ -349,6 +402,134 @@ def run_orchestrator(message: str, token: str, session: dict):
         clear_pending_update_shift_state(session)
         pending_update_shift = None
         return "Okay — I cancelled the update flow."
+
+    if pending_schedule_member_change and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
+        clear_pending_schedule_member_change_state(session)
+        pending_schedule_member_change = None
+        return "Okay — I cancelled the schedule member update flow."
+
+    if pending_schedule_member_change:
+        if not pending_schedule_member_change.get("employeeId"):
+            choice = re.search(r"\b(\d+)\b", message or "")
+            option_employees = pending_schedule_member_change.get("employeeOptions") or []
+            if choice and option_employees:
+                idx = int(choice.group(1))
+                if 1 <= idx <= len(option_employees):
+                    pending_schedule_member_change["employeeId"] = option_employees[idx - 1]["id"]
+                    pending_schedule_member_change["employeeOptions"] = []
+                else:
+                    option_lines = [
+                        f"{index + 1}. {item.get('firstName', '').strip()} {item.get('lastName', '').strip()}".strip()
+                        for index, item in enumerate(option_employees)
+                    ]
+                    return "That number is out of range. Please choose one:\n" + "\n".join(option_lines)
+            else:
+                employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""}) or []
+                name = find_name_in_message(message, employees) if employees else None
+                if not name:
+                    return "Which employee should I use?"
+                resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
+                if not resolution or resolution.get("type") == "not_found":
+                    return f"I couldn't find an employee matching '{name}'."
+                if resolution.get("type") == "disambiguation":
+                    pending_schedule_member_change["employeeOptions"] = resolution["raw"]
+                    option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(resolution["options"])]
+                    set_pending_schedule_member_change_state(session, pending_schedule_member_change)
+                    return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+                pending_schedule_member_change["employeeId"] = resolution["employeeId"]
+
+        if not pending_schedule_member_change.get("scheduleId"):
+            resolved_schedule_id = normalize_schedule_id_arg(
+                token,
+                _extract_schedule_name_or_id_from_message(message),
+                OPERATIONS,
+                call_api,
+            )
+            if resolved_schedule_id is None:
+                return "Which schedule should I update?"
+            pending_schedule_member_change["scheduleId"] = resolved_schedule_id
+
+        operation = _get_schedule_member_operation(pending_schedule_member_change.get("action"))
+        if not operation:
+            clear_pending_schedule_member_change_state(session)
+            return "Schedule member update is not available because the API spec is missing that operation."
+        call_api(
+            token,
+            operation,
+            {
+                "scheduleId": pending_schedule_member_change["scheduleId"],
+                "employeeId": pending_schedule_member_change["employeeId"],
+            },
+        )
+        action_word = "added to" if pending_schedule_member_change.get("action") == "add" else "removed from"
+        role_word = pending_schedule_member_change.get("roleTarget", "employee")
+        clear_pending_schedule_member_change_state(session)
+        return (
+            f"{role_word.capitalize()} {pending_schedule_member_change['employeeId']} "
+            f"was {action_word} schedule {pending_schedule_member_change['scheduleId']}."
+        )
+
+    if is_create_schedule_intent(message):
+        schedule_name = _extract_schedule_name_for_create(message)
+        if not schedule_name:
+            return "What should I name the new schedule?"
+        result = call_api(token, OPERATIONS["createSchedule"], {"name": schedule_name})
+        schedule_id = result.get("id")
+        if schedule_id is not None:
+            return {
+                "summary": f"Created schedule '{schedule_name}' (ID: {schedule_id}).",
+                "data": {"scheduleId": schedule_id, "name": schedule_name},
+            }
+        return {
+            "summary": f"Created schedule '{schedule_name}'.",
+            "data": {"name": schedule_name, "createScheduleResponse": result},
+        }
+
+    if is_add_schedule_member_intent(message) or is_remove_schedule_member_intent(message):
+        employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""}) or []
+        action = "add" if is_add_schedule_member_intent(message) else "remove"
+        role_target = _extract_member_role_target(message)
+        name = find_name_in_message(message, employees) if employees else None
+        state = {
+            "action": action,
+            "roleTarget": role_target,
+            "employeeId": None,
+            "scheduleId": None,
+            "employeeOptions": [],
+        }
+        if name:
+            resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
+            if resolution and resolution.get("type") == "resolved":
+                state["employeeId"] = resolution["employeeId"]
+            elif resolution and resolution.get("type") == "disambiguation":
+                state["employeeOptions"] = resolution["raw"]
+                set_pending_schedule_member_change_state(session, state)
+                option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(resolution["options"])]
+                return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
+            elif resolution and resolution.get("type") == "not_found":
+                return f"I couldn't find an employee matching '{name}'."
+
+        if state["employeeId"] is not None and role_target == "manager":
+            employee = next((emp for emp in employees if emp.get("id") == state["employeeId"]), None)
+            if employee and employee.get("roleId") != 2:
+                return "That employee is not a manager/supervisor. Please choose someone with supervisor role."
+
+        raw_schedule_target = _extract_schedule_name_or_id_from_message(message)
+        if raw_schedule_target:
+            state["scheduleId"] = normalize_schedule_id_arg(token, raw_schedule_target, OPERATIONS, call_api)
+
+        if state["employeeId"] is None or state["scheduleId"] is None:
+            set_pending_schedule_member_change_state(session, state)
+            if state["employeeId"] is None:
+                return "Who should I update on the schedule?"
+            return "Which schedule should I update?"
+
+        operation = _get_schedule_member_operation(action)
+        if not operation:
+            return "Schedule member update is not available because the API spec is missing that operation."
+        call_api(token, operation, {"scheduleId": state["scheduleId"], "employeeId": state["employeeId"]})
+        action_word = "added to" if action == "add" else "removed from"
+        return f"{role_target.capitalize()} {state['employeeId']} was {action_word} schedule {state['scheduleId']}."
 
     if pending_delete_shift:
         selected_shift_id = _resolve_delete_shift_number_reply(message, pending_delete_shift)
