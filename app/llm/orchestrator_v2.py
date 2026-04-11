@@ -66,6 +66,10 @@ from llm.orchestration.state_store import (
 )
 from llm.orchestration.summary import summarize_shifts
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
+from llm.orchestration.context_resolution import (
+    is_follow_up_employee_query,
+    is_self_referential_employee_query,
+)
 from llm.orchestration.registry import FlowRegistry
 from llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
 from llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
@@ -925,9 +929,19 @@ def run_orchestrator(message: str, token: str, session: dict):
                 setattr(memory, "last_employee_id", employee_id)
             print(f"Resolved {name} → employeeId {employee_id}")
     elif (
+        session.get("employee_id") is not None
+        and is_self_referential_employee_query(lowered_message)
+    ):
+        effective_message += f" (employeeId = {session['employee_id']})"
+        if memory and hasattr(memory, "save_last_employee"):
+            memory.save_last_employee(session["employee_id"])
+        elif memory is not None:
+            setattr(memory, "last_employee_id", session["employee_id"])
+        print(f"Using session employee_id {session['employee_id']} for self-referential request.")
+    elif (
         last_employee_id is not None
-        and re.search(r"\b(week|month|shift|schedule|hours?)\b", lowered_message)
-        and re.search(r"\b(next|this|what about|how many|scheduled|schedule)\b", lowered_message)
+        and is_follow_up_employee_query(lowered_message)
+        and not is_self_referential_employee_query(lowered_message)
     ):
         effective_message += f" (employeeId = {last_employee_id})"
         print(f"Using last referenced employeeId {last_employee_id} for follow-up message.")
