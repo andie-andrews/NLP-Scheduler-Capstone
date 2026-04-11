@@ -250,6 +250,19 @@ def _extract_employee_name_parts(message: str):
     quoted = re.search(r"['\"]([^'\"]+)['\"]", text)
     candidate = quoted.group(1).strip() if quoted else text
 
+    generic_phrases = {
+        "employee",
+        "an employee",
+        "a employee",
+        "new employee",
+        "add employee",
+        "add an employee",
+        "create employee",
+        "create an employee",
+    }
+    if candidate.lower().strip(" .?!") in generic_phrases:
+        return None, None
+
     patterns = [
         r"(?:employee\s+)?named\s+([a-zA-Z]+)\s+([a-zA-Z]+)",
         r"(?:employee\s+)?name\s+is\s+([a-zA-Z]+)\s+([a-zA-Z]+)",
@@ -260,8 +273,14 @@ def _extract_employee_name_parts(message: str):
         if match:
             return match.group(1).strip().title(), match.group(2).strip().title()
 
-    tokens = [token for token in re.findall(r"[a-zA-Z]+", candidate) if token.lower() not in {"employee", "add", "create", "new", "hire", "update", "edit", "change", "delete", "remove"}]
+    ignored = {
+        "employee", "add", "create", "new", "hire", "update", "edit", "change", "delete", "remove",
+        "can", "you", "please", "an", "a", "the", "me",
+    }
+    tokens = [token for token in re.findall(r"[a-zA-Z]+", candidate) if token.lower() not in ignored]
     if len(tokens) >= 2:
+        if tokens[-2].lower() in {"an", "a", "employee"} or tokens[-1].lower() == "employee":
+            return None, None
         return tokens[-2].title(), tokens[-1].title()
     return None, None
 
@@ -273,7 +292,7 @@ def _extract_role_id(message: str):
         return int(explicit.group(1))
     if "supervisor" in text or "manager" in text:
         return 2
-    if "employee" in text:
+    if re.search(r"\b(as|role)\s+(an?\s+)?employee\b", text):
         return 1
     return None
 
