@@ -16,8 +16,8 @@ public class CreateEmployeeHandler
   {
     using var connection = _db.CreateConnection();
     var sql = @"
-            INSERT INTO Employees (FirstName, LastName, RoleId)
-            VALUES (@FirstName, @LastName, @RoleId);
+            INSERT INTO Employees (FirstName, LastName, Email, RoleId)
+            VALUES (@FirstName, @LastName, @Email, @RoleId);
             SELECT CAST(SCOPE_IDENTITY() as int);
         ";
 

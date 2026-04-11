@@ -17,7 +17,7 @@ public class GetScheduleEmployeesHandler
     using var connection = _db.CreateConnection();
 
     var sql = @"
-            SELECT e.Id, e.FirstName, e.LastName, e.RoleId
+            SELECT e.Id, e.FirstName, e.LastName, e.Email, e.RoleId
             FROM Employees e
             JOIN ScheduleEmployees se ON se.EmployeeId = e.Id
             WHERE se.ScheduleId = @scheduleId

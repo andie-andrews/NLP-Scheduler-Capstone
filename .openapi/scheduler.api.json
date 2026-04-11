@@ -57,7 +57,7 @@
         ],
         "operationId": "searchEmployees",
         "summary": "Search employees",
-        "description": "Search employees by first, last, or full name.",
+        "description": "Search employees by first name, last name, full name, or email prefix.",
         "x-operation-type": "query",
         "x-intent": [
           "find employee",
@@ -75,6 +75,7 @@
               "id",
               "firstName",
               "lastName",
+              "email",
               "roleId"
             ]
           }
@@ -104,12 +105,14 @@
                     "id": 1,
                     "firstName": "John",
                     "lastName": "Doe",
+                    "email": "john.doe@scheduler.local",
                     "roleId": 1
                   },
                   {
                     "id": 2,
                     "firstName": "John",
                     "lastName": "Smith",
+                    "email": "john.smith@scheduler.local",
                     "roleId": 2
                   }
                 ]
@@ -155,6 +158,7 @@
                   "id": 10,
                   "firstName": "Jane",
                   "lastName": "Smith",
+                  "email": "jane.smith@scheduler.local",
                   "roleId": 1
                 }
               }
@@ -723,6 +727,10 @@
           "lastName": {
             "type": "string"
           },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
           "roleId": {
             "type": "integer",
             "description": "1 = Employee, 2 = Supervisor"
@@ -774,7 +782,9 @@
         "type": "object",
         "required": [
           "firstName",
-          "lastName"
+          "lastName",
+          "email",
+          "roleId"
         ],
         "properties": {
           "firstName": {
@@ -782,6 +792,10 @@
           },
           "lastName": {
             "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
           },
           "roleId": {
             "type": "integer"
@@ -796,6 +810,10 @@
           },
           "lastName": {
             "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
           },
           "roleId": {
             "type": "integer"

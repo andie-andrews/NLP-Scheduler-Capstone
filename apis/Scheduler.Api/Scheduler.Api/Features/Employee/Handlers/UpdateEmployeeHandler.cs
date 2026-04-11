@@ -21,11 +21,14 @@ public class UpdateEmployeeHandler
             UPDATE Employees
             SET FirstName = @FirstName,
                 LastName = @LastName,
+                Email = @Email,
                 RoleId = @RoleId
             WHERE Id = @Id
         ";
 
-    var rows = await connection.ExecuteAsync(sql, new { request.FirstName, request.LastName, request.RoleId, Id = employeeId });
+    var rows = await connection.ExecuteAsync(
+      sql,
+      new { request.FirstName, request.LastName, request.Email, request.RoleId, Id = employeeId });
     return rows > 0;
   }
 }

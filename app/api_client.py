@@ -133,21 +133,23 @@ def get_employee(employee_id):
     return get(f"/api/employees/{employee_id}")
 
 
-def create_employee(first_name, last_name, role_id=1):
+def create_employee(first_name, last_name, email, role_id=1):
     return post(
         "/api/employees",
         {
             "firstName": first_name,
             "lastName": last_name,
+            "email": email,
             "roleId": role_id
         }
     )
 
 
-def update_employee(employee_id, first_name, last_name, role_id=None):
+def update_employee(employee_id, first_name, last_name, email, role_id=None):
     payload = {
         "firstName": first_name,
-        "lastName": last_name
+        "lastName": last_name,
+        "email": email
     }
 
     if role_id is not None:

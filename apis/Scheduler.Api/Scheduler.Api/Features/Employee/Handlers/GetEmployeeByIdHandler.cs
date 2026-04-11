@@ -17,7 +17,7 @@ namespace Scheduler.Api.Features.Employee.Handlers
       using var connection = _db.CreateConnection();
 
       var sql = @"
-            SELECT Id, FirstName, LastName, RoleId
+            SELECT Id, FirstName, LastName, Email, RoleId
             FROM Employees
             WHERE Id = @id
         ";

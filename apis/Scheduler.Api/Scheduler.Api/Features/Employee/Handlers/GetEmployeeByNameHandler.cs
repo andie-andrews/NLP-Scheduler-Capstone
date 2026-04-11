@@ -21,7 +21,8 @@ public class GetEmployeeByNameHandler
     var parameters = new
     {
       FirstName = query.FirstName?.Trim(),
-      LastName = query.LastName?.Trim()
+      LastName = query.LastName?.Trim(),
+      Query = query.FirstName?.Trim()
     };
 
     if (!string.IsNullOrWhiteSpace(query.FirstName) && !string.IsNullOrWhiteSpace(query.LastName))
@@ -31,6 +32,7 @@ public class GetEmployeeByNameHandler
           Id,
           FirstName,
           LastName,
+          Email,
           RoleId
       FROM Employees
       WHERE FirstName LIKE @FirstName + '%'
@@ -50,12 +52,15 @@ public class GetEmployeeByNameHandler
         Id,
         FirstName,
         LastName,
+        Email,
         RoleId
     FROM Employees
     WHERE
       (@FirstName IS NOT NULL AND FirstName LIKE @FirstName + '%')
       OR
       (@LastName IS NOT NULL AND LastName LIKE @LastName + '%')
+      OR
+      (@Query IS NOT NULL AND Email LIKE @Query + '%')
     ";
 
     return await connection.QueryAsync<Infrastructure.Domain.Models.Employee>(

@@ -14,11 +14,11 @@ INSERT INTO Schedules (Name, StartDate, EndDate)
 VALUES ('Week 1', GETDATE(), DATEADD(DAY, 7, GETDATE()));
 
 -- Employees
-INSERT INTO Employees (FirstName, LastName, RoleId)
+INSERT INTO Employees (FirstName, LastName, Email, RoleId)
 VALUES
-('John', 'Doe', 1),
-('Jane', 'Smith', 1),
-('Boss', 'Man', 2);
+('John', 'Doe', 'john.doe@scheduler.local', 1),
+('Jane', 'Smith', 'jane.smith@scheduler.local', 1),
+('Boss', 'Man', 'boss.man@scheduler.local', 2);
 
 -- Assign employees to schedule
 INSERT INTO ScheduleEmployees (ScheduleId, EmployeeId)
