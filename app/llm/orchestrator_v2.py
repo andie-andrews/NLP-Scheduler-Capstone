@@ -261,7 +261,19 @@ def _extract_schedule_name_or_id_from_message(message: str):
         return int(id_match.group(1))
 
     name = extract_schedule_name(raw)
-    return name or raw
+    if name:
+        normalized = name.strip().lower()
+        if normalized in {"a", "an", "the", "my"}:
+            return None
+        return name
+
+    to_schedule_match = re.search(r"\bto\s+([a-zA-Z0-9 _'’-]+?)\s+schedule\b", raw, flags=re.IGNORECASE)
+    if to_schedule_match:
+        candidate = to_schedule_match.group(1).strip(" .,!?:;\"'")
+        if candidate.lower() not in {"a", "an", "the", "my"}:
+            return candidate
+
+    return None
 
 
 def _extract_member_role_target(message: str):
@@ -300,6 +312,14 @@ def _extract_schedule_change_target_name(message: str, employees: list):
             if full_name and (candidate == full_name or full_name in candidate):
                 return full_name
     return None
+
+
+def _build_schedule_member_schedule_question(state: dict):
+    action = "add" if state.get("action") == "add" else "remove"
+    employee_name = state.get("employeeName")
+    if employee_name:
+        return f"What schedule did you want to {action} {employee_name} {'to' if action == 'add' else 'from'}?"
+    return "Which schedule should I update?"
 
 
 def _resolve_delete_shift_number_reply(message: str, state):
@@ -459,7 +479,11 @@ def run_orchestrator(message: str, token: str, session: dict):
             if choice and option_employees:
                 idx = int(choice.group(1))
                 if 1 <= idx <= len(option_employees):
-                    pending_schedule_member_change["employeeId"] = option_employees[idx - 1]["id"]
+                    chosen = option_employees[idx - 1]
+                    pending_schedule_member_change["employeeId"] = chosen["id"]
+                    pending_schedule_member_change["employeeName"] = (
+                        f"{(chosen.get('firstName') or '').strip()} {(chosen.get('lastName') or '').strip()}".strip()
+                    )
                     pending_schedule_member_change["employeeOptions"] = []
                 else:
                     option_lines = [
@@ -481,6 +505,11 @@ def run_orchestrator(message: str, token: str, session: dict):
                     set_pending_schedule_member_change_state(session, pending_schedule_member_change)
                     return "I found multiple employees. Please choose one:\n" + "\n".join(option_lines)
                 pending_schedule_member_change["employeeId"] = resolution["employeeId"]
+                matched = next((emp for emp in employees if emp.get("id") == resolution["employeeId"]), None)
+                if matched:
+                    pending_schedule_member_change["employeeName"] = (
+                        f"{(matched.get('firstName') or '').strip()} {(matched.get('lastName') or '').strip()}".strip()
+                    )
 
         if not pending_schedule_member_change.get("scheduleId"):
             schedule_target = _extract_schedule_name_or_id_from_message(message)
@@ -492,7 +521,7 @@ def run_orchestrator(message: str, token: str, session: dict):
                     pending_schedule_member_change["suggestedScheduleName"] = suggested_name
                     set_pending_schedule_member_change_state(session, pending_schedule_member_change)
                     return f"I couldn't find schedule '{suggested_name}'. Do you want me to create it?"
-                return "Which schedule should I update? If it doesn't exist, I can create it."
+                return _build_schedule_member_schedule_question(pending_schedule_member_change)
             pending_schedule_member_change["scheduleId"] = resolved_schedule_id
 
         operation = _get_schedule_member_operation(pending_schedule_member_change.get("action"))
@@ -542,6 +571,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             "action": action,
             "roleTarget": role_target,
             "employeeId": None,
+            "employeeName": None,
             "scheduleId": None,
             "employeeOptions": [],
             "awaitingCreateSchedule": False,
@@ -551,6 +581,9 @@ def run_orchestrator(message: str, token: str, session: dict):
             resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
             if resolution and resolution.get("type") == "resolved":
                 state["employeeId"] = resolution["employeeId"]
+                matched = next((emp for emp in employees if emp.get("id") == state["employeeId"]), None)
+                if matched:
+                    state["employeeName"] = f"{(matched.get('firstName') or '').strip()} {(matched.get('lastName') or '').strip()}".strip()
             elif resolution and resolution.get("type") == "disambiguation":
                 state["employeeOptions"] = resolution["raw"]
                 set_pending_schedule_member_change_state(session, state)
@@ -577,7 +610,7 @@ def run_orchestrator(message: str, token: str, session: dict):
                 return "Who should I update on the schedule?"
             if state.get("awaitingCreateSchedule") and state.get("suggestedScheduleName"):
                 return f"I couldn't find schedule '{state['suggestedScheduleName']}'. Do you want me to create it?"
-            return "Which schedule should I update?"
+            return _build_schedule_member_schedule_question(state)
 
         operation = _get_schedule_member_operation(action)
         if not operation:
