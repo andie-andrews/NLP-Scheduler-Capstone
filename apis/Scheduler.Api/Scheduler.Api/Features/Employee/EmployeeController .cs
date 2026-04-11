@@ -83,7 +83,7 @@ public class EmployeeController : ControllerBase
     if (parts.Length == 1)
     {
       firstName = parts[0];
-      lastName = parts[0];
+      lastName = null;
     }
     else
     {
@@ -92,7 +92,7 @@ public class EmployeeController : ControllerBase
     }
 
     var result = await _getByNameHandler.Handle(
-      new EmployeeQueries.GetEmployeeByNameQuery(firstName, lastName, parts.Length > 1));
+      new EmployeeQueries.GetEmployeeByNameQuery(firstName, lastName));
 
     return Ok(result);
   }
