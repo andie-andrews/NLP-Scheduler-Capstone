@@ -70,6 +70,10 @@ from llm.orchestration.context_resolution import (
     is_follow_up_employee_query,
     is_self_referential_employee_query,
 )
+from llm.orchestration.flow_context import (
+    build_pending_flow_kwargs,
+    build_shift_flow_kwargs,
+)
 from llm.orchestration.registry import FlowRegistry
 from llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
 from llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
@@ -577,7 +581,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     pending_flow_registry = FlowRegistry()
     pending_flow_registry.register("pending_schedule", handle_pending_schedule_flow)
     pending_flow_registry.register("pending_employee", handle_pending_employee_flow)
-    pending_flow_result = pending_flow_registry.dispatch(
+    pending_flow_result = pending_flow_registry.dispatch(**build_pending_flow_kwargs(
         message=message,
         token=token,
         session=session,
@@ -597,7 +601,7 @@ def run_orchestrator(message: str, token: str, session: dict):
         resolve_employee_id=resolve_employee_id,
         set_pending_employee_operation_state=set_pending_employee_operation_state,
         clear_pending_employee_operation_state=clear_pending_employee_operation_state,
-    )
+    ))
     if pending_flow_result is not None:
         return pending_flow_result
 
@@ -851,7 +855,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     flow_registry.register("delete_shift", handle_delete_shift_flow)
     flow_registry.register("update_shift", handle_update_shift_flow)
     flow_registry.register("create_shift", handle_create_shift_flow)
-    flow_result = flow_registry.dispatch(
+    flow_result = flow_registry.dispatch(**build_shift_flow_kwargs(
         message=message,
         token=token,
         session=session,
@@ -886,7 +890,7 @@ def run_orchestrator(message: str, token: str, session: dict):
         normalize_schedule_id_arg=normalize_schedule_id_arg,
         call_api=call_api,
         week_range_from_date=week_range_from_date,
-    )
+    ))
     if flow_result is not None:
         return flow_result
 
