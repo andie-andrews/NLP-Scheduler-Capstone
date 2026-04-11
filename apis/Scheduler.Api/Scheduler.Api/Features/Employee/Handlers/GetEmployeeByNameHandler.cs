@@ -25,16 +25,28 @@ public class GetEmployeeByNameHandler
         RoleId
     FROM Employees
     WHERE
-        (@FirstName IS NULL OR FirstName LIKE @FirstName + '%')
-        OR
-        (@LastName IS NULL OR LastName LIKE @LastName + '%')
+      (
+        @IsFullNameQuery = 1
+        AND FirstName LIKE @FirstName + '%'
+        AND LastName LIKE @LastName + '%'
+      )
+      OR
+      (
+        @IsFullNameQuery = 0
+        AND (
+          (@FirstName IS NOT NULL AND FirstName LIKE @FirstName + '%')
+          OR
+          (@LastName IS NOT NULL AND LastName LIKE @LastName + '%')
+        )
+      )
 ";
 
     Console.WriteLine($"FirstName: {query.FirstName}, LastName: {query.LastName}");
     var parameters = new
     {
       FirstName = query.FirstName?.Trim(),
-      LastName = query.LastName?.Trim()
+      LastName = query.LastName?.Trim(),
+      query.IsFullNameQuery
     };
 
 

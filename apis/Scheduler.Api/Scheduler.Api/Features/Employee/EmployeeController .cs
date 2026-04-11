@@ -92,7 +92,7 @@ public class EmployeeController : ControllerBase
     }
 
     var result = await _getByNameHandler.Handle(
-      new EmployeeQueries.GetEmployeeByNameQuery(firstName, lastName));
+      new EmployeeQueries.GetEmployeeByNameQuery(firstName, lastName, parts.Length > 1));
 
     return Ok(result);
   }

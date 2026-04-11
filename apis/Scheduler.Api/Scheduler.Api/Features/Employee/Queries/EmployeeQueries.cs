@@ -2,6 +2,6 @@
 {
   public class EmployeeQueries
   {
-    public record GetEmployeeByNameQuery(string FirstName, string LastName);
+    public record GetEmployeeByNameQuery(string FirstName, string LastName, bool IsFullNameQuery = false);
   }
 }
