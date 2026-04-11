@@ -68,3 +68,24 @@ def is_delete_schedule_intent(message: str):
     if "shift" in text:
         return False
     return not is_remove_schedule_member_intent(message)
+
+
+def is_create_employee_intent(message: str):
+    text = (message or "").lower()
+    if "employee" not in text:
+        return False
+    return any(action in text for action in ["create", "add", "new", "hire"])
+
+
+def is_update_employee_intent(message: str):
+    text = (message or "").lower()
+    if "employee" not in text:
+        return False
+    return any(action in text for action in ["update", "edit", "change"])
+
+
+def is_delete_employee_intent(message: str):
+    text = (message or "").lower()
+    if "employee" not in text:
+        return False
+    return any(action in text for action in ["delete", "remove", "terminate"])
