@@ -273,6 +273,12 @@ def _extract_schedule_name_or_id_from_message(message: str):
         if candidate.lower() not in {"a", "an", "the", "my"}:
             return candidate
 
+    from_schedule_match = re.search(r"\bfrom\s+([a-zA-Z0-9 _'’-]+?)\s+schedule\b", raw, flags=re.IGNORECASE)
+    if from_schedule_match:
+        candidate = from_schedule_match.group(1).strip(" .,!?:;\"'")
+        if candidate.lower() not in {"a", "an", "the", "my"}:
+            return candidate
+
     return None
 
 
