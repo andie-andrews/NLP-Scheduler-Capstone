@@ -9,11 +9,14 @@ from llm.openapi_parser import parse_operations
 from llm.openapi_client import call_api
 from llm.orchestration.intents import (
     is_add_schedule_member_intent,
+    is_create_employee_intent,
     is_create_schedule_intent,
     is_create_shift_intent,
+    is_delete_employee_intent,
     is_delete_schedule_intent,
     is_delete_shift_intent,
     is_remove_schedule_member_intent,
+    is_update_employee_intent,
     is_update_shift_intent,
 )
 from llm.orchestration.parsers import (
@@ -41,6 +44,7 @@ from llm.orchestration.state_store import (
     clear_pending_schedule_member_change_state,
     clear_pending_create_schedule_state,
     clear_pending_delete_schedule_state,
+    clear_pending_employee_operation_state,
     get_pending_employee_disambiguation_state,
     get_pending_delete_shift_state,
     get_pending_show_shifts_state,
@@ -49,6 +53,7 @@ from llm.orchestration.state_store import (
     get_pending_schedule_member_change_state,
     get_pending_create_schedule_state,
     get_pending_delete_schedule_state,
+    get_pending_employee_operation_state,
     set_pending_employee_disambiguation_state,
     set_pending_show_shifts_state,
     set_pending_delete_shift_state,
@@ -57,6 +62,7 @@ from llm.orchestration.state_store import (
     set_pending_schedule_member_change_state,
     set_pending_create_schedule_state,
     set_pending_delete_schedule_state,
+    set_pending_employee_operation_state,
 )
 from llm.orchestration.summary import summarize_shifts
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
@@ -237,6 +243,39 @@ def _extract_explicit_employee_id(message: str):
     if not match:
         return None
     return int(match.group(1))
+
+
+def _extract_employee_name_parts(message: str):
+    text = (message or "").strip()
+    quoted = re.search(r"['\"]([^'\"]+)['\"]", text)
+    candidate = quoted.group(1).strip() if quoted else text
+
+    patterns = [
+        r"(?:employee\s+)?named\s+([a-zA-Z]+)\s+([a-zA-Z]+)",
+        r"(?:employee\s+)?name\s+is\s+([a-zA-Z]+)\s+([a-zA-Z]+)",
+        r"(?:add|create|new|hire|update|edit|change)\s+(?:employee\s+)?([a-zA-Z]+)\s+([a-zA-Z]+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, candidate, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip().title(), match.group(2).strip().title()
+
+    tokens = [token for token in re.findall(r"[a-zA-Z]+", candidate) if token.lower() not in {"employee", "add", "create", "new", "hire", "update", "edit", "change", "delete", "remove"}]
+    if len(tokens) >= 2:
+        return tokens[-2].title(), tokens[-1].title()
+    return None, None
+
+
+def _extract_role_id(message: str):
+    text = (message or "").lower()
+    explicit = re.search(r"role\s*id\s*[:=]?\s*(\d+)", text)
+    if explicit:
+        return int(explicit.group(1))
+    if "supervisor" in text or "manager" in text:
+        return 2
+    if "employee" in text:
+        return 1
+    return None
 
 
 def _extract_schedule_name_for_create(message: str):
@@ -426,6 +465,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     pending_schedule_member_change = get_pending_schedule_member_change_state(session)
     pending_create_schedule = get_pending_create_schedule_state(session)
     pending_delete_schedule = get_pending_delete_schedule_state(session)
+    pending_employee_operation = get_pending_employee_operation_state(session)
 
     if pending_employee_disambiguation:
         options = pending_employee_disambiguation.get("options", [])
@@ -491,6 +531,11 @@ def run_orchestrator(message: str, token: str, session: dict):
         pending_delete_schedule = None
         return "Okay — I cancelled deleting the schedule."
 
+    if pending_employee_operation and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
+        clear_pending_employee_operation_state(session)
+        pending_employee_operation = None
+        return "Okay — I cancelled the employee update flow."
+
     if pending_create_schedule:
         schedule_name = (message or "").strip()
         if not schedule_name:
@@ -515,6 +560,104 @@ def run_orchestrator(message: str, token: str, session: dict):
         clear_pending_delete_schedule_state(session)
         schedule_name = schedule_target if isinstance(schedule_target, str) else _lookup_schedule_name_by_id(token, resolved_schedule_id)
         return f"Done — deleted schedule {schedule_name or resolved_schedule_id}."
+
+    if pending_employee_operation:
+        employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""}) or []
+        action = pending_employee_operation.get("action")
+        first_name, last_name = _extract_employee_name_parts(message)
+        role_id = _extract_role_id(message)
+        if first_name and not pending_employee_operation.get("firstName"):
+            pending_employee_operation["firstName"] = first_name
+        if last_name and not pending_employee_operation.get("lastName"):
+            pending_employee_operation["lastName"] = last_name
+        if role_id and pending_employee_operation.get("roleId") is None:
+            pending_employee_operation["roleId"] = role_id
+
+        if action in {"update", "delete"} and pending_employee_operation.get("employeeId") is None:
+            resolved_id = _extract_explicit_employee_id(message)
+            if resolved_id is None:
+                lookup_name = " ".join(filter(None, [pending_employee_operation.get("firstName"), pending_employee_operation.get("lastName")])).strip()
+                if not lookup_name and first_name and last_name:
+                    lookup_name = f"{first_name} {last_name}"
+                if lookup_name:
+                    resolution = resolve_employee_id(token, lookup_name, OPERATIONS, call_api)
+                    if resolution and resolution.get("type") == "resolved":
+                        pending_employee_operation["employeeId"] = resolution["employeeId"]
+                    elif resolution and resolution.get("type") == "disambiguation":
+                        pending_employee_operation["employeeOptions"] = resolution["raw"]
+                        set_pending_employee_operation_state(session, pending_employee_operation)
+                        lines = [f"{idx + 1}. {value}" for idx, value in enumerate(resolution["options"])]
+                        return "I found multiple employees. Please choose one:\n" + "\n".join(lines)
+            else:
+                pending_employee_operation["employeeId"] = resolved_id
+
+            choice = re.search(r"\b(\d+)\b", message or "")
+            options = pending_employee_operation.get("employeeOptions") or []
+            if pending_employee_operation.get("employeeId") is None and choice and options:
+                idx = int(choice.group(1))
+                if 1 <= idx <= len(options):
+                    pending_employee_operation["employeeId"] = options[idx - 1]["id"]
+                    pending_employee_operation["employeeOptions"] = []
+                else:
+                    lines = [f"{i + 1}. {(item.get('firstName') or '').strip()} {(item.get('lastName') or '').strip()}".strip() for i, item in enumerate(options)]
+                    return "That number is out of range. Please choose one:\n" + "\n".join(lines)
+
+        if action == "create":
+            missing = []
+            if not pending_employee_operation.get("firstName"):
+                missing.append("first name")
+            if not pending_employee_operation.get("lastName"):
+                missing.append("last name")
+            if pending_employee_operation.get("roleId") is None:
+                missing.append("role (employee or supervisor)")
+            if missing:
+                set_pending_employee_operation_state(session, pending_employee_operation)
+                return "I can add that employee. Please provide: " + ", ".join(missing) + "."
+            payload = {
+                "firstName": pending_employee_operation["firstName"],
+                "lastName": pending_employee_operation["lastName"],
+                "roleId": pending_employee_operation["roleId"],
+            }
+            created = call_api(token, OPERATIONS["createEmployee"], payload)
+            clear_pending_employee_operation_state(session)
+            created_id = created.get("id")
+            return f"Done — created employee {payload['firstName']} {payload['lastName']}" + (f" (ID: {created_id})." if created_id is not None else ".")
+
+        if action == "update":
+            if pending_employee_operation.get("employeeId") is None:
+                set_pending_employee_operation_state(session, pending_employee_operation)
+                return "Which employee should I update? Please provide name or employeeId."
+            update_payload = {"employeeId": pending_employee_operation["employeeId"]}
+            if pending_employee_operation.get("firstName"):
+                update_payload["firstName"] = pending_employee_operation["firstName"]
+            if pending_employee_operation.get("lastName"):
+                update_payload["lastName"] = pending_employee_operation["lastName"]
+            if pending_employee_operation.get("roleId") is not None:
+                update_payload["roleId"] = pending_employee_operation["roleId"]
+            if len(update_payload) == 1:
+                set_pending_employee_operation_state(session, pending_employee_operation)
+                return "What should I change? You can provide first name, last name, and/or role."
+            call_api(token, OPERATIONS["updateEmployee"], update_payload)
+            employee = next((emp for emp in employees if emp.get("id") == pending_employee_operation["employeeId"]), None)
+            clear_pending_employee_operation_state(session)
+            employee_display = (
+                f"{(employee.get('firstName') or '').strip()} {(employee.get('lastName') or '').strip()}".strip()
+                if employee else f"employee {update_payload['employeeId']}"
+            )
+            return f"Done — updated {employee_display}."
+
+        if action == "delete":
+            if pending_employee_operation.get("employeeId") is None:
+                set_pending_employee_operation_state(session, pending_employee_operation)
+                return "Which employee should I delete? Please provide name or employeeId."
+            call_api(token, OPERATIONS["deleteEmployee"], {"employeeId": pending_employee_operation["employeeId"]})
+            employee = next((emp for emp in employees if emp.get("id") == pending_employee_operation["employeeId"]), None)
+            clear_pending_employee_operation_state(session)
+            employee_display = (
+                f"{(employee.get('firstName') or '').strip()} {(employee.get('lastName') or '').strip()}".strip()
+                if employee else f"employee {pending_employee_operation['employeeId']}"
+            )
+            return f"Done — deleted {employee_display}."
 
     if pending_schedule_member_change:
         if pending_schedule_member_change.get("awaitingCreateSchedule"):
@@ -643,6 +786,56 @@ def run_orchestrator(message: str, token: str, session: dict):
         call_api(token, delete_operation, {"scheduleId": resolved_schedule_id})
         schedule_name = schedule_target if isinstance(schedule_target, str) else _lookup_schedule_name_by_id(token, resolved_schedule_id)
         return f"Done — deleted schedule {schedule_name or resolved_schedule_id}."
+
+    if is_create_employee_intent(message):
+        first_name, last_name = _extract_employee_name_parts(message)
+        role_id = _extract_role_id(message)
+        state = {
+            "action": "create",
+            "firstName": first_name,
+            "lastName": last_name,
+            "roleId": role_id,
+        }
+        set_pending_employee_operation_state(session, state)
+        if not first_name or not last_name or role_id is None:
+            missing = []
+            if not first_name:
+                missing.append("first name")
+            if not last_name:
+                missing.append("last name")
+            if role_id is None:
+                missing.append("role (employee or supervisor)")
+            return "I can add that employee. Please provide: " + ", ".join(missing) + "."
+        created = call_api(token, OPERATIONS["createEmployee"], {"firstName": first_name, "lastName": last_name, "roleId": role_id})
+        clear_pending_employee_operation_state(session)
+        created_id = created.get("id")
+        return f"Done — created employee {first_name} {last_name}" + (f" (ID: {created_id})." if created_id is not None else ".")
+
+    if is_update_employee_intent(message):
+        first_name, last_name = _extract_employee_name_parts(message)
+        role_id = _extract_role_id(message)
+        state = {
+            "action": "update",
+            "employeeId": _extract_explicit_employee_id(message),
+            "firstName": first_name,
+            "lastName": last_name,
+            "roleId": role_id,
+            "employeeOptions": [],
+        }
+        set_pending_employee_operation_state(session, state)
+        return run_orchestrator("", token, session)
+
+    if is_delete_employee_intent(message):
+        first_name, last_name = _extract_employee_name_parts(message)
+        state = {
+            "action": "delete",
+            "employeeId": _extract_explicit_employee_id(message),
+            "firstName": first_name,
+            "lastName": last_name,
+            "employeeOptions": [],
+        }
+        set_pending_employee_operation_state(session, state)
+        return run_orchestrator("", token, session)
 
     if is_add_schedule_member_intent(message) or is_remove_schedule_member_intent(message):
         employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""}) or []
