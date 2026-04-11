@@ -30,12 +30,14 @@ def resolve_schedule_id(token, name, operations, api_caller):
     if not schedule_op:
         return None
 
-    schedules = api_caller(token, schedule_op, {})
-    if not schedules:
-        return {"type": "not_found", "name": name}
-
     target = (name or "").strip().lower()
     if not target:
+        return {"type": "not_found", "name": name}
+
+    schedules = api_caller(token, schedule_op, {"query": name}) or []
+    if not schedules:
+        schedules = api_caller(token, schedule_op, {}) or []
+    if not schedules:
         return {"type": "not_found", "name": name}
 
     exact = [s for s in schedules if (s.get("name") or "").strip().lower() == target]

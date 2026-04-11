@@ -82,7 +82,11 @@ public class ScheduleController : ControllerBase
   [ProducesResponseType(typeof(Schedule), 201)]
   public async Task<IActionResult> CreateSchedule([FromBody] CreateScheduleRequest request)
   {
-    var id = await _createScheduleHandler.Handle(request.Name);
+    var employeeIdClaim = User.FindFirst("employeeId")?.Value;
+    if (!int.TryParse(employeeIdClaim, out var managerId))
+      return Unauthorized("Missing or invalid employeeId claim.");
+
+    var id = await _createScheduleHandler.Handle(request.Name, managerId);
     return Ok(new { id });
   }
 
