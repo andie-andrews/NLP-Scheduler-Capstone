@@ -678,6 +678,35 @@
           }
         }
       }
+    },
+    "/api/schedules/{scheduleId}": {
+      "delete": {
+        "tags": [
+          "Schedule"
+        ],
+        "operationId": "deleteSchedule",
+        "x-operation-type": "mutation",
+        "x-intent": [
+          "delete schedule",
+          "remove schedule",
+          "cancel schedule"
+        ],
+        "parameters": [
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule deleted"
+          }
+        }
+      }
     }
   },
   "components": {

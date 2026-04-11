@@ -5,6 +5,7 @@ PENDING_UPDATE_SHIFT_KEY = "pending_update_shift"
 PENDING_EMPLOYEE_DISAMBIGUATION_KEY = "pending_employee_disambiguation"
 PENDING_SCHEDULE_MEMBER_CHANGE_KEY = "pending_schedule_member_change"
 PENDING_CREATE_SCHEDULE_KEY = "pending_create_schedule"
+PENDING_DELETE_SCHEDULE_KEY = "pending_delete_schedule"
 
 
 def _get_memory(session: dict):
@@ -135,3 +136,21 @@ def set_pending_create_schedule_state(session, state):
 
 def clear_pending_create_schedule_state(session):
     set_pending_create_schedule_state(session, None)
+
+
+def get_pending_delete_schedule_state(session):
+    memory = _get_memory(session)
+    if memory is None:
+        return None
+    return getattr(memory, PENDING_DELETE_SCHEDULE_KEY, None)
+
+
+def set_pending_delete_schedule_state(session, state):
+    memory = _get_memory(session)
+    if memory is None:
+        return
+    setattr(memory, PENDING_DELETE_SCHEDULE_KEY, state)
+
+
+def clear_pending_delete_schedule_state(session):
+    set_pending_delete_schedule_state(session, None)

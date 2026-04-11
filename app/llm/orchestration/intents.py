@@ -48,12 +48,23 @@ def is_add_schedule_member_intent(message: str):
     text = (message or "").lower()
     add_words = any(word in text for word in ["add", "assign", "include", "put"])
     member_words = any(word in text for word in ["employee", "manager", "supervisor"])
-    return "schedule" in text and add_words and (member_words or " to " in text)
+    explicit_member_phrase = bool(re.search(r"\b(add|assign|include|put)\b.+\bto\b.+\bschedule\b", text))
+    return "schedule" in text and add_words and (explicit_member_phrase or ("employee" in text and member_words))
 
 
 def is_remove_schedule_member_intent(message: str):
     text = (message or "").lower()
     remove_words = any(word in text for word in ["remove", "unassign", "delete", "take off"])
-    member_words = any(word in text for word in ["employee", "manager", "supervisor"])
-    has_linking_prep = " from " in text or " off " in text
-    return "schedule" in text and remove_words and (member_words or has_linking_prep)
+    explicit_member_phrase = bool(re.search(r"\b(remove|unassign|delete|take off)\b.+\b(from|off)\b.+\bschedule\b", text))
+    member_words = any(word in text for word in ["employee", "staff member", "teammate"])
+    return "schedule" in text and remove_words and (explicit_member_phrase or member_words)
+
+
+def is_delete_schedule_intent(message: str):
+    text = (message or "").lower()
+    has_delete_action = any(action in text for action in ["delete", "remove", "cancel"])
+    if not has_delete_action or "schedule" not in text:
+        return False
+    if "shift" in text:
+        return False
+    return not is_remove_schedule_member_intent(message)

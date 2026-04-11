@@ -11,6 +11,7 @@ from llm.orchestration.intents import (
     is_add_schedule_member_intent,
     is_create_schedule_intent,
     is_create_shift_intent,
+    is_delete_schedule_intent,
     is_delete_shift_intent,
     is_remove_schedule_member_intent,
     is_update_shift_intent,
@@ -39,6 +40,7 @@ from llm.orchestration.state_store import (
     clear_pending_update_shift_state,
     clear_pending_schedule_member_change_state,
     clear_pending_create_schedule_state,
+    clear_pending_delete_schedule_state,
     get_pending_employee_disambiguation_state,
     get_pending_delete_shift_state,
     get_pending_show_shifts_state,
@@ -46,6 +48,7 @@ from llm.orchestration.state_store import (
     get_pending_update_shift_state,
     get_pending_schedule_member_change_state,
     get_pending_create_schedule_state,
+    get_pending_delete_schedule_state,
     set_pending_employee_disambiguation_state,
     set_pending_show_shifts_state,
     set_pending_delete_shift_state,
@@ -53,6 +56,7 @@ from llm.orchestration.state_store import (
     set_pending_update_shift_state,
     set_pending_schedule_member_change_state,
     set_pending_create_schedule_state,
+    set_pending_delete_schedule_state,
 )
 from llm.orchestration.summary import summarize_shifts
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
@@ -421,6 +425,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     pending_employee_disambiguation = get_pending_employee_disambiguation_state(session)
     pending_schedule_member_change = get_pending_schedule_member_change_state(session)
     pending_create_schedule = get_pending_create_schedule_state(session)
+    pending_delete_schedule = get_pending_delete_schedule_state(session)
 
     if pending_employee_disambiguation:
         options = pending_employee_disambiguation.get("options", [])
@@ -481,6 +486,11 @@ def run_orchestrator(message: str, token: str, session: dict):
         pending_create_schedule = None
         return "Okay — I cancelled creating a new schedule."
 
+    if pending_delete_schedule and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
+        clear_pending_delete_schedule_state(session)
+        pending_delete_schedule = None
+        return "Okay — I cancelled deleting the schedule."
+
     if pending_create_schedule:
         schedule_name = (message or "").strip()
         if not schedule_name:
@@ -491,6 +501,20 @@ def run_orchestrator(message: str, token: str, session: dict):
         if schedule_id is not None:
             return {"summary": f"Created schedule '{schedule_name}' (ID: {schedule_id}).", "data": {"scheduleId": schedule_id, "name": schedule_name}}
         return {"summary": f"Created schedule '{schedule_name}'.", "data": {"name": schedule_name, "createScheduleResponse": result}}
+
+    if pending_delete_schedule:
+        schedule_target = _extract_schedule_name_or_id_from_message(message) or (message or "").strip()
+        resolved_schedule_id = normalize_schedule_id_arg(token, schedule_target, OPERATIONS, call_api)
+        if resolved_schedule_id is None:
+            return "I couldn't find that schedule. Which schedule should I delete?"
+        delete_operation = OPERATIONS.get("deleteSchedule")
+        if not delete_operation:
+            clear_pending_delete_schedule_state(session)
+            return "Deleting schedules is not available because the API spec is missing deleteSchedule."
+        call_api(token, delete_operation, {"scheduleId": resolved_schedule_id})
+        clear_pending_delete_schedule_state(session)
+        schedule_name = schedule_target if isinstance(schedule_target, str) else _lookup_schedule_name_by_id(token, resolved_schedule_id)
+        return f"Done — deleted schedule {schedule_name or resolved_schedule_id}."
 
     if pending_schedule_member_change:
         if pending_schedule_member_change.get("awaitingCreateSchedule"):
@@ -603,6 +627,22 @@ def run_orchestrator(message: str, token: str, session: dict):
             "summary": f"Created schedule '{schedule_name}'.",
             "data": {"name": schedule_name, "createScheduleResponse": result},
         }
+
+    if is_delete_schedule_intent(message):
+        schedule_target = _extract_schedule_name_or_id_from_message(message)
+        if not schedule_target:
+            set_pending_delete_schedule_state(session, {"intent": "delete_schedule"})
+            return "Which schedule do you want me to delete?"
+        resolved_schedule_id = normalize_schedule_id_arg(token, schedule_target, OPERATIONS, call_api)
+        if resolved_schedule_id is None:
+            set_pending_delete_schedule_state(session, {"intent": "delete_schedule"})
+            return "I couldn't find that schedule. Which schedule do you want me to delete?"
+        delete_operation = OPERATIONS.get("deleteSchedule")
+        if not delete_operation:
+            return "Deleting schedules is not available because the API spec is missing deleteSchedule."
+        call_api(token, delete_operation, {"scheduleId": resolved_schedule_id})
+        schedule_name = schedule_target if isinstance(schedule_target, str) else _lookup_schedule_name_by_id(token, resolved_schedule_id)
+        return f"Done — deleted schedule {schedule_name or resolved_schedule_id}."
 
     if is_add_schedule_member_intent(message) or is_remove_schedule_member_intent(message):
         employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""}) or []
