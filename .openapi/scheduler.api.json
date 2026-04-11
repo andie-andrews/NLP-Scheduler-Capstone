@@ -398,16 +398,29 @@
         },
         "responses": {
           "200": {
-            "description": "Created schedule",
+            "description": "Created schedule id",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Schedule"
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing or invalid employeeId claim in JWT."
           }
-        }
+        },
+        "summary": "Create schedule and assign creator as manager",
+        "description": "Creates a new schedule and automatically assigns the authenticated user (employeeId claim) as a manager in ScheduleManagers."
       }
     },
     "/api/schedules/{scheduleId}/employees": {
