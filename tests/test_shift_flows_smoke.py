@@ -1,4 +1,5 @@
 import unittest
+from datetime import date
 
 from app.llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
 from app.llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
@@ -73,6 +74,142 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             build_employee_disambiguation_prompt=lambda *_: "",
         )
         self.assertIsNone(result)
+
+    def test_create_shift_flow_creates_multiple_shifts_when_dates_are_present(self):
+        calls = []
+        responses = [{"id": 1}, {"id": 2}]
+
+        def fake_call_api(_token, operation, args):
+            if operation == "create-shift-op":
+                calls.append(args)
+                return responses[len(calls) - 1]
+            return []
+
+        session = {}
+        result = handle_create_shift_flow(
+            message="schedule jane next week monday-friday 9am-5pm",
+            token="t",
+            session=session,
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": ["2026-04-20", "2026-04-21"],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (None, None),
+        )
+
+        self.assertEqual(result["summary"], "Shifts created successfully (2 new).")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0]["start"], "2026-04-20T09:00:00")
+        self.assertEqual(calls[1]["start"], "2026-04-21T09:00:00")
+
+    def test_create_shift_flow_skips_existing_recurring_shifts(self):
+        create_calls = []
+
+        def fake_call_api(_token, operation, args):
+            if operation == "get-shifts-op":
+                return [
+                    {"employeeId": 10, "start": "2026-04-20T09:00:00", "durationHours": 8},
+                    {"employeeId": 10, "start": "2026-04-21T09:00:00", "durationHours": 8},
+                ]
+            if operation == "create-shift-op":
+                create_calls.append(args)
+                return {"id": 99}
+            return []
+
+        result = handle_create_shift_flow(
+            message="schedule jane next week monday-friday 9am-5pm",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": ["2026-04-20", "2026-04-21"],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op", "getScheduleShifts": "get-shifts-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(result["summary"], "All requested shifts already exist on that schedule.")
+        self.assertEqual(len(create_calls), 0)
+
+    def test_create_shift_flow_single_shift_still_creates_even_if_match_exists(self):
+        create_calls = []
+
+        def fake_call_api(_token, operation, args):
+            if operation == "get-shifts-op":
+                return [{"employeeId": 10, "start": "2026-04-20T09:00:00", "durationHours": 8}]
+            if operation == "create-shift-op":
+                create_calls.append(args)
+                return {"id": 100}
+            return []
+
+        result = handle_create_shift_flow(
+            message="create shift",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": [],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op", "getScheduleShifts": "get-shifts-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(result["summary"], "Shift created successfully.")
+        self.assertEqual(len(create_calls), 1)
+        self.assertEqual(result["data"]["createdCount"], 1)
+        self.assertEqual(result["data"]["createShiftResponse"], {"id": 100})
 
 
 if __name__ == "__main__":

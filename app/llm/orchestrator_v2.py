@@ -21,8 +21,10 @@ from llm.orchestration.intents import (
 )
 from llm.orchestration.parsers import (
     extract_duration_hours,
+    extract_recurring_shift_dates,
     extract_schedule_name,
     extract_time_of_day,
+    extract_time_range,
     extract_week_range_from_message,
     extract_weekday_date,
     extract_weekday_datetime,
@@ -94,6 +96,8 @@ def _build_create_shift_question(state):
     if not state.get("scheduleId"):
         return "Got it. Which schedule should I use?"
     if not state.get("start"):
+        if state.get("multiShiftDates"):
+            return "What time should these shifts start?"
         if state.get("pendingStartDate"):
             pending_date = datetime.fromisoformat(state["pendingStartDate"]).strftime("%A, %b %d")
             return f"What time should the shift start on {pending_date}?"
@@ -142,6 +146,31 @@ def _attempt_fill_shift_state_from_message(message, token, state):
     if duration and not state.get("durationHours"):
         state["durationHours"] = duration
 
+    recurring_dates = extract_recurring_shift_dates(message)
+    if recurring_dates and not state.get("multiShiftDates"):
+        state["multiShiftDates"] = [date.isoformat() for date in recurring_dates]
+
+    time_range = extract_time_range(message)
+    if time_range:
+        if not state.get("durationHours"):
+            state["durationHours"] = time_range["durationHours"]
+        if not state.get("start"):
+            if state.get("multiShiftDates"):
+                first_date = datetime.fromisoformat(state["multiShiftDates"][0]).date()
+                start_dt = datetime.combine(first_date, datetime.min.time()).replace(
+                    hour=time_range["startHour"],
+                    minute=time_range["startMinute"],
+                )
+                state["start"] = start_dt.isoformat()
+            else:
+                parsed_date = extract_weekday_date(message)
+                if parsed_date:
+                    start_dt = datetime.combine(parsed_date, datetime.min.time()).replace(
+                        hour=time_range["startHour"],
+                        minute=time_range["startMinute"],
+                    )
+                    state["start"] = start_dt.isoformat()
+
     if not state.get("start"):
         start = extract_weekday_datetime(message)
         if start:
@@ -159,6 +188,15 @@ def _attempt_fill_shift_state_from_message(message, token, state):
             start_dt = datetime.combine(pending_date, datetime.min.time()).replace(hour=parsed_time[0], minute=parsed_time[1])
             state["start"] = start_dt.isoformat()
             state["pendingStartDate"] = None
+
+    if not state.get("start") and state.get("multiShiftDates"):
+        parsed_time = extract_time_of_day(message)
+        if parsed_time:
+            first_date = datetime.fromisoformat(state["multiShiftDates"][0]).date()
+            state["start"] = datetime.combine(first_date, datetime.min.time()).replace(
+                hour=parsed_time[0],
+                minute=parsed_time[1],
+            ).isoformat()
 
     if not state.get("scheduleId"):
         raw_message = message.strip()
