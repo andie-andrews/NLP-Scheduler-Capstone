@@ -1,5 +1,27 @@
 -- Insert initial data into the database
 
+-- Backfill schema for environments created before Email was added.
+IF COL_LENGTH('Employees', 'Email') IS NULL
+BEGIN
+    ALTER TABLE Employees ADD Email NVARCHAR(255) NULL;
+
+    UPDATE Employees
+    SET Email = LOWER(CONCAT(FirstName, '.', LastName, '@scheduler.local'))
+    WHERE Email IS NULL;
+
+    ALTER TABLE Employees ALTER COLUMN Email NVARCHAR(255) NOT NULL;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes
+        WHERE name = 'UQ_Employees_Email'
+          AND object_id = OBJECT_ID('dbo.Employees')
+    )
+    BEGIN
+        ALTER TABLE Employees ADD CONSTRAINT [UQ_Employees_Email] UNIQUE ([Email]);
+    END
+END
+
 -- Roles
 IF NOT EXISTS (SELECT 1 FROM Roles)
 BEGIN

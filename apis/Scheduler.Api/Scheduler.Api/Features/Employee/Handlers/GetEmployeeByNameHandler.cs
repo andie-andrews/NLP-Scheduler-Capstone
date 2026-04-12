@@ -16,6 +16,8 @@ public class GetEmployeeByNameHandler
   public async Task<IEnumerable<Infrastructure.Domain.Models.Employee>> Handle(EmployeeQueries.GetEmployeeByNameQuery query)
   {
     using var connection = _db.CreateConnection();
+    var hasEmail = await connection.ExecuteScalarAsync<int>(
+      "SELECT CASE WHEN COL_LENGTH('Employees', 'Email') IS NULL THEN 0 ELSE 1 END") == 1;
 
     Console.WriteLine($"FirstName: {query.FirstName}, LastName: {query.LastName}");
     var parameters = new
@@ -27,12 +29,24 @@ public class GetEmployeeByNameHandler
 
     if (!string.IsNullOrWhiteSpace(query.FirstName) && !string.IsNullOrWhiteSpace(query.LastName))
     {
-      var fullNameSql = @"
+      var fullNameSql = hasEmail
+        ? @"
       SELECT 
           Id,
           FirstName,
           LastName,
           Email,
+          RoleId
+      FROM Employees
+      WHERE FirstName LIKE @FirstName + '%'
+        AND LastName LIKE @LastName + '%'
+      "
+        : @"
+      SELECT 
+          Id,
+          FirstName,
+          LastName,
+          CAST('' AS NVARCHAR(255)) AS Email,
           RoleId
       FROM Employees
       WHERE FirstName LIKE @FirstName + '%'
@@ -47,7 +61,8 @@ public class GetEmployeeByNameHandler
         return fullNameMatches;
     }
 
-    var fallbackSql = @"
+    var fallbackSql = hasEmail
+      ? @"
     SELECT 
         Id,
         FirstName,
@@ -61,6 +76,19 @@ public class GetEmployeeByNameHandler
       (@LastName IS NOT NULL AND LastName LIKE @LastName + '%')
       OR
       (@Query IS NOT NULL AND Email LIKE @Query + '%')
+    "
+      : @"
+    SELECT 
+        Id,
+        FirstName,
+        LastName,
+        CAST('' AS NVARCHAR(255)) AS Email,
+        RoleId
+    FROM Employees
+    WHERE
+      (@FirstName IS NOT NULL AND FirstName LIKE @FirstName + '%')
+      OR
+      (@LastName IS NOT NULL AND LastName LIKE @LastName + '%')
     ";
 
     return await connection.QueryAsync<Infrastructure.Domain.Models.Employee>(
