@@ -1,4 +1,5 @@
 using Dapper;
+using Scheduler.Api.Features.Shifts;
 using Scheduler.Api.Infrastructure.Data;
 using System.Data;
 
@@ -25,9 +26,16 @@ public class CreateShiftHandler
 
     try
     {
-      await connection.ExecuteAsync(@"
+      var rows = await connection.ExecuteAsync(@"
         INSERT INTO Shifts (ScheduleId, EmployeeId, Start, DurationHours)
-        VALUES (@scheduleId, @employeeId, @start, @duration)
+        SELECT @scheduleId, @employeeId, @start, @duration
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM Shifts
+          WHERE EmployeeId = @employeeId
+            AND Start < DATEADD(hour, @duration, @start)
+            AND DATEADD(hour, DurationHours, Start) > @start
+        )
       ", new
       {
         scheduleId,
@@ -35,6 +43,11 @@ public class CreateShiftHandler
         start,
         duration,
       });
+
+      if (rows == 0)
+        throw new ShiftValidationException(
+          "Shift overlaps an existing shift for this employee.",
+          "overlapping_shift");
     }
     finally
     {
