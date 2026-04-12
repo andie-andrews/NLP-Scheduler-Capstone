@@ -92,8 +92,9 @@ def handle_create_shift_flow(
         shifts_to_create.append(args)
 
     get_schedule_shifts = operations.get("getScheduleShifts")
+    should_skip_existing = len(shifts_to_create) > 1
     existing_matches_before = []
-    if get_schedule_shifts and shifts_to_create:
+    if get_schedule_shifts and shifts_to_create and should_skip_existing:
         parsed_starts = [datetime.fromisoformat(shift["start"]) for shift in shifts_to_create]
         week_start_date, _ = week_range_from_date(min(parsed_starts))
         _, week_end_date = week_range_from_date(max(parsed_starts))
@@ -119,15 +120,18 @@ def handle_create_shift_flow(
         week_start_date = None
         week_end_date = None
 
-    shifts_missing = []
-    for shift_args in shifts_to_create:
-        already_exists = any(
-            existing.get("start") == shift_args["start"]
-            and existing.get("durationHours") == shift_args["durationHours"]
-            for existing in existing_matches_before
-        )
-        if not already_exists:
-            shifts_missing.append(shift_args)
+    if should_skip_existing:
+        shifts_missing = []
+        for shift_args in shifts_to_create:
+            already_exists = any(
+                existing.get("start") == shift_args["start"]
+                and existing.get("durationHours") == shift_args["durationHours"]
+                for existing in existing_matches_before
+            )
+            if not already_exists:
+                shifts_missing.append(shift_args)
+    else:
+        shifts_missing = list(shifts_to_create)
 
     results = []
     for shift_args in shifts_missing:
@@ -183,7 +187,7 @@ def handle_create_shift_flow(
         print("[create_shift] Verification result:", verification)
 
     clear_pending_shift_state(session)
-    if not shifts_missing:
+    if should_skip_existing and not shifts_missing:
         summary = "All requested shifts already exist on that schedule."
     elif len(shifts_to_create) > 1:
         summary = f"Shifts created successfully ({len(shifts_missing)} new)."

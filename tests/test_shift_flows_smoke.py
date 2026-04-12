@@ -166,6 +166,49 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         self.assertEqual(result["summary"], "All requested shifts already exist on that schedule.")
         self.assertEqual(len(create_calls), 0)
 
+    def test_create_shift_flow_single_shift_still_creates_even_if_match_exists(self):
+        create_calls = []
+
+        def fake_call_api(_token, operation, args):
+            if operation == "get-shifts-op":
+                return [{"employeeId": 10, "start": "2026-04-20T09:00:00", "durationHours": 8}]
+            if operation == "create-shift-op":
+                create_calls.append(args)
+                return {"id": 100}
+            return []
+
+        result = handle_create_shift_flow(
+            message="create shift",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": [],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op", "getScheduleShifts": "get-shifts-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(result["summary"], "Shift created successfully.")
+        self.assertEqual(len(create_calls), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
