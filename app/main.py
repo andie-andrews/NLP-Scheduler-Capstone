@@ -41,19 +41,27 @@ if st.sidebar.button("Logout", use_container_width=True):
     logout()
     st.rerun()
 
-tabs = get_tabs()
+tabs = [tab for tab in get_tabs() if tab != "AI Assistant"]
+active_view = st.session_state.get("active_tab", tabs[0])
+
 selected = st.sidebar.selectbox(
     "Go to",
     tabs,
-    index=tabs.index(st.session_state.get("active_tab", tabs[0])) if st.session_state.get("active_tab") in tabs else 0,
+    index=tabs.index(active_view) if active_view in tabs else 0,
 )
-st.session_state["active_tab"] = selected
 
-if selected == "My Schedule":
+active_view = selected
+st.sidebar.markdown("##### Quick Access")
+if st.sidebar.button("🤖 AI Assistant", use_container_width=True):
+    active_view = "AI Assistant"
+
+st.session_state["active_tab"] = active_view
+
+if active_view == "My Schedule":
     render_my_schedule()
-elif selected == "Manage Employees":
+elif active_view == "Manage Employees":
     render_manage_employees()
-elif selected == "Manage Schedules":
+elif active_view == "Manage Schedules":
     render_manage_schedules()
-elif selected == "AI Assistant":
+elif active_view == "AI Assistant":
     render_ai_assistant()
