@@ -204,6 +204,27 @@ else:
                 const leftCol = columns[0];
                 const rightCol = columns[2];
 
+                const applyPaneLayout = () => {
+                    const viewportHeight = window.parent.innerHeight || 900;
+                    const paneHeight = Math.max(420, viewportHeight - 120);
+
+                    parentDoc.documentElement.style.overflow = 'hidden';
+                    parentDoc.body.style.overflow = 'hidden';
+
+                    const appView = parentDoc.querySelector('[data-testid="stAppViewContainer"]');
+                    if (appView) appView.style.overflow = 'hidden';
+
+                    for (const col of [leftCol, rightCol]) {
+                        col.style.height = `${paneHeight}px`;
+                        col.style.overflow = 'hidden';
+                        const block = col.querySelector('[data-testid="stVerticalBlock"]');
+                        if (block) {
+                            block.style.height = '100%';
+                            block.style.overflow = 'hidden';
+                        }
+                    }
+                };
+
                 handle.dataset.dragReady = '1';
                 let startX = 0;
                 let startLeft = 0;
@@ -219,6 +240,7 @@ else:
 
                     leftCol.style.flex = `0 0 ${nextLeft}px`;
                     rightCol.style.flex = `0 0 ${nextRight}px`;
+                    applyPaneLayout();
                 };
 
                 const onMouseUp = () => {
@@ -236,6 +258,9 @@ else:
                     parentDoc.addEventListener('mousemove', onMouseMove);
                     parentDoc.addEventListener('mouseup', onMouseUp);
                 });
+
+                applyPaneLayout();
+                window.parent.addEventListener('resize', applyPaneLayout);
             };
 
             setTimeout(setupDragHandle, 100);
