@@ -131,8 +131,9 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
     }
 
     range_match = re.search(
-        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*[-–]\s*"
-        r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s*"
+        r"(?:-|–|through|thru|to)\s*"
+        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
         normalized,
     )
     if range_match and ("next week" in normalized or "this week" in normalized):
