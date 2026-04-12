@@ -30,6 +30,8 @@ public class ShiftDomainService
   public async Task CreateShift(int scheduleId, CreateShiftRequest request, int currentUserEmployeeId)
   {
     using var connection = _db.CreateConnection();
+    if (connection.State != ConnectionState.Open)
+      connection.Open();
     using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
     var isManager = await connection.ExecuteScalarAsync<int?>(@"
@@ -78,6 +80,8 @@ public class ShiftDomainService
   public async Task<bool> UpdateShift(int shiftId, UpdateShiftRequest request, int currentUserEmployeeId)
   {
     using var connection = _db.CreateConnection();
+    if (connection.State != ConnectionState.Open)
+      connection.Open();
     using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
     var shift = await connection.QuerySingleOrDefaultAsync<(int Id, int ScheduleId, int EmployeeId)>(@"

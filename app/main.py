@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from ui.login import render_login
 from ui.tabs import get_tabs
@@ -16,10 +17,12 @@ from auth import logout
 st.set_page_config(page_title="Scheduler App", layout="wide")
 inject_global_styles()
 
+
 # 🔐 Not logged in
 if "token" not in st.session_state:
     render_login()
     st.stop()
+
 
 # 🔓 Logged in
 st.sidebar.markdown("<div class='sidebar-brand'>📅 Scheduler Pro</div>", unsafe_allow_html=True)
@@ -41,8 +44,17 @@ if st.sidebar.button("Logout", use_container_width=True):
     logout()
     st.rerun()
 
+
+def render_main_view(active_view: str):
+    if active_view == "My Schedule":
+        render_my_schedule()
+    elif active_view == "Manage Employees":
+        render_manage_employees()
+    elif active_view == "Manage Schedules":
+        render_manage_schedules()
+
+
 tabs = [tab for tab in get_tabs() if tab != "AI Assistant"]
-active_view = st.session_state.get("active_tab", tabs[0])
 main_nav_tab = st.session_state.get("main_nav_tab", tabs[0])
 if main_nav_tab not in tabs:
     main_nav_tab = tabs[0]
@@ -54,22 +66,225 @@ selected = st.sidebar.selectbox(
 )
 st.session_state["main_nav_tab"] = selected
 
-if selected != main_nav_tab:
-    active_view = selected
-elif active_view != "AI Assistant":
-    active_view = selected
+# --- AI panel state ---
+if "ai_panel_open" not in st.session_state:
+    st.session_state.ai_panel_open = True
+if "ai_panel_collapsed" not in st.session_state:
+    st.session_state.ai_panel_collapsed = False
+if "ai_panel_width" not in st.session_state:
+    st.session_state.ai_panel_width = 35
 
-st.sidebar.markdown("##### Quick Access")
-if st.sidebar.button("🤖 AI Assistant", use_container_width=True):
-    active_view = "AI Assistant"
+st.sidebar.markdown("##### AI Assistant")
+if st.sidebar.button("🤖 Open Assistant", use_container_width=True):
+    st.session_state.ai_panel_open = True
+    st.session_state.ai_panel_collapsed = False
 
-st.session_state["active_tab"] = active_view
+if st.session_state.ai_panel_open:
+    st.sidebar.caption("Drag the center handle (↔) to resize")
 
-if active_view == "My Schedule":
-    render_my_schedule()
-elif active_view == "Manage Employees":
-    render_manage_employees()
-elif active_view == "Manage Schedules":
-    render_manage_schedules()
-elif active_view == "AI Assistant":
-    render_ai_assistant()
+# --- Render split view ---
+if not st.session_state.ai_panel_open:
+    render_main_view(selected)
+else:
+    width = 8 if st.session_state.ai_panel_collapsed else st.session_state.ai_panel_width
+    left_width = max(100 - width, 25)
+    handle_width = 2 if not st.session_state.ai_panel_collapsed else 1
+
+    main_col, resize_col, assistant_col = st.columns(
+        [left_width, handle_width, 100 - left_width - handle_width],
+        gap="small",
+    )
+
+    with main_col:
+        with st.container(key="main_scroll_pane"):
+            render_main_view(selected)
+
+    with resize_col:
+        if st.session_state.ai_panel_collapsed:
+            st.markdown("<div class='ai-resize-line'></div>", unsafe_allow_html=True)
+        else:
+            st.markdown(
+                """
+                <div class='ai-resize-handle' title='Drag left/right to resize'>
+                    <span>↔</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    with assistant_col:
+        panel_controls = st.columns([7, 1, 1], gap="small")
+        with panel_controls[0]:
+            st.markdown("#### 🤖 AI Assistant")
+        with panel_controls[1]:
+            if st.button(
+                "◀" if not st.session_state.ai_panel_collapsed else "▶",
+                key="toggle_ai_collapse",
+                help="Collapse/expand assistant panel",
+                use_container_width=True,
+            ):
+                st.session_state.ai_panel_collapsed = not st.session_state.ai_panel_collapsed
+                st.rerun()
+        with panel_controls[2]:
+            if st.button(
+                "✕",
+                key="close_ai_panel",
+                help="Close assistant panel",
+                use_container_width=True,
+            ):
+                st.session_state.ai_panel_open = False
+                st.rerun()
+
+        if st.session_state.ai_panel_collapsed:
+            st.caption("Assistant collapsed. Click ▶ to expand.")
+        else:
+            with st.container(key="assistant_shell"):
+                render_ai_assistant(embedded=True)
+
+    st.markdown(
+        """
+        <style>
+            .ai-resize-handle {
+                width: 100%;
+                height: 4.5rem;
+                border-radius: 0.5rem;
+                border: 1px solid rgba(120, 120, 120, 0.35);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: ew-resize;
+                user-select: none;
+                font-size: 1.15rem;
+                background: rgba(120, 120, 120, 0.08);
+            }
+
+            .ai-resize-line {
+                width: 100%;
+                height: 4.5rem;
+                border-left: 1px solid rgba(120, 120, 120, 0.35);
+            }
+
+            .st-key-main_scroll_pane {
+                height: calc(100vh - 7rem);
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 0 0.1rem 8rem 0;
+            }
+
+            .st-key-assistant_shell {
+                height: calc(100vh - 7rem);
+                overflow: hidden;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if not st.session_state.ai_panel_collapsed:
+        components.html(
+            """
+            <script>
+            const applySplitPaneLayout = (parentDoc) => {
+                const app = parentDoc.querySelector('.stApp');
+                const appView = parentDoc.querySelector('[data-testid="stAppViewContainer"]');
+                const mainView = parentDoc.querySelector('[data-testid="stAppViewContainer"] > .main');
+                [app, appView, mainView].forEach((el) => {
+                    if (!el) return;
+                    el.style.maxHeight = '100vh';
+                    el.style.overflow = 'hidden';
+                });
+
+                const mainPane = parentDoc.querySelector('.st-key-main_scroll_pane');
+                if (mainPane) {
+                    mainPane.style.height = 'calc(100vh - 7rem)';
+                    mainPane.style.overflowY = 'auto';
+                    mainPane.style.overflowX = 'hidden';
+                }
+
+                const shell = parentDoc.querySelector('.st-key-assistant_shell');
+                if (shell) {
+                    shell.style.height = 'calc(100vh - 7rem)';
+                    shell.style.display = 'flex';
+                    shell.style.flexDirection = 'column';
+                    shell.style.minHeight = '0';
+                    shell.style.overflow = 'hidden';
+                }
+
+                const chatPane = parentDoc.querySelector('.st-key-assistant_chat_scroll');
+                if (chatPane) {
+                    chatPane.style.flex = '1 1 auto';
+                    chatPane.style.minHeight = '0';
+                    chatPane.style.overflowY = 'auto';
+                    chatPane.style.background = '#ffffff';
+                }
+
+                const footer = parentDoc.querySelector('.st-key-assistant_input_footer');
+                if (footer) {
+                    footer.style.marginTop = 'auto';
+                    footer.style.position = 'sticky';
+                    footer.style.bottom = '0';
+                    footer.style.background = '#ffffff';
+                }
+            };
+
+            const setupDragHandle = () => {
+                const parentDoc = window.parent.document;
+                applySplitPaneLayout(parentDoc);
+
+                const handles = parentDoc.querySelectorAll('.ai-resize-handle');
+                if (!handles.length) return;
+
+                const handle = handles[handles.length - 1];
+                if (handle.dataset.dragReady === '1') return;
+
+                const handleColumn = handle.closest('[data-testid="stColumn"]');
+                const row = handleColumn?.parentElement;
+                if (!row) return;
+
+                const columns = [...row.children].filter(
+                    (el) => el.getAttribute('data-testid') === 'stColumn'
+                );
+                if (columns.length < 3) return;
+
+                const leftCol = columns[0];
+                const rightCol = columns[2];
+
+                handle.dataset.dragReady = '1';
+                let startX = 0;
+                let startLeft = 0;
+                let startRight = 0;
+
+                const onMouseMove = (event) => {
+                    const dx = event.clientX - startX;
+                    const minPanelWidth = 300;
+                    const containerWidth = row.getBoundingClientRect().width;
+
+                    const nextLeft = Math.max(minPanelWidth, Math.min(startLeft + dx, containerWidth - minPanelWidth));
+                    const nextRight = Math.max(minPanelWidth, startRight - dx);
+
+                    leftCol.style.flex = `0 0 ${nextLeft}px`;
+                    rightCol.style.flex = `0 0 ${nextRight}px`;
+                };
+
+                const onMouseUp = () => {
+                    parentDoc.removeEventListener('mousemove', onMouseMove);
+                    parentDoc.removeEventListener('mouseup', onMouseUp);
+                    parentDoc.body.style.cursor = '';
+                };
+
+                handle.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                    startX = event.clientX;
+                    startLeft = leftCol.getBoundingClientRect().width;
+                    startRight = rightCol.getBoundingClientRect().width;
+                    parentDoc.body.style.cursor = 'ew-resize';
+                    parentDoc.addEventListener('mousemove', onMouseMove);
+                    parentDoc.addEventListener('mouseup', onMouseUp);
+                });
+            };
+
+            setTimeout(setupDragHandle, 100);
+            </script>
+            """,
+            height=0,
+        )

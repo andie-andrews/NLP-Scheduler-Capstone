@@ -316,11 +316,12 @@ def render():
         ghost_row = st.columns(9)
 
         selected = ghost_row[0].selectbox(
-            "",
+            "Add employee",
             options=[None] + [e["id"] for e in available],
             format_func=lambda x: "➕ Add employee..." if x is None else
             next(f"{e['firstName']} {e['lastName']}" for e in available if e["id"] == x),
-            key=ghost_key
+            key=ghost_key,
+            label_visibility="collapsed",
         )
 
         if selected:
