@@ -96,7 +96,8 @@ else:
     )
 
     with main_col:
-        render_main_view(selected)
+        with st.container(key="main_scroll_pane"):
+            render_main_view(selected)
 
     with resize_col:
         if st.session_state.ai_panel_collapsed:
@@ -137,7 +138,8 @@ else:
         if st.session_state.ai_panel_collapsed:
             st.caption("Assistant collapsed. Click ▶ to expand.")
         else:
-            render_ai_assistant(embedded=True)
+            with st.container(key="assistant_panel_pane"):
+                render_ai_assistant(embedded=True)
 
     st.markdown(
         """
@@ -160,6 +162,20 @@ else:
                 width: 100%;
                 height: 4.5rem;
                 border-left: 1px solid rgba(120, 120, 120, 0.35);
+            }
+
+            .st-key-main_scroll_pane {
+                max-height: calc(100vh - 7.5rem);
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-right: 0.45rem;
+            }
+
+            .st-key-assistant_panel_pane {
+                max-height: calc(100vh - 11.5rem);
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-right: 0.35rem;
             }
         </style>
         """,

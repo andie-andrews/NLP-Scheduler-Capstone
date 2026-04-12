@@ -27,7 +27,8 @@ def render_ai_assistant(embedded: bool = False):
         f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
     )
 
-    _render_chat_history()
+    with st.container(key="assistant_chat_scroll"):
+        _render_chat_history()
 
     # -------------------------------
     # 💬 Chat Input (interactive)
@@ -116,6 +117,13 @@ def _inject_sticky_new_chat_css():
                     width: 9rem;
                     height: 2.6rem;
                 }
+            }
+
+            .st-key-assistant_chat_scroll {
+                max-height: calc(100vh - 20.5rem);
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-right: 0.35rem;
             }
         </style>
         """,
