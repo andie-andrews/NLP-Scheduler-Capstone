@@ -31,6 +31,12 @@ def _extract_error_detail(response_payload):
             elif isinstance(item, str) and item:
                 return item
 
+    raw_text = response_payload.get("rawText")
+    if isinstance(raw_text, str) and raw_text.strip():
+        first_line = raw_text.strip().splitlines()[0].strip()
+        if first_line:
+            return first_line
+
     return response_payload.get("title") or response_payload.get("detail") or response_payload.get("message")
 
 
