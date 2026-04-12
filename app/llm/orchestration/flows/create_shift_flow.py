@@ -197,7 +197,9 @@ def handle_create_shift_flow(
     return {
         "summary": summary,
         "data": {
+            "createdCount": len(results),
             "createShiftResponses": results,
+            "createShiftResponse": results[0]["response"] if len(results) == 1 else None,
             "createdShift": args,
             "createdShifts": shifts_to_create,
             "skippedExistingShifts": [shift for shift in shifts_to_create if shift not in shifts_missing],

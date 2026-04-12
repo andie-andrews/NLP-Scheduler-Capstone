@@ -208,6 +208,8 @@ class ShiftFlowSmokeTests(unittest.TestCase):
 
         self.assertEqual(result["summary"], "Shift created successfully.")
         self.assertEqual(len(create_calls), 1)
+        self.assertEqual(result["data"]["createdCount"], 1)
+        self.assertEqual(result["data"]["createShiftResponse"], {"id": 100})
 
 
 if __name__ == "__main__":
