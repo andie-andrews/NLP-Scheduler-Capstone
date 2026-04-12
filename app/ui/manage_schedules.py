@@ -16,6 +16,8 @@ from api_client import (
 from datetime import datetime, timedelta
 from collections import defaultdict
 
+from ui.styles import render_page_header
+
 
 def render():
     def rerun_app():
@@ -49,11 +51,13 @@ def render():
     if "remove_schedule_employee" not in st.session_state:
         st.session_state["remove_schedule_employee"] = None
 
+    render_page_header("Manage Schedules", "Plan staffing, assign employees, and manage shifts by week.")
+
     # 🔥 HEADER
     header_col1, header_col2 = st.columns([6, 2])
 
     with header_col1:
-        st.markdown("## Manage Schedules")
+        st.caption("Select a schedule and use the week navigator to adjust assignments.")
 
     with header_col2:
         btn_col1, btn_col2, btn_col3 = st.columns(3)
@@ -82,7 +86,7 @@ def render():
 
     schedule_map = {s["name"]: s["id"] for s in schedules}
 
-    selected_name = st.selectbox("Select Schedule", list(schedule_map.keys()))
+    selected_name = st.selectbox("Select Schedule", list(schedule_map.keys()), help="Choose the schedule to manage")
     schedule_id = schedule_map[selected_name]
 
     # 🔹 WEEK NAV
@@ -112,6 +116,10 @@ def render():
     # 🔥 LOAD ALL EMPLOYEES
     all_emp_res = get_all_employees()
     all_employees = all_emp_res.json() if all_emp_res.status_code == 200 else []
+
+    metric_col1, metric_col2 = st.columns(2)
+    metric_col1.metric("Assigned Employees", len(employees))
+    metric_col2.metric("Week Range", f"{start_of_week.strftime('%b %d')} - {end_of_week.strftime('%b %d')}")
 
     # 🔥 ZERO STATE
     if not employees:

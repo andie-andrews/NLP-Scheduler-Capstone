@@ -10,19 +10,29 @@ from ui.manage_employees import render as render_manage_employees
 from ui.manage_schedules import render as render_manage_schedules
 from ui.ai_assistant import render_ai_assistant as render_ai_assistant
 from auth import logout
+from ui.styles import apply_global_styles
 
 st.set_page_config(page_title="Scheduler App", layout="wide")
+apply_global_styles()
 
 # 🔐 Not logged in
 if "token" not in st.session_state:
     render_login()
     st.stop()
 else:
-    st.sidebar.write(f"Welcome, {st.session_state['full_name']}")
-    st.sidebar.write(f"Role: {st.session_state['role']}")
+    st.sidebar.markdown(
+        f"""
+        <div class='profile-card'>
+            <div class='profile-name'>👋 {st.session_state['full_name']}</div>
+            <div class='profile-role'>Role: {st.session_state['role']}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # 🔓 Logged in
 st.sidebar.title("Navigation")
+st.sidebar.caption("Choose a workspace")
 
 if st.sidebar.button("Logout"):
     logout()

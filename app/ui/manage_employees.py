@@ -1,10 +1,12 @@
 import streamlit as st
+
 from api_client import (
-    get_all_employees,
     create_employee,
-    update_employee,
     delete_employee,
+    get_all_employees,
+    update_employee,
 )
+from ui.styles import render_page_header
 
 ROLE_OPTIONS = {
     "Employee": 1,
@@ -20,7 +22,7 @@ def _employee_label(employee):
 
 
 def render():
-    st.subheader("Manage Employees")
+    render_page_header("Manage Employees", "Search, review, and maintain employee records.")
 
     if "show_create_employee" not in st.session_state:
         st.session_state["show_create_employee"] = False
@@ -33,11 +35,11 @@ def render():
 
     with header_right:
         create_col, edit_col, delete_col = st.columns(3)
-        if create_col.button("➕", use_container_width=True):
+        if create_col.button("➕", use_container_width=True, help="Create employee"):
             st.session_state["show_create_employee"] = True
-        if edit_col.button("✎", use_container_width=True):
+        if edit_col.button("✎", use_container_width=True, help="Edit employee"):
             st.session_state["show_edit_employee"] = True
-        if delete_col.button("🗑️", use_container_width=True):
+        if delete_col.button("🗑️", use_container_width=True, help="Delete employee"):
             st.session_state["show_delete_employee"] = True
 
     query = header_left.text_input(
@@ -57,19 +59,28 @@ def render():
 
     employees = employees_response.json()
 
+    metric_col1, metric_col2 = st.columns(2)
+    metric_col1.metric("Total Employees", len(employees))
+    metric_col2.metric(
+        "Supervisors",
+        sum(1 for employee in employees if employee.get("roleId") == ROLE_OPTIONS["Supervisor"]),
+    )
+
     if not employees:
         st.info("No employees found.")
     else:
         st.markdown("### Employee Directory")
-
-        for employee in employees:
-            role_name = ROLE_LABELS.get(employee.get("roleId"), f"Role {employee.get('roleId', '?')}")
-            cols = st.columns([1, 2, 2, 3, 2])
-            cols[0].markdown(f"`#{employee['id']}`")
-            cols[1].markdown(employee["firstName"])
-            cols[2].markdown(employee["lastName"])
-            cols[3].markdown(employee["email"])
-            cols[4].markdown(role_name)
+        table_rows = [
+            {
+                "ID": employee["id"],
+                "First Name": employee["firstName"],
+                "Last Name": employee["lastName"],
+                "Email": employee["email"],
+                "Role": ROLE_LABELS.get(employee.get("roleId"), f"Role {employee.get('roleId', '?')}"),
+            }
+            for employee in employees
+        ]
+        st.dataframe(table_rows, use_container_width=True, hide_index=True)
 
     if st.session_state.get("show_create_employee"):
 
