@@ -75,8 +75,7 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_chat_scroll {
-                flex: 1;
-                min-height: 0;
+                height: calc(100vh - 19rem);
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding-right: 0.35rem;
@@ -92,8 +91,10 @@ def _inject_sticky_new_chat_css():
                 border-top: 1px solid rgba(120, 120, 120, 0.2);
             }
 
-            .st-key-assistant_input_footer .stChatInput {
+            .st-key-assistant_input_footer [data-testid="stChatInput"] {
                 margin-top: 0.45rem;
+                position: sticky;
+                bottom: 0;
             }
 
             .st-key-assistant_chat_scroll::-webkit-scrollbar,

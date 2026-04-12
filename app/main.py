@@ -144,6 +144,23 @@ else:
     st.markdown(
         """
         <style>
+            html, body {
+                height: 100%;
+                overflow: hidden !important;
+            }
+
+            [data-testid="stAppViewContainer"],
+            [data-testid="stMain"] {
+                height: 100vh;
+                overflow: hidden !important;
+            }
+
+            [data-testid="stMainBlockContainer"] {
+                height: 100%;
+                overflow: hidden;
+                padding-bottom: 0 !important;
+            }
+
             .ai-resize-handle {
                 width: 100%;
                 height: 4.5rem;
