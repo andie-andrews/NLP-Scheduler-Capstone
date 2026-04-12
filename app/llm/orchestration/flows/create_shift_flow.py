@@ -91,19 +91,57 @@ def handle_create_shift_flow(
     else:
         shifts_to_create.append(args)
 
-    results = []
+    get_schedule_shifts = operations.get("getScheduleShifts")
+    existing_matches_before = []
+    if get_schedule_shifts and shifts_to_create:
+        parsed_starts = [datetime.fromisoformat(shift["start"]) for shift in shifts_to_create]
+        week_start_date, _ = week_range_from_date(min(parsed_starts))
+        _, week_end_date = week_range_from_date(max(parsed_starts))
+        existing_shifts = call_api(
+            token,
+            get_schedule_shifts,
+            {
+                "scheduleId": args["scheduleId"],
+                "startDate": week_start_date.isoformat(),
+                "endDate": week_end_date.isoformat(),
+            },
+        ) or []
+        existing_matches_before = [
+            s for s in existing_shifts
+            if s.get("employeeId") == args["employeeId"]
+            and any(
+                s.get("start") == planned_shift["start"]
+                and s.get("durationHours") == planned_shift["durationHours"]
+                for planned_shift in shifts_to_create
+            )
+        ]
+    else:
+        week_start_date = None
+        week_end_date = None
+
+    shifts_missing = []
     for shift_args in shifts_to_create:
+        already_exists = any(
+            existing.get("start") == shift_args["start"]
+            and existing.get("durationHours") == shift_args["durationHours"]
+            for existing in existing_matches_before
+        )
+        if not already_exists:
+            shifts_missing.append(shift_args)
+
+    results = []
+    for shift_args in shifts_missing:
         print("[create_shift] Calling createShift with args:", shift_args)
         created = call_api(token, operations["createShift"], shift_args)
         print("[create_shift] createShift response:", created)
         results.append({"shift": shift_args, "response": created})
 
     verification = None
-    get_schedule_shifts = operations.get("getScheduleShifts")
     if get_schedule_shifts:
-        parsed_starts = [datetime.fromisoformat(shift["start"]) for shift in shifts_to_create]
-        week_start_date, _ = week_range_from_date(min(parsed_starts))
-        _, week_end_date = week_range_from_date(max(parsed_starts))
+        if week_start_date is None or week_end_date is None:
+            parsed_starts = [datetime.fromisoformat(shift["start"]) for shift in shifts_to_create]
+            week_start_date, _ = week_range_from_date(min(parsed_starts))
+            _, week_end_date = week_range_from_date(max(parsed_starts))
         print(
             "[create_shift] Verifying created shift in schedule week:",
             {
@@ -124,6 +162,8 @@ def handle_create_shift_flow(
         verification = {
             "startDate": week_start_date.isoformat(),
             "endDate": week_end_date.isoformat(),
+            "expectedNewShiftCount": len(shifts_missing),
+            "matchingShiftCountBefore": len(existing_matches_before),
             "matchingShiftCount": len(
                 [
                     s for s in (shifts or [])
@@ -136,15 +176,27 @@ def handle_create_shift_flow(
                 ]
             ),
         }
+        verification["matchingShiftCountAfter"] = verification["matchingShiftCount"]
+        verification["createdCountInVerificationWindow"] = (
+            verification["matchingShiftCountAfter"] - verification["matchingShiftCountBefore"]
+        )
         print("[create_shift] Verification result:", verification)
 
     clear_pending_shift_state(session)
+    if not shifts_missing:
+        summary = "All requested shifts already exist on that schedule."
+    elif len(shifts_to_create) > 1:
+        summary = f"Shifts created successfully ({len(shifts_missing)} new)."
+    else:
+        summary = "Shift created successfully."
+
     return {
-        "summary": "Shifts created successfully." if len(shifts_to_create) > 1 else "Shift created successfully.",
+        "summary": summary,
         "data": {
             "createShiftResponses": results,
             "createdShift": args,
             "createdShifts": shifts_to_create,
+            "skippedExistingShifts": [shift for shift in shifts_to_create if shift not in shifts_missing],
             "verification": verification,
         }
     }
