@@ -40,11 +40,10 @@ def render_ai_assistant(embedded: bool = False):
     # 💬 Chat Input footer
     # -------------------------------
     _inject_sticky_new_chat_css()
-    with st.container(key="assistant_input_footer"):
-        user_input = st.chat_input(
-            "Ask something about schedules, shifts, or hours...",
-            key="assistant_chat_input",
-        )
+    user_input = st.chat_input(
+        "Ask something about schedules, shifts, or hours...",
+        key="assistant_chat_input",
+    )
 
     if not user_input:
         return
@@ -77,7 +76,7 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_chat_scroll {
-                height: calc(100vh - 19rem);
+                height: calc(100vh - 22rem);
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding: 0.5rem 0.45rem 0.65rem 0.2rem;
@@ -86,13 +85,11 @@ def _inject_sticky_new_chat_css():
                 background: rgba(255, 255, 255, 0.55);
             }
 
-            .st-key-assistant_input_footer {
+            [data-testid="stChatInput"] {
+                position: sticky;
+                bottom: 0;
                 background: var(--background-color, #f6f8fc);
                 padding-top: 0.5rem;
-            }
-
-            .st-key-assistant_input_footer [data-testid="stChatInput"] {
-                margin-top: 0.2rem;
             }
 
             .st-key-assistant_chat_scroll::-webkit-scrollbar,
