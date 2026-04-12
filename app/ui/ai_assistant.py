@@ -6,8 +6,11 @@ from datetime import datetime
 from ui.theme import render_page_header
 
 
-def render_ai_assistant():
-    render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
+def render_ai_assistant(embedded: bool = False):
+    if embedded:
+        st.caption("Ask for schedule help, shift summaries, and staffing insights in plain language.")
+    else:
+        render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
 
     # -------------------------------
     # 🧠 Memory (session)
