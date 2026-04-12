@@ -43,14 +43,22 @@ if st.sidebar.button("Logout", use_container_width=True):
 
 tabs = [tab for tab in get_tabs() if tab != "AI Assistant"]
 active_view = st.session_state.get("active_tab", tabs[0])
+main_nav_tab = st.session_state.get("main_nav_tab", tabs[0])
+if main_nav_tab not in tabs:
+    main_nav_tab = tabs[0]
 
 selected = st.sidebar.selectbox(
     "Go to",
     tabs,
-    index=tabs.index(active_view) if active_view in tabs else 0,
+    index=tabs.index(main_nav_tab),
 )
+st.session_state["main_nav_tab"] = selected
 
-active_view = selected
+if selected != main_nav_tab:
+    active_view = selected
+elif active_view != "AI Assistant":
+    active_view = selected
+
 st.sidebar.markdown("##### Quick Access")
 if st.sidebar.button("🤖 AI Assistant", use_container_width=True):
     active_view = "AI Assistant"
