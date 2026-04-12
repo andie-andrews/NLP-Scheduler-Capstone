@@ -84,7 +84,7 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_chat_scroll {
-                max-height: calc(100vh - 20rem);
+                height: calc(100vh - 19rem);
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding-right: 0.35rem;
@@ -97,6 +97,17 @@ def _inject_sticky_new_chat_css():
                 background: var(--background-color, #f6f8fc);
                 padding-top: 0.55rem;
                 border-top: 1px solid rgba(120, 120, 120, 0.2);
+            }
+
+            .st-key-assistant_chat_scroll::-webkit-scrollbar,
+            .st-key-main_scroll_pane::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .st-key-assistant_chat_scroll::-webkit-scrollbar-thumb,
+            .st-key-main_scroll_pane::-webkit-scrollbar-thumb {
+                background: rgba(120, 120, 120, 0.45);
+                border-radius: 999px;
             }
         </style>
         """,

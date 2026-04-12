@@ -138,7 +138,8 @@ else:
         if st.session_state.ai_panel_collapsed:
             st.caption("Assistant collapsed. Click ▶ to expand.")
         else:
-            render_ai_assistant(embedded=True)
+            with st.container(key="assistant_shell"):
+                render_ai_assistant(embedded=True)
 
     st.markdown(
         """
@@ -170,7 +171,8 @@ else:
                 padding: 0 0.1rem 8rem 0;
             }
 
-            [data-testid="stMain"] {
+            .st-key-assistant_shell {
+                height: calc(100vh - 7rem);
                 overflow: hidden;
             }
         </style>
