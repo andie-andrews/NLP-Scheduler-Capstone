@@ -6,8 +6,20 @@ from datetime import datetime
 from ui.theme import render_page_header
 
 
-def render_ai_assistant():
-    render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
+def render_ai_assistant(embedded: bool = False):
+    if embedded:
+        _inject_embedded_panel_css()
+        st.markdown(
+            """
+            <div class="assistant-panel-header">
+                <div class="assistant-panel-title">🤖 AI Assistant</div>
+                <div class="assistant-panel-subtitle">Ask for schedule help, shift summaries, and staffing insights.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
 
     # -------------------------------
     # 🧠 Memory (session)
@@ -29,10 +41,15 @@ def render_ai_assistant():
     # -------------------------------
     # 💬 Chat Input (interactive)
     # -------------------------------
-    _inject_sticky_new_chat_css()
-    if st.button("🆕 New chat", key="new_chat_sticky", use_container_width=True):
-        _start_new_chat()
-        st.rerun()
+    if embedded:
+        if st.button("🆕 New chat", key="new_chat_embedded", use_container_width=True):
+            _start_new_chat()
+            st.rerun()
+    else:
+        _inject_sticky_new_chat_css()
+        if st.button("🆕 New chat", key="new_chat_sticky", use_container_width=True):
+            _start_new_chat()
+            st.rerun()
 
     user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
     if not user_input:
@@ -59,6 +76,34 @@ def render_ai_assistant():
     })
     st.rerun()
 
+
+def _inject_embedded_panel_css():
+    st.markdown(
+        """
+        <style>
+            .assistant-panel-header {
+                background: #ffffff;
+                border: 1px solid #dbe7ff;
+                border-radius: 12px;
+                padding: 0.75rem 0.85rem;
+                margin-bottom: 0.6rem;
+            }
+
+            .assistant-panel-title {
+                font-size: 1.05rem;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            .assistant-panel-subtitle {
+                font-size: 0.86rem;
+                color: #4b5d7a;
+                margin-top: 0.2rem;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _inject_sticky_new_chat_css():
