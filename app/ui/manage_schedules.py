@@ -91,10 +91,10 @@ def render():
     # 🔹 WEEK NAV
     nav_col1, nav_col2, nav_col3 = st.columns([1, 4, 1])
 
-    if nav_col1.button("◀"):
+    if nav_col1.button("◀ Previous", use_container_width=True):
         st.session_state["week_offset"] -= 1
 
-    if nav_col3.button("▶"):
+    if nav_col3.button("Next ▶", use_container_width=True):
         st.session_state["week_offset"] += 1
 
     today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -104,7 +104,7 @@ def render():
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
     nav_col2.markdown(
-        f"<div style='text-align:center;font-size:20px;font-weight:600;'>Week of {start_of_week.strftime('%b %d, %Y')}</div>",
+        f"<div class='metric-tile' style='text-align:center;font-weight:600;'>Week of {start_of_week.strftime('%b %d, %Y')}</div>",
         unsafe_allow_html=True
     )
 
