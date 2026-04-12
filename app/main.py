@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from ui.login import render_login
 from ui.tabs import get_tabs
@@ -79,15 +80,7 @@ if st.sidebar.button("🤖 Open Assistant", use_container_width=True):
     st.session_state.ai_panel_collapsed = False
 
 if st.session_state.ai_panel_open:
-    st.sidebar.caption("Drag to resize assistant width")
-    st.session_state.ai_panel_width = st.sidebar.slider(
-        "Assistant width",
-        min_value=22,
-        max_value=55,
-        value=st.session_state.ai_panel_width,
-        step=1,
-        help="Drag left/right to make the main view or assistant larger.",
-    )
+    st.sidebar.caption("Drag the center handle (↔) to resize")
 
 # --- Render split view ---
 if not st.session_state.ai_panel_open:
@@ -95,11 +88,28 @@ if not st.session_state.ai_panel_open:
 else:
     width = 8 if st.session_state.ai_panel_collapsed else st.session_state.ai_panel_width
     left_width = max(100 - width, 25)
+    handle_width = 2 if not st.session_state.ai_panel_collapsed else 1
 
-    main_col, assistant_col = st.columns([left_width, 100 - left_width], gap="small")
+    main_col, resize_col, assistant_col = st.columns(
+        [left_width, handle_width, 100 - left_width - handle_width],
+        gap="small",
+    )
 
     with main_col:
         render_main_view(selected)
+
+    with resize_col:
+        if st.session_state.ai_panel_collapsed:
+            st.markdown("<div class='ai-resize-line'></div>", unsafe_allow_html=True)
+        else:
+            st.markdown(
+                """
+                <div class='ai-resize-handle' title='Drag left/right to resize'>
+                    <span>↔</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     with assistant_col:
         panel_controls = st.columns([7, 1, 1], gap="small")
@@ -128,3 +138,94 @@ else:
             st.caption("Assistant collapsed. Click ▶ to expand.")
         else:
             render_ai_assistant(embedded=True)
+
+    st.markdown(
+        """
+        <style>
+            .ai-resize-handle {
+                width: 100%;
+                height: 4.5rem;
+                border-radius: 0.5rem;
+                border: 1px solid rgba(120, 120, 120, 0.35);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: ew-resize;
+                user-select: none;
+                font-size: 1.15rem;
+                background: rgba(120, 120, 120, 0.08);
+            }
+
+            .ai-resize-line {
+                width: 100%;
+                height: 4.5rem;
+                border-left: 1px solid rgba(120, 120, 120, 0.35);
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if not st.session_state.ai_panel_collapsed:
+        components.html(
+            """
+            <script>
+            const setupDragHandle = () => {
+                const parentDoc = window.parent.document;
+                const handles = parentDoc.querySelectorAll('.ai-resize-handle');
+                if (!handles.length) return;
+
+                const handle = handles[handles.length - 1];
+                if (handle.dataset.dragReady === '1') return;
+
+                const handleColumn = handle.closest('[data-testid="stColumn"]');
+                const row = handleColumn?.parentElement;
+                if (!row) return;
+
+                const columns = [...row.children].filter(
+                    (el) => el.getAttribute('data-testid') === 'stColumn'
+                );
+                if (columns.length < 3) return;
+
+                const leftCol = columns[0];
+                const rightCol = columns[2];
+
+                handle.dataset.dragReady = '1';
+                let startX = 0;
+                let startLeft = 0;
+                let startRight = 0;
+
+                const onMouseMove = (event) => {
+                    const dx = event.clientX - startX;
+                    const minPanelWidth = 300;
+                    const containerWidth = row.getBoundingClientRect().width;
+
+                    const nextLeft = Math.max(minPanelWidth, Math.min(startLeft + dx, containerWidth - minPanelWidth));
+                    const nextRight = Math.max(minPanelWidth, startRight - dx);
+
+                    leftCol.style.flex = `0 0 ${nextLeft}px`;
+                    rightCol.style.flex = `0 0 ${nextRight}px`;
+                };
+
+                const onMouseUp = () => {
+                    parentDoc.removeEventListener('mousemove', onMouseMove);
+                    parentDoc.removeEventListener('mouseup', onMouseUp);
+                    parentDoc.body.style.cursor = '';
+                };
+
+                handle.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                    startX = event.clientX;
+                    startLeft = leftCol.getBoundingClientRect().width;
+                    startRight = rightCol.getBoundingClientRect().width;
+                    parentDoc.body.style.cursor = 'ew-resize';
+                    parentDoc.addEventListener('mousemove', onMouseMove);
+                    parentDoc.addEventListener('mouseup', onMouseUp);
+                });
+            };
+
+            setTimeout(setupDragHandle, 100);
+            </script>
+            """,
+            height=0,
+        )
