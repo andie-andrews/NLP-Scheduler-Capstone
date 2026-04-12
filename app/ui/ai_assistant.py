@@ -33,26 +33,27 @@ def render_ai_assistant(embedded: bool = False):
             _start_new_chat()
             st.rerun()
 
-    with st.container(key="assistant_chat_scroll"):
-        _render_chat_history()
-
-    # -------------------------------
-    # 💬 Chat Input footer
-    # -------------------------------
     _inject_sticky_new_chat_css()
-    user_input = None
-    submitted = False
-    with st.container(key="assistant_input_footer"):
-        with st.form("assistant_input_form", clear_on_submit=True):
-            input_cols = st.columns([8, 2], gap="small")
-            with input_cols[0]:
-                user_input = st.text_input(
-                    "Ask something about schedules, shifts, or hours...",
-                    label_visibility="collapsed",
-                    placeholder="Ask something about schedules, shifts, or hours...",
-                )
-            with input_cols[1]:
-                submitted = st.form_submit_button("Send", use_container_width=True)
+    with st.container(key="assistant_chat_layout"):
+        with st.container(key="assistant_chat_scroll"):
+            _render_chat_history()
+
+        # -------------------------------
+        # 💬 Chat Input footer
+        # -------------------------------
+        user_input = None
+        submitted = False
+        with st.container(key="assistant_input_footer"):
+            with st.form("assistant_input_form", clear_on_submit=True):
+                input_cols = st.columns([8, 2], gap="small")
+                with input_cols[0]:
+                    user_input = st.text_input(
+                        "Ask something about schedules, shifts, or hours...",
+                        label_visibility="collapsed",
+                        placeholder="Ask something about schedules, shifts, or hours...",
+                    )
+                with input_cols[1]:
+                    submitted = st.form_submit_button("Send", use_container_width=True)
 
     if not submitted or not user_input:
         return
@@ -84,8 +85,16 @@ def _inject_sticky_new_chat_css():
     st.markdown(
         """
         <style>
+            .st-key-assistant_chat_layout {
+                height: calc(100vh - 15.5rem);
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+
             .st-key-assistant_chat_scroll {
-                height: calc(100vh - 25rem);
+                flex: 1;
+                min-height: 0;
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding: 0.5rem 0.45rem 0.65rem 0.2rem;
@@ -97,9 +106,7 @@ def _inject_sticky_new_chat_css():
             .st-key-assistant_input_footer {
                 background: var(--background-color, #f6f8fc);
                 padding-top: 0.45rem;
-                position: sticky;
-                bottom: 0;
-                z-index: 5;
+                margin-top: 0.5rem;
             }
 
             .st-key-assistant_input_footer input {
@@ -123,11 +130,6 @@ def _inject_sticky_new_chat_css():
 
 
 def _render_chat_history():
-    if not st.session_state.chat_messages:
-        with st.chat_message("assistant"):
-            st.markdown("Hi! I can help with schedules, shift summaries, and staffing questions.")
-        return
-
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
             render_response(message["content"])
