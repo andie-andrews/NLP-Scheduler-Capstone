@@ -227,11 +227,18 @@ else:
                     const viewportHeight = window.parent.innerHeight || 900;
                     const paneHeight = Math.max(360, viewportHeight - 112);
 
+                    leftCol.style.height = `${paneHeight}px`;
+                    leftCol.style.overflowY = 'auto';
+                    leftCol.style.overflowX = 'hidden';
+
+                    rightCol.style.height = `${paneHeight}px`;
+                    rightCol.style.overflow = 'hidden';
+
                     const mainScrollPane = parentDoc.querySelector('.st-key-main_scroll_pane');
                     if (mainScrollPane) {
-                        mainScrollPane.style.height = `${paneHeight}px`;
-                        mainScrollPane.style.overflowY = 'auto';
-                        mainScrollPane.style.overflowX = 'hidden';
+                        mainScrollPane.style.height = 'auto';
+                        mainScrollPane.style.minHeight = '100%';
+                        mainScrollPane.style.overflow = 'visible';
                     }
 
                     const assistantShell = parentDoc.querySelector('.st-key-assistant_shell');
