@@ -1,4 +1,5 @@
 import streamlit as st
+from ui.theme import render_page_header
 from api_client import (
     get_all_employees,
     create_employee,
@@ -20,7 +21,7 @@ def _employee_label(employee):
 
 
 def render():
-    st.subheader("Manage Employees")
+    render_page_header("Manage Employees", "Search, create, edit, and remove employee accounts from one place.")
 
     if "show_create_employee" not in st.session_state:
         st.session_state["show_create_employee"] = False
@@ -61,6 +62,7 @@ def render():
         st.info("No employees found.")
     else:
         st.markdown("### Employee Directory")
+        st.caption("Use search to quickly find people and role details.")
 
         for employee in employees:
             role_name = ROLE_LABELS.get(employee.get("roleId"), f"Role {employee.get('roleId', '?')}")

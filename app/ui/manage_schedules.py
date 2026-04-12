@@ -15,6 +15,7 @@ from api_client import (
 )
 from datetime import datetime, timedelta
 from collections import defaultdict
+from ui.theme import render_page_header
 
 
 def render():
@@ -50,10 +51,12 @@ def render():
         st.session_state["remove_schedule_employee"] = None
 
     # 🔥 HEADER
+    render_page_header("Manage Schedules", "Coordinate weekly staffing, shifts, and schedule assignments with clarity.")
+
     header_col1, header_col2 = st.columns([6, 2])
 
     with header_col1:
-        st.markdown("## Manage Schedules")
+        st.caption("Select a schedule and use the controls on the right to manage it.")
 
     with header_col2:
         btn_col1, btn_col2, btn_col3 = st.columns(3)
@@ -88,10 +91,10 @@ def render():
     # 🔹 WEEK NAV
     nav_col1, nav_col2, nav_col3 = st.columns([1, 4, 1])
 
-    if nav_col1.button("◀"):
+    if nav_col1.button("◀ Previous", use_container_width=True):
         st.session_state["week_offset"] -= 1
 
-    if nav_col3.button("▶"):
+    if nav_col3.button("Next ▶", use_container_width=True):
         st.session_state["week_offset"] += 1
 
     today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -101,7 +104,7 @@ def render():
     days = [start_of_week + timedelta(days=i) for i in range(7)]
 
     nav_col2.markdown(
-        f"<div style='text-align:center;font-size:20px;font-weight:600;'>Week of {start_of_week.strftime('%b %d, %Y')}</div>",
+        f"<div class='metric-tile' style='text-align:center;font-weight:600;'>Week of {start_of_week.strftime('%b %d, %Y')}</div>",
         unsafe_allow_html=True
     )
 
