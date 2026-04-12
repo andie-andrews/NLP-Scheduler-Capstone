@@ -223,6 +223,24 @@ else:
                 const leftCol = columns[0];
                 const rightCol = columns[2];
 
+                const applyPaneHeights = () => {
+                    const viewportHeight = window.parent.innerHeight || 900;
+                    const paneHeight = Math.max(360, viewportHeight - 112);
+
+                    const mainScrollPane = parentDoc.querySelector('.st-key-main_scroll_pane');
+                    if (mainScrollPane) {
+                        mainScrollPane.style.height = `${paneHeight}px`;
+                        mainScrollPane.style.overflowY = 'auto';
+                        mainScrollPane.style.overflowX = 'hidden';
+                    }
+
+                    const assistantShell = parentDoc.querySelector('.st-key-assistant_shell');
+                    if (assistantShell) {
+                        assistantShell.style.height = `${paneHeight}px`;
+                        assistantShell.style.overflow = 'hidden';
+                    }
+                };
+
                 handle.dataset.dragReady = '1';
                 let startX = 0;
                 let startLeft = 0;
@@ -256,6 +274,8 @@ else:
                     parentDoc.addEventListener('mouseup', onMouseUp);
                 });
 
+                applyPaneHeights();
+                window.parent.addEventListener('resize', applyPaneHeights);
             };
 
             setTimeout(setupDragHandle, 100);
