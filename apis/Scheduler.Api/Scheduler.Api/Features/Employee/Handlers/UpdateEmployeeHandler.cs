@@ -16,8 +16,19 @@ public class UpdateEmployeeHandler
   public async Task<bool> Handle(int employeeId, UpdateEmployeeRequest request)
   {
     using var connection = _db.CreateConnection();
+    var hasEmail = await connection.ExecuteScalarAsync<int>(
+      "SELECT CASE WHEN COL_LENGTH('Employees', 'Email') IS NULL THEN 0 ELSE 1 END") == 1;
 
-    var sql = @"
+    var sql = hasEmail
+      ? @"
+            UPDATE Employees
+            SET FirstName = @FirstName,
+                LastName = @LastName,
+                Email = @Email,
+                RoleId = @RoleId
+            WHERE Id = @Id
+        "
+      : @"
             UPDATE Employees
             SET FirstName = @FirstName,
                 LastName = @LastName,
@@ -25,7 +36,14 @@ public class UpdateEmployeeHandler
             WHERE Id = @Id
         ";
 
-    var rows = await connection.ExecuteAsync(sql, new { request.FirstName, request.LastName, request.RoleId, Id = employeeId });
+    var rows = await connection.ExecuteAsync(sql, new
+    {
+      request.FirstName,
+      request.LastName,
+      request.Email,
+      request.RoleId,
+      Id = employeeId
+    });
     return rows > 0;
   }
 }
