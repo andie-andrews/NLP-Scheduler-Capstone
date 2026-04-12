@@ -55,6 +55,9 @@ def call_api(token, operation, args):
                 "rawText": res.text,
             }
 
+    if isinstance(result, dict) and "__httpStatus" not in result:
+        result["__httpStatus"] = res.status_code
+
     print("----- API RESULT -----")
     print("URL:", url)
     print(result)

@@ -184,6 +184,16 @@ def render_response(response):
         if response.get("summary"):
             st.markdown(response["summary"])
 
+        if isinstance(data, dict) and "failedShifts" in data and data.get("failedShifts"):
+            st.warning("Some shifts could not be created:")
+            for failed in data.get("failedShifts", []):
+                shift = failed.get("shift", {})
+                start_value = shift.get("start", "unknown start")
+                error_value = failed.get("error", "Validation failed")
+                st.markdown(
+                    f"- `{start_value}` ({shift.get('durationHours', '?')}h): {error_value}"
+                )
+
         # Show lightweight metrics/details only when useful.
         if isinstance(data, dict) and "totalHours" in data:
             st.metric("Total Hours", data.get("totalHours", 0))

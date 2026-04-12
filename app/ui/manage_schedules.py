@@ -3,6 +3,7 @@ from api_client import (
     get_schedules,
     get_schedule_employees,
     get_schedule_shifts,
+    get_my_schedule,
     create_shift,
     update_shift,
     delete_shift,
@@ -35,8 +36,61 @@ def render():
         except Exception:
             error_payload = response.text or "Unknown error"
 
+        if isinstance(error_payload, dict):
+            errors = error_payload.get("errors") or {}
+
+            overlap_errors = []
+            if isinstance(errors, dict):
+                overlap_errors = errors.get("overlapping_shift") or []
+            elif isinstance(errors, list):
+                overlap_errors = [
+                    item.get("message")
+                    for item in errors
+                    if isinstance(item, dict) and item.get("code") == "overlapping_shift"
+                ]
+
+            if overlap_errors:
+                st.error("Shift not created: it overlaps an existing shift for this employee.")
+                for detail in overlap_errors:
+                    st.caption(detail)
+                return False
+
         st.error(f"Request failed ({response.status_code}): {error_payload}")
         return False
+
+    def overlaps_existing_shift(*, employee_id: int, start_iso: str, duration_hours: int, exclude_shift_id: int | None = None):
+        proposed_start = datetime.fromisoformat(start_iso)
+        proposed_end = proposed_start + timedelta(hours=int(duration_hours))
+        window_start = (proposed_start - timedelta(days=1)).date().isoformat()
+        window_end = (proposed_end + timedelta(days=1)).date().isoformat()
+
+        shifts_response = get_my_schedule(
+            employee_id,
+            params={"startDate": window_start, "endDate": window_end},
+        )
+
+        if shifts_response.status_code != 200:
+            return False, None
+
+        try:
+            existing_shifts = shifts_response.json() or []
+        except Exception:
+            return False, None
+
+        for existing in existing_shifts:
+            if exclude_shift_id and existing.get("id") == exclude_shift_id:
+                continue
+
+            existing_start = datetime.fromisoformat(existing["start"])
+            existing_end = existing_start + timedelta(hours=int(existing.get("durationHours", 0)))
+            if existing_start < proposed_end and existing_end > proposed_start:
+                detail = (
+                    f"Overlaps existing shift on {existing_start.strftime('%A, %b %d, %Y')} "
+                    f"({existing_start.strftime('%I:%M %p')} - {existing_end.strftime('%I:%M %p')})."
+                )
+                return True, detail
+
+        return False, None
 
     # 🔥 INIT STATE
     if "week_offset" not in st.session_state:
@@ -225,6 +279,7 @@ def render():
                             if st.button("Edit shift", key=f"edit_shift_{shift_id}", use_container_width=True):
                                 st.session_state["editing_shift"] = {
                                     "id": shift_id,
+                                    "employee_id": emp["id"],
                                     "employee_name": full_name,
                                     "start": shift["start"],
                                     "durationHours": shift["durationHours"]
@@ -332,6 +387,17 @@ def render():
 
             if st.button("Create shift", use_container_width=True):
                 shift_start = datetime.combine(start_date, start_time).isoformat()
+                has_overlap, overlap_detail = overlaps_existing_shift(
+                    employee_id=pending["employee_id"],
+                    start_iso=shift_start,
+                    duration_hours=int(duration),
+                )
+                if has_overlap:
+                    st.error("Shift not created: it overlaps an existing shift for this employee.")
+                    if overlap_detail:
+                        st.caption(overlap_detail)
+                    return
+
                 result = create_shift(
                     pending["schedule_id"],
                     pending["employee_id"],
@@ -367,6 +433,18 @@ def render():
 
             if st.button("Save changes", use_container_width=True):
                 shift_start = datetime.combine(start_date, start_time).isoformat()
+                has_overlap, overlap_detail = overlaps_existing_shift(
+                    employee_id=editing["employee_id"],
+                    start_iso=shift_start,
+                    duration_hours=int(duration),
+                    exclude_shift_id=editing["id"],
+                )
+                if has_overlap:
+                    st.error("Shift not updated: it overlaps an existing shift for this employee.")
+                    if overlap_detail:
+                        st.caption(overlap_detail)
+                    return
+
                 result = update_shift(editing["id"], start=shift_start, duration=int(duration))
                 if handle_mutation(result, "Shift updated."):
                     st.session_state["editing_shift"] = None

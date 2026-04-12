@@ -1,5 +1,7 @@
-﻿using Dapper;
+using Dapper;
+using Scheduler.Api.Features.Shifts;
 using Scheduler.Api.Infrastructure.Data;
+using System.Data;
 
 namespace Scheduler.Api.Features.Shifts.Handlers;
 
@@ -12,41 +14,46 @@ public class CreateShiftHandler
     _db = db;
   }
 
-  public async Task Handle(int scheduleId, int employeeId, DateTime start, int duration, int currentUserEmployeeId)
+  public async Task Handle(
+    int scheduleId,
+    int employeeId,
+    DateTime start,
+    int duration,
+    IDbConnection? connection = null,
+    IDbTransaction? transaction = null)
   {
-    using var connection = _db.CreateConnection();
+    var ownsConnection = connection is null;
+    connection ??= _db.CreateConnection();
 
-    var isManager = await connection.ExecuteScalarAsync<int?>(@"
-            SELECT 1
-            FROM ScheduleManagers
-            WHERE ScheduleId = @scheduleId
-              AND ManagerId = @managerId
-        ", new { scheduleId, managerId = currentUserEmployeeId });
-
-    if (isManager is null)
-      throw new Exception("Not authorized to manage this schedule");
-
-    // 👥 Validate employee is on schedule
-    var isAssigned = await connection.ExecuteScalarAsync<int?>(@"
-            SELECT 1
-            FROM ScheduleEmployees
-            WHERE ScheduleId = @scheduleId
-              AND EmployeeId = @employeeId
-        ", new { scheduleId, employeeId });
-
-    if (isAssigned is null)
-      throw new Exception("Employee not assigned to schedule");
-
-    // ➕ Insert shift
-    await connection.ExecuteAsync(@"
-            INSERT INTO Shifts (ScheduleId, EmployeeId, Start, DurationHours)
-            VALUES (@scheduleId, @employeeId, @start, @duration)
-        ", new
+    try
     {
-      scheduleId,
-      employeeId,
-      start,
-      duration
-    });
+      var rows = await connection.ExecuteAsync(@"
+        INSERT INTO Shifts (ScheduleId, EmployeeId, Start, DurationHours)
+        SELECT @scheduleId, @employeeId, @start, @duration
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM Shifts WITH (UPDLOCK, HOLDLOCK)
+          WHERE EmployeeId = @employeeId
+            AND Start < DATEADD(hour, @duration, @start)
+            AND DATEADD(hour, DurationHours, Start) > @start
+        )
+      ", new
+      {
+        scheduleId,
+        employeeId,
+        start,
+        duration,
+      }, transaction: transaction);
+
+      if (rows == 0)
+        throw new ShiftValidationException(
+          "Shift overlaps an existing shift for this employee.",
+          "overlapping_shift");
+    }
+    finally
+    {
+      if (ownsConnection)
+        connection.Dispose();
+    }
   }
 }

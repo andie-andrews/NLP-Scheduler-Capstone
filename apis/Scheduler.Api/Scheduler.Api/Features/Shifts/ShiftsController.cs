@@ -2,7 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Scheduler.Api.Features.Schedules.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
+using Scheduler.Api.Features.Shifts;
 using Scheduler.Api.Features.Shifts.Models;
+using Scheduler.Api.Features.Shifts.Services;
+using Scheduler.Api.Infrastructure.Api;
 using Scheduler.Api.Infrastructure.Domain.Models;
 
 namespace Scheduler.Api.Features.Shifts;
@@ -14,21 +17,18 @@ public class ShiftsController : ControllerBase
 {
   private readonly GetScheduleShiftsHandler _getShifts;
   private readonly GetEmployeeShiftsHandler _getEmployeeShifts;
-  private readonly CreateShiftHandler _createShiftHandler;
   private readonly DeleteShiftHandler _deleteShiftHandler;
-  private readonly UpdateShiftHandler _updateShiftHandler;
+  private readonly ShiftDomainService _shiftDomainService;
   public ShiftsController(
     GetScheduleShiftsHandler getShifts,
-    CreateShiftHandler createShift, 
     GetEmployeeShiftsHandler getEmployeeShifts,
     DeleteShiftHandler deleteShiftHandler,
-    UpdateShiftHandler updateShiftHandler)
+    ShiftDomainService shiftCommandService)
   {
     _getShifts = getShifts;
-    _createShiftHandler = createShift;
     _getEmployeeShifts = getEmployeeShifts;
     _deleteShiftHandler = deleteShiftHandler;
-    _updateShiftHandler = updateShiftHandler;
+    _shiftDomainService = shiftCommandService;
   }
 
   /// <summary>
@@ -102,15 +102,16 @@ public class ShiftsController : ControllerBase
   {
     var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
 
-    await _createShiftHandler.Handle(
-      scheduleId,
-      request.EmployeeId,
-      request.Start,
-      request.DurationHours,
-      userEmployeeId
-    );
+    try
+    {
+      await _shiftDomainService.CreateShift(scheduleId, request, userEmployeeId);
+    }
+    catch (ShiftValidationException ex)
+    {
+      return ApiResponse.Error(this, ex.StatusCode, ex.ErrorCode, ex.Message);
+    }
 
-    return Ok();
+    return Ok(ApiResponse.Ok(new { message = "Shift created successfully." }));
   }
 
   /// <summary>
@@ -136,16 +137,21 @@ public class ShiftsController : ControllerBase
   public async Task<IActionResult> UpdateShift([FromRoute] int shiftId, UpdateShiftRequest request)
   {
     var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
-    var wasUpdated = await _updateShiftHandler.Handle(
-      shiftId,
-      request.Start,
-      request.DurationHours,
-      userEmployeeId
-    );
+    bool wasUpdated;
+
+    try
+    {
+      wasUpdated = await _shiftDomainService.UpdateShift(shiftId, request, userEmployeeId);
+    }
+    catch (ShiftValidationException ex)
+    {
+      return ApiResponse.Error(this, ex.StatusCode, ex.ErrorCode, ex.Message);
+    }
 
     if (!wasUpdated)
       return NotFound();
 
-    return Ok();
+    return Ok(ApiResponse.Ok(new { message = "Shift updated successfully." }));
   }
+
 }
