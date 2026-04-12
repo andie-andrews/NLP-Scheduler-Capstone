@@ -40,12 +40,21 @@ def render_ai_assistant(embedded: bool = False):
     # 💬 Chat Input footer
     # -------------------------------
     _inject_sticky_new_chat_css()
-    user_input = st.chat_input(
-        "Ask something about schedules, shifts, or hours...",
-        key="assistant_chat_input",
-    )
+    user_input = None
+    submitted = False
+    with st.container(key="assistant_input_footer"):
+        with st.form("assistant_input_form", clear_on_submit=True):
+            input_cols = st.columns([8, 2], gap="small")
+            with input_cols[0]:
+                user_input = st.text_input(
+                    "Ask something about schedules, shifts, or hours...",
+                    label_visibility="collapsed",
+                    placeholder="Ask something about schedules, shifts, or hours...",
+                )
+            with input_cols[1]:
+                submitted = st.form_submit_button("Send", use_container_width=True)
 
-    if not user_input:
+    if not submitted or not user_input:
         return
 
     st.session_state.chat_messages.append({
@@ -76,7 +85,7 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_chat_scroll {
-                height: calc(100vh - 22rem);
+                height: calc(100vh - 25rem);
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding: 0.5rem 0.45rem 0.65rem 0.2rem;
@@ -85,11 +94,16 @@ def _inject_sticky_new_chat_css():
                 background: rgba(255, 255, 255, 0.55);
             }
 
-            [data-testid="stChatInput"] {
+            .st-key-assistant_input_footer {
+                background: var(--background-color, #f6f8fc);
+                padding-top: 0.45rem;
                 position: sticky;
                 bottom: 0;
-                background: var(--background-color, #f6f8fc);
-                padding-top: 0.5rem;
+                z-index: 5;
+            }
+
+            .st-key-assistant_input_footer input {
+                border-radius: 999px;
             }
 
             .st-key-assistant_chat_scroll::-webkit-scrollbar,
