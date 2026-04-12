@@ -74,6 +74,51 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+    def test_create_shift_flow_creates_multiple_shifts_when_dates_are_present(self):
+        calls = []
+        responses = [{"id": 1}, {"id": 2}]
+
+        def fake_call_api(_token, operation, args):
+            if operation == "create-shift-op":
+                calls.append(args)
+                return responses[len(calls) - 1]
+            return []
+
+        session = {}
+        result = handle_create_shift_flow(
+            message="schedule jane next week monday-friday 9am-5pm",
+            token="t",
+            session=session,
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": ["2026-04-20", "2026-04-21"],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (None, None),
+        )
+
+        self.assertEqual(result["summary"], "Shifts created successfully.")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0]["start"], "2026-04-20T09:00:00")
+        self.assertEqual(calls[1]["start"], "2026-04-21T09:00:00")
+
 
 if __name__ == "__main__":
     unittest.main()

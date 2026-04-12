@@ -42,6 +42,7 @@ def handle_create_shift_flow(
         "start": None,
         "pendingStartDate": None,
         "durationHours": None,
+        "multiShiftDates": [],
         "awaiting": None,
         "employee_options": [],
         "schedule_options": [],
@@ -76,15 +77,33 @@ def handle_create_shift_flow(
         set_pending_shift_state(session, state)
         return "I couldn't match that schedule name. Which schedule should I use?"
     args["scheduleId"] = normalized_schedule_id
-    print("[create_shift] Calling createShift with args:", args)
-    result = call_api(token, operations["createShift"], args)
-    print("[create_shift] createShift response:", result)
+
+    recurring_dates = state.get("multiShiftDates") or []
+    shifts_to_create = []
+    if recurring_dates:
+        base_start = datetime.fromisoformat(args["start"])
+        for raw_date in recurring_dates:
+            date_value = datetime.fromisoformat(raw_date).date()
+            shifts_to_create.append({
+                **args,
+                "start": datetime.combine(date_value, base_start.time()).isoformat(),
+            })
+    else:
+        shifts_to_create.append(args)
+
+    results = []
+    for shift_args in shifts_to_create:
+        print("[create_shift] Calling createShift with args:", shift_args)
+        created = call_api(token, operations["createShift"], shift_args)
+        print("[create_shift] createShift response:", created)
+        results.append({"shift": shift_args, "response": created})
 
     verification = None
     get_schedule_shifts = operations.get("getScheduleShifts")
     if get_schedule_shifts:
-        parsed_start = datetime.fromisoformat(args["start"])
-        week_start_date, week_end_date = week_range_from_date(parsed_start)
+        parsed_starts = [datetime.fromisoformat(shift["start"]) for shift in shifts_to_create]
+        week_start_date, _ = week_range_from_date(min(parsed_starts))
+        _, week_end_date = week_range_from_date(max(parsed_starts))
         print(
             "[create_shift] Verifying created shift in schedule week:",
             {
@@ -109,8 +128,11 @@ def handle_create_shift_flow(
                 [
                     s for s in (shifts or [])
                     if s.get("employeeId") == args["employeeId"]
-                    and s.get("start") == args["start"]
-                    and s.get("durationHours") == args["durationHours"]
+                    and any(
+                        s.get("start") == created_shift["start"]
+                        and s.get("durationHours") == created_shift["durationHours"]
+                        for created_shift in shifts_to_create
+                    )
                 ]
             ),
         }
@@ -118,10 +140,11 @@ def handle_create_shift_flow(
 
     clear_pending_shift_state(session)
     return {
-        "summary": "Shift created successfully.",
+        "summary": "Shifts created successfully." if len(shifts_to_create) > 1 else "Shift created successfully.",
         "data": {
-            "createShiftResponse": result,
+            "createShiftResponses": results,
             "createdShift": args,
+            "createdShifts": shifts_to_create,
             "verification": verification,
         }
     }

@@ -48,6 +48,130 @@ def extract_time_of_day(message: str):
     return hour, minute
 
 
+def extract_time_range(message: str):
+    text = (message or "").lower()
+    match = re.search(
+        r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:-|to)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?",
+        text,
+    )
+    if not match:
+        return None
+
+    def to_24_hour(raw_hour: str, raw_minute: str | None, meridian: str | None):
+        hour = int(raw_hour)
+        minute = int(raw_minute or 0)
+        marker = (meridian or "").lower()
+        if marker == "pm" and hour != 12:
+            hour += 12
+        if marker == "am" and hour == 12:
+            hour = 0
+        if marker not in {"am", "pm"} and hour == 24:
+            hour = 0
+        if hour > 23 or minute > 59:
+            return None
+        return hour, minute
+
+    start_meridian = match.group(3)
+    end_meridian = match.group(6)
+    if not start_meridian and end_meridian:
+        start_meridian = end_meridian
+
+    start = to_24_hour(match.group(1), match.group(2), start_meridian)
+    end = to_24_hour(match.group(4), match.group(5), end_meridian)
+    if not start or not end:
+        return None
+
+    start_minutes = start[0] * 60 + start[1]
+    end_minutes = end[0] * 60 + end[1]
+    if end_minutes <= start_minutes:
+        end_minutes += 24 * 60
+
+    duration_minutes = end_minutes - start_minutes
+    if duration_minutes % 60 != 0:
+        return None
+
+    return {"startHour": start[0], "startMinute": start[1], "durationHours": duration_minutes // 60}
+
+
+def extract_recurring_shift_dates(message: str, now: datetime | None = None):
+    text = (message or "").lower()
+    now = now or datetime.now()
+    normalized = re.sub(r"\s+", " ", text)
+
+    weekdays = {
+        "monday": 0,
+        "tuesday": 1,
+        "wednesday": 2,
+        "thursday": 3,
+        "friday": 4,
+        "saturday": 5,
+        "sunday": 6,
+    }
+
+    def list_from_weekday_expression(expression: str):
+        values = []
+        for day_name, day_index in weekdays.items():
+            if re.search(rf"\b{day_name}\b", expression):
+                values.append(day_index)
+        return sorted(set(values))
+
+    number_words = {
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+        "six": 6,
+        "seven": 7,
+        "eight": 8,
+        "nine": 9,
+        "ten": 10,
+        "eleven": 11,
+        "twelve": 12,
+    }
+
+    range_match = re.search(
+        r"\bnext week\b.*\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*[-–]\s*"
+        r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+        normalized,
+    )
+    if range_match:
+        start_day = weekdays[range_match.group(1)]
+        end_day = weekdays[range_match.group(2)]
+        span = []
+        day = start_day
+        while True:
+            span.append(day)
+            if day == end_day:
+                break
+            day = (day + 1) % 7
+
+        days_since_sunday = (now.weekday() + 1) % 7
+        start_of_next_week = (now - timedelta(days=days_since_sunday)).date() + timedelta(days=7)
+        return [start_of_next_week + timedelta(days=(weekday + 1) % 7) for weekday in span]
+
+    every_match = re.search(
+        r"\bevery\s+(.+?)\s+for\s+(?:the\s+)?next\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\b",
+        normalized,
+    )
+    if every_match:
+        days = list_from_weekday_expression(every_match.group(1))
+        raw_weeks = every_match.group(2)
+        weeks = int(raw_weeks) if raw_weeks.isdigit() else number_words.get(raw_weeks, 0)
+        if not days or weeks <= 0:
+            return None
+        dates = []
+        window_end = now.date() + timedelta(days=weeks * 7)
+        current = now.date()
+        while current < window_end:
+            if current.weekday() in days:
+                dates.append(current)
+            current += timedelta(days=1)
+        return dates
+
+    return None
+
+
 def extract_weekday_datetime(message: str):
     weekdays = {
         "monday": 0,
