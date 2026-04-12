@@ -23,18 +23,18 @@ def render_ai_assistant(embedded: bool = False):
     # -------------------------------
     # 🧪 Debug: which orchestrator
     # -------------------------------
-    st.caption(
-        f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
-    )
-
-    action_cols = st.columns([4, 2], gap="small")
-    with action_cols[1]:
-        if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
-            _start_new_chat()
-            st.rerun()
-
     _inject_sticky_new_chat_css()
-    with st.container(key="assistant_chat_layout"):
+    with st.container(key="assistant_panel_body"):
+        st.caption(
+            f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
+        )
+
+        action_cols = st.columns([4, 2], gap="small")
+        with action_cols[1]:
+            if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+                _start_new_chat()
+                st.rerun()
+
         with st.container(key="assistant_chat_scroll"):
             _render_chat_history()
 
@@ -85,11 +85,12 @@ def _inject_sticky_new_chat_css():
     st.markdown(
         """
         <style>
-            .st-key-assistant_chat_layout {
+            .st-key-assistant_panel_body {
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
                 flex: 1;
+                height: 100%;
             }
 
             .st-key-assistant_chat_scroll {
