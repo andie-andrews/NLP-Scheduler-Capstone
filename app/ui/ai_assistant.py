@@ -35,25 +35,16 @@ def render_ai_assistant(embedded: bool = False):
     # -------------------------------
     _inject_sticky_new_chat_css()
     with st.container(key="assistant_input_footer"):
-        footer_cols = st.columns([2, 8], gap="small")
-        with footer_cols[0]:
-            if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
-                _start_new_chat()
-                st.rerun()
+        if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+            _start_new_chat()
+            st.rerun()
 
-        with footer_cols[1]:
-            with st.form("assistant_input_form", clear_on_submit=True):
-                input_cols = st.columns([8, 2], gap="small")
-                with input_cols[0]:
-                    user_input = st.text_input(
-                        "Ask something about schedules, shifts, or hours...",
-                        label_visibility="collapsed",
-                        placeholder="Ask something about schedules, shifts, or hours...",
-                    )
-                with input_cols[1]:
-                    submitted = st.form_submit_button("Send", use_container_width=True)
+        user_input = st.chat_input(
+            "Ask something about schedules, shifts, or hours...",
+            key="assistant_chat_input",
+        )
 
-    if not submitted or not user_input:
+    if not user_input:
         return
 
     st.session_state.chat_messages.append({
@@ -84,10 +75,12 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_chat_scroll {
-                height: calc(100vh - 19rem);
+                flex: 1;
+                min-height: 0;
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding-right: 0.35rem;
+                padding-bottom: 0.6rem;
             }
 
             .st-key-assistant_input_footer {
@@ -97,6 +90,10 @@ def _inject_sticky_new_chat_css():
                 background: var(--background-color, #f6f8fc);
                 padding-top: 0.55rem;
                 border-top: 1px solid rgba(120, 120, 120, 0.2);
+            }
+
+            .st-key-assistant_input_footer .stChatInput {
+                margin-top: 0.45rem;
             }
 
             .st-key-assistant_chat_scroll::-webkit-scrollbar,
