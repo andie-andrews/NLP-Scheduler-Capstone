@@ -1,6 +1,39 @@
 from datetime import datetime
 
 
+def _extract_error_detail(response_payload):
+    if not isinstance(response_payload, dict):
+        return None
+
+    errors = response_payload.get("errors")
+    if isinstance(errors, dict):
+        if errors.get("overlapping_shift"):
+            return errors["overlapping_shift"][0]
+
+        for error_code, messages in errors.items():
+            if isinstance(messages, list) and messages:
+                return messages[0]
+            if isinstance(messages, str) and messages:
+                return messages
+            if messages:
+                return f"{error_code}: {messages}"
+
+    if isinstance(errors, list):
+        for item in errors:
+            if isinstance(item, dict) and item.get("code") == "overlapping_shift" and item.get("message"):
+                return item["message"]
+
+        for item in errors:
+            if isinstance(item, dict):
+                message = item.get("message")
+                if message:
+                    return message
+            elif isinstance(item, str) and item:
+                return item
+
+    return response_payload.get("title") or response_payload.get("detail") or response_payload.get("message")
+
+
 def handle_create_shift_flow(
     *,
     message: str,
@@ -145,22 +178,7 @@ def handle_create_shift_flow(
         api_reported_failure = isinstance(created, dict) and created.get("success") is False
         status_reported_failure = status_code is not None and not (200 <= status_code < 300)
         if status_reported_failure or api_reported_failure:
-            error_detail = None
-            if isinstance(created, dict):
-                errors = created.get("errors") or {}
-                overlap_errors = []
-                if isinstance(errors, dict):
-                    overlap_errors = errors.get("overlapping_shift") or []
-                elif isinstance(errors, list):
-                    overlap_errors = [
-                        item.get("message")
-                        for item in errors
-                        if isinstance(item, dict) and item.get("code") == "overlapping_shift"
-                    ]
-                if overlap_errors:
-                    error_detail = overlap_errors[0]
-                else:
-                    error_detail = created.get("title") or created.get("detail") or created.get("message")
+            error_detail = _extract_error_detail(created)
             failed_creates.append({
                 "shift": shift_args,
                 "statusCode": status_code,
