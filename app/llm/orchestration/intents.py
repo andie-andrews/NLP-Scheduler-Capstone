@@ -20,6 +20,13 @@ def is_create_shift_intent(message: str, create_shift_operation: dict | None = N
     if any(phrase_matches(keyword) for keyword in keywords):
         return True
 
+    looks_like_schedule_lookup = (
+        bool(re.search(r"\b(what|show|view|see|list|which)\b", text))
+        and "schedule" in text
+    ) or bool(re.search(r"\b\w+['’]s schedule\b", text))
+    if looks_like_schedule_lookup:
+        return False
+
     weekday_terms = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "week"]
     has_weekday_context = any(term in text for term in weekday_terms)
     has_scheduling_action = any(action in text for action in ["schedule", "assign", "book"])
