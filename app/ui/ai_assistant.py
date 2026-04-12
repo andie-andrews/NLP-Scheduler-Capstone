@@ -86,7 +86,7 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_chat_layout {
-                height: calc(100vh - 15.5rem);
+                height: calc(var(--assistant-pane-height, 720px) - 10rem);
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
@@ -107,6 +107,8 @@ def _inject_sticky_new_chat_css():
                 background: var(--background-color, #f6f8fc);
                 padding-top: 0.45rem;
                 margin-top: 0.5rem;
+                position: sticky;
+                bottom: 0;
             }
 
             .st-key-assistant_input_footer input {

@@ -227,6 +227,7 @@ else:
                 const applyPaneHeights = () => {
                     const viewportHeight = window.parent.innerHeight || 900;
                     const paneHeight = Math.max(360, viewportHeight - 112);
+                    parentDoc.documentElement.style.setProperty('--assistant-pane-height', `${paneHeight}px`);
 
                     leftCol.style.height = `${paneHeight}px`;
                     leftCol.style.overflow = 'hidden';
