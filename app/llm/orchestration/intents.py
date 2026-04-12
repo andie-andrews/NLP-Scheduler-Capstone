@@ -9,7 +9,7 @@ DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS = [
 
 
 def is_create_shift_intent(message: str, create_shift_operation: dict | None = None):
-    text = message.lower()
+    text = (message or "").lower()
     openapi_keywords = (create_shift_operation or {}).get("intent_phrases") or []
     keywords = [k.strip().lower() for k in (openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS) if k]
 
@@ -18,6 +18,12 @@ def is_create_shift_intent(message: str, create_shift_operation: dict | None = N
         return bool(words) and all(word in text for word in words)
 
     if any(phrase_matches(keyword) for keyword in keywords):
+        return True
+
+    weekday_terms = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "week"]
+    has_weekday_context = any(term in text for term in weekday_terms)
+    has_scheduling_action = any(action in text for action in ["schedule", "assign", "book"])
+    if has_scheduling_action and has_weekday_context:
         return True
 
     return "shift" in text and any(action in text for action in ["schedule", "create", "assign"])
