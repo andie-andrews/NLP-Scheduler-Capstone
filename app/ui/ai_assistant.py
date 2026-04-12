@@ -3,10 +3,11 @@ from llm.orchestrator import run_orchestrator
 from llm.memory import ConversationMemory
 import config as config
 from datetime import datetime
+from ui.theme import render_page_header
 
 
 def render_ai_assistant():
-    st.header("🤖 AI Scheduler Assistant")
+    render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
 
     # -------------------------------
     # 🧠 Memory (session)

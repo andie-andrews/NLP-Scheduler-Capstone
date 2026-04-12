@@ -15,6 +15,7 @@ from api_client import (
 )
 from datetime import datetime, timedelta
 from collections import defaultdict
+from ui.theme import render_page_header
 
 
 def render():
@@ -50,10 +51,12 @@ def render():
         st.session_state["remove_schedule_employee"] = None
 
     # 🔥 HEADER
+    render_page_header("Manage Schedules", "Coordinate weekly staffing, shifts, and schedule assignments with clarity.")
+
     header_col1, header_col2 = st.columns([6, 2])
 
     with header_col1:
-        st.markdown("## Manage Schedules")
+        st.caption("Select a schedule and use the controls on the right to manage it.")
 
     with header_col2:
         btn_col1, btn_col2, btn_col3 = st.columns(3)
