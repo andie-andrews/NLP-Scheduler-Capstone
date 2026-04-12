@@ -254,6 +254,29 @@ else:
                     if (assistantShell) {
                         assistantShell.style.height = `${paneHeight}px`;
                         assistantShell.style.overflow = 'hidden';
+
+                        const panelBody = assistantShell.querySelector('.st-key-assistant_panel_body');
+                        if (panelBody) {
+                            panelBody.style.height = '100%';
+                            panelBody.style.display = 'flex';
+                            panelBody.style.flexDirection = 'column';
+                            panelBody.style.minHeight = '0';
+
+                            const panelBodyBlock = panelBody.querySelector('[data-testid="stVerticalBlock"]');
+                            if (panelBodyBlock) {
+                                panelBodyBlock.style.height = '100%';
+                                panelBodyBlock.style.display = 'flex';
+                                panelBodyBlock.style.flexDirection = 'column';
+                                panelBodyBlock.style.minHeight = '0';
+                            }
+
+                            const chatScroll = panelBody.querySelector('.st-key-assistant_chat_scroll');
+                            if (chatScroll) {
+                                chatScroll.style.flex = '1';
+                                chatScroll.style.minHeight = '0';
+                                chatScroll.style.overflowY = 'auto';
+                            }
+                        }
                     }
                 };
 
