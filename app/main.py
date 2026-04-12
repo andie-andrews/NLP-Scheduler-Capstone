@@ -195,6 +195,13 @@ else:
                 display: flex;
                 flex-direction: column;
             }
+
+            .st-key-assistant_shell [data-testid="stVerticalBlock"] {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
         </style>
         """,
         unsafe_allow_html=True,
