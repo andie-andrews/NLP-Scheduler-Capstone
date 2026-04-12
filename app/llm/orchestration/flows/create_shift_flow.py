@@ -142,7 +142,9 @@ def handle_create_shift_flow(
         print("[create_shift] createShift response:", created)
 
         status_code = created.get("__httpStatus") if isinstance(created, dict) else None
-        if status_code is not None and not (200 <= status_code < 300):
+        api_reported_failure = isinstance(created, dict) and created.get("success") is False
+        status_reported_failure = status_code is not None and not (200 <= status_code < 300)
+        if status_reported_failure or api_reported_failure:
             error_detail = None
             if isinstance(created, dict):
                 errors = created.get("errors") or {}
@@ -158,7 +160,7 @@ def handle_create_shift_flow(
                 if overlap_errors:
                     error_detail = overlap_errors[0]
                 else:
-                    error_detail = created.get("title") or created.get("detail")
+                    error_detail = created.get("title") or created.get("detail") or created.get("message")
             failed_creates.append({
                 "shift": shift_args,
                 "statusCode": status_code,

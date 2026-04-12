@@ -264,6 +264,49 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         self.assertEqual(result["data"]["failedCount"], 1)
         self.assertEqual(result["data"]["failedShifts"][0]["statusCode"], 400)
 
+    def test_create_shift_flow_treats_success_false_payload_as_failure(self):
+        def fake_call_api(_token, operation, _args):
+            if operation == "create-shift-op":
+                return {
+                    "success": False,
+                    "errors": [{"code": "overlapping_shift", "message": "Shift overlaps existing shift."}],
+                    "__httpStatus": 200,
+                }
+            return []
+
+        result = handle_create_shift_flow(
+            message="create shift",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": [],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(result["data"]["createdCount"], 0)
+        self.assertEqual(result["data"]["failedCount"], 1)
+        self.assertIn("No shifts were created", result["summary"])
+
 
 if __name__ == "__main__":
     unittest.main()
