@@ -183,8 +183,9 @@ else:
 
             .st-key-main_scroll_pane {
                 height: calc(100vh - 7rem);
-                overflow-y: auto;
-                overflow-x: hidden;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
                 padding: 0 0.25rem 1rem 0;
             }
 
@@ -228,17 +229,17 @@ else:
                     const paneHeight = Math.max(360, viewportHeight - 112);
 
                     leftCol.style.height = `${paneHeight}px`;
-                    leftCol.style.overflowY = 'auto';
-                    leftCol.style.overflowX = 'hidden';
+                    leftCol.style.overflow = 'hidden';
 
                     rightCol.style.height = `${paneHeight}px`;
                     rightCol.style.overflow = 'hidden';
 
                     const mainScrollPane = parentDoc.querySelector('.st-key-main_scroll_pane');
                     if (mainScrollPane) {
-                        mainScrollPane.style.height = 'auto';
-                        mainScrollPane.style.minHeight = '100%';
-                        mainScrollPane.style.overflow = 'visible';
+                        mainScrollPane.style.height = `${paneHeight}px`;
+                        mainScrollPane.style.overflow = 'hidden';
+                        mainScrollPane.style.display = 'flex';
+                        mainScrollPane.style.flexDirection = 'column';
                     }
 
                     const assistantShell = parentDoc.querySelector('.st-key-assistant_shell');
