@@ -36,6 +36,7 @@ def render_ai_assistant(embedded: bool = False):
                 st.rerun()
 
         with st.container(key="assistant_chat_scroll"):
+            st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
             _render_chat_history()
 
         # -------------------------------
@@ -102,6 +103,10 @@ def _inject_sticky_new_chat_css():
                 border: 1px solid rgba(120, 120, 120, 0.2);
                 border-radius: 0.8rem;
                 background: rgba(255, 255, 255, 0.55);
+            }
+
+            .assistant-chat-anchor {
+                min-height: 0.25rem;
             }
 
             .st-key-assistant_input_footer {
