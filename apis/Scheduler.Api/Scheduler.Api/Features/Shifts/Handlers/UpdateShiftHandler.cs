@@ -18,7 +18,8 @@ public class UpdateShiftHandler
     int shiftId,
     DateTime start,
     int durationHours,
-    IDbConnection? connection = null)
+    IDbConnection? connection = null,
+    IDbTransaction? transaction = null)
   {
     var ownsConnection = connection is null;
     connection ??= _db.CreateConnection();
@@ -32,7 +33,7 @@ public class UpdateShiftHandler
         WHERE Id = @shiftId
           AND NOT EXISTS (
             SELECT 1
-            FROM Shifts
+            FROM Shifts WITH (UPDLOCK, HOLDLOCK)
             WHERE EmployeeId = (
               SELECT EmployeeId
               FROM Shifts
@@ -47,7 +48,7 @@ public class UpdateShiftHandler
         shiftId,
         start,
         durationHours,
-      });
+      }, transaction: transaction);
 
       if (rows == 0)
       {
@@ -55,7 +56,7 @@ public class UpdateShiftHandler
           SELECT 1
           FROM Shifts
           WHERE Id = @shiftId
-        ", new { shiftId });
+        ", new { shiftId }, transaction: transaction);
 
         if (shiftExists is not null)
           throw new ShiftValidationException(

@@ -18,7 +18,8 @@ public class ValidateShiftOverlapHandler
     DateTime start,
     int durationHours,
     int? excludeShiftId = null,
-    IDbConnection? connection = null)
+    IDbConnection? connection = null,
+    IDbTransaction? transaction = null)
   {
     var end = start.AddHours(durationHours);
     var ownsConnection = connection is null;
@@ -28,7 +29,7 @@ public class ValidateShiftOverlapHandler
     {
       var overlapping = await connection.QuerySingleOrDefaultAsync<(int Id, int ScheduleId, DateTime Start, int DurationHours)>(@"
         SELECT TOP 1 Id, ScheduleId, Start, DurationHours
-        FROM Shifts
+        FROM Shifts WITH (UPDLOCK, HOLDLOCK)
         WHERE EmployeeId = @employeeId
           AND (@excludeShiftId IS NULL OR Id <> @excludeShiftId)
           AND Start < @newEnd
@@ -40,7 +41,7 @@ public class ValidateShiftOverlapHandler
         newStart = start,
         newEnd = end,
         excludeShiftId,
-      });
+      }, transaction: transaction);
 
       if (overlapping.Id == 0)
         return;

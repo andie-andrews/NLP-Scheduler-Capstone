@@ -4,6 +4,7 @@ using Scheduler.Api.Features.Schedules.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
 using Scheduler.Api.Features.Shifts.Models;
 using Scheduler.Api.Infrastructure.Data;
+using System.Data;
 
 namespace Scheduler.Api.Features.Shifts.Services;
 
@@ -29,13 +30,14 @@ public class ShiftDomainService
   public async Task CreateShift(int scheduleId, CreateShiftRequest request, int currentUserEmployeeId)
   {
     using var connection = _db.CreateConnection();
+    using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
     var isManager = await connection.ExecuteScalarAsync<int?>(@"
       SELECT 1
       FROM ScheduleManagers
       WHERE ScheduleId = @scheduleId
         AND ManagerId = @managerId
-    ", new { scheduleId, managerId = currentUserEmployeeId });
+    ", new { scheduleId, managerId = currentUserEmployeeId }, transaction: transaction);
 
     if (isManager is null)
       throw new ShiftValidationException(
@@ -48,7 +50,7 @@ public class ShiftDomainService
       FROM ScheduleEmployees
       WHERE ScheduleId = @scheduleId
         AND EmployeeId = @employeeId
-    ", new { scheduleId, employeeId = request.EmployeeId });
+    ", new { scheduleId, employeeId = request.EmployeeId }, transaction: transaction);
 
     if (isAssigned is null)
       throw new ShiftValidationException(
@@ -59,28 +61,36 @@ public class ShiftDomainService
       request.EmployeeId,
       request.Start,
       request.DurationHours,
-      connection: connection);
+      connection: connection,
+      transaction: transaction);
 
     await _createShiftHandler.Handle(
       scheduleId,
       request.EmployeeId,
       request.Start,
       request.DurationHours,
-      connection);
+      connection,
+      transaction);
+
+    transaction.Commit();
   }
 
   public async Task<bool> UpdateShift(int shiftId, UpdateShiftRequest request, int currentUserEmployeeId)
   {
     using var connection = _db.CreateConnection();
+    using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
     var shift = await connection.QuerySingleOrDefaultAsync<(int Id, int ScheduleId, int EmployeeId)>(@"
       SELECT Id, ScheduleId, EmployeeId
       FROM Shifts
       WHERE Id = @shiftId
-    ", new { shiftId });
+    ", new { shiftId }, transaction: transaction);
 
     if (shift.Id == 0)
+    {
+      transaction.Commit();
       return false;
+    }
 
     var isManager = await connection.ExecuteScalarAsync<int?>(@"
       SELECT 1
@@ -91,7 +101,7 @@ public class ShiftDomainService
     {
       scheduleId = shift.ScheduleId,
       managerId = currentUserEmployeeId,
-    });
+    }, transaction: transaction);
 
     if (isManager is null)
       throw new ShiftValidationException(
@@ -104,12 +114,17 @@ public class ShiftDomainService
       request.Start,
       request.DurationHours,
       shiftId,
-      connection);
+      connection,
+      transaction);
 
-    return await _updateShiftHandler.Handle(
+    var wasUpdated = await _updateShiftHandler.Handle(
       shiftId,
       request.Start,
       request.DurationHours,
-      connection);
+      connection,
+      transaction);
+
+    transaction.Commit();
+    return wasUpdated;
   }
 }
