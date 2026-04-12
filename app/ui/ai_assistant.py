@@ -27,33 +27,20 @@ def render_ai_assistant(embedded: bool = False):
         f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
     )
 
+    _inject_assistant_layout_css()
+
+    controls_col, _ = st.columns([2, 8], gap="small")
+    with controls_col:
+        if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+            _start_new_chat()
+            st.rerun()
+
     with st.container(key="assistant_chat_scroll"):
         _render_chat_history()
 
-    # -------------------------------
-    # 💬 Chat Input + New Chat footer
-    # -------------------------------
-    _inject_sticky_new_chat_css()
-    with st.container(key="assistant_input_footer"):
-        footer_cols = st.columns([2, 8], gap="small")
-        with footer_cols[0]:
-            if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
-                _start_new_chat()
-                st.rerun()
+    user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
 
-        with footer_cols[1]:
-            with st.form("assistant_input_form", clear_on_submit=True):
-                input_cols = st.columns([8, 2], gap="small")
-                with input_cols[0]:
-                    user_input = st.text_input(
-                        "Ask something about schedules, shifts, or hours...",
-                        label_visibility="collapsed",
-                        placeholder="Ask something about schedules, shifts, or hours...",
-                    )
-                with input_cols[1]:
-                    submitted = st.form_submit_button("Send", use_container_width=True)
-
-    if not submitted or not user_input:
+    if not user_input:
         return
 
     st.session_state.chat_messages.append({
@@ -79,24 +66,15 @@ def render_ai_assistant(embedded: bool = False):
 
 
 
-def _inject_sticky_new_chat_css():
+def _inject_assistant_layout_css():
     st.markdown(
         """
         <style>
             .st-key-assistant_chat_scroll {
-                height: calc(100vh - 19rem);
+                height: calc(100vh - 17rem);
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding-right: 0.35rem;
-            }
-
-            .st-key-assistant_input_footer {
-                position: sticky;
-                bottom: 0;
-                z-index: 10;
-                background: var(--background-color, #f6f8fc);
-                padding-top: 0.55rem;
-                border-top: 1px solid rgba(120, 120, 120, 0.2);
             }
 
             .st-key-assistant_chat_scroll::-webkit-scrollbar,

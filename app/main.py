@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from ui.login import render_login
 from ui.tabs import get_tabs
@@ -152,7 +151,6 @@ else:
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                cursor: ew-resize;
                 user-select: none;
                 font-size: 1.15rem;
                 background: rgba(120, 120, 120, 0.08);
@@ -168,7 +166,7 @@ else:
                 height: calc(100vh - 7rem);
                 overflow-y: auto;
                 overflow-x: hidden;
-                padding: 0 0.1rem 8rem 0;
+                padding: 0 0.1rem 1.25rem 0;
             }
 
             .st-key-assistant_shell {
@@ -179,92 +177,3 @@ else:
         """,
         unsafe_allow_html=True,
     )
-
-    if not st.session_state.ai_panel_collapsed:
-        components.html(
-            """
-            <script>
-            const setupDragHandle = () => {
-                const parentDoc = window.parent.document;
-                const handles = parentDoc.querySelectorAll('.ai-resize-handle');
-                if (!handles.length) return;
-
-                const handle = handles[handles.length - 1];
-                if (handle.dataset.dragReady === '1') return;
-
-                const handleColumn = handle.closest('[data-testid="stColumn"]');
-                const row = handleColumn?.parentElement;
-                if (!row) return;
-
-                const columns = [...row.children].filter(
-                    (el) => el.getAttribute('data-testid') === 'stColumn'
-                );
-                if (columns.length < 3) return;
-
-                const leftCol = columns[0];
-                const rightCol = columns[2];
-
-                const applyPaneLayout = () => {
-                    const viewportHeight = window.parent.innerHeight || 900;
-                    const paneHeight = Math.max(420, viewportHeight - 120);
-
-                    parentDoc.documentElement.style.overflow = 'hidden';
-                    parentDoc.body.style.overflow = 'hidden';
-
-                    const appView = parentDoc.querySelector('[data-testid="stAppViewContainer"]');
-                    if (appView) appView.style.overflow = 'hidden';
-
-                    for (const col of [leftCol, rightCol]) {
-                        col.style.height = `${paneHeight}px`;
-                        col.style.overflow = 'hidden';
-                        const block = col.querySelector('[data-testid="stVerticalBlock"]');
-                        if (block) {
-                            block.style.height = '100%';
-                            block.style.overflow = 'hidden';
-                        }
-                    }
-                };
-
-                handle.dataset.dragReady = '1';
-                let startX = 0;
-                let startLeft = 0;
-                let startRight = 0;
-
-                const onMouseMove = (event) => {
-                    const dx = event.clientX - startX;
-                    const minPanelWidth = 300;
-                    const containerWidth = row.getBoundingClientRect().width;
-
-                    const nextLeft = Math.max(minPanelWidth, Math.min(startLeft + dx, containerWidth - minPanelWidth));
-                    const nextRight = Math.max(minPanelWidth, startRight - dx);
-
-                    leftCol.style.flex = `0 0 ${nextLeft}px`;
-                    rightCol.style.flex = `0 0 ${nextRight}px`;
-                    applyPaneLayout();
-                };
-
-                const onMouseUp = () => {
-                    parentDoc.removeEventListener('mousemove', onMouseMove);
-                    parentDoc.removeEventListener('mouseup', onMouseUp);
-                    parentDoc.body.style.cursor = '';
-                };
-
-                handle.addEventListener('mousedown', (event) => {
-                    event.preventDefault();
-                    startX = event.clientX;
-                    startLeft = leftCol.getBoundingClientRect().width;
-                    startRight = rightCol.getBoundingClientRect().width;
-                    parentDoc.body.style.cursor = 'ew-resize';
-                    parentDoc.addEventListener('mousemove', onMouseMove);
-                    parentDoc.addEventListener('mouseup', onMouseUp);
-                });
-
-                applyPaneLayout();
-                window.parent.addEventListener('resize', applyPaneLayout);
-            };
-
-            setTimeout(setupDragHandle, 100);
-            </script>
-            """,
-            height=0,
-        )
