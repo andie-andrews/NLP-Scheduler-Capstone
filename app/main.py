@@ -138,8 +138,7 @@ else:
         if st.session_state.ai_panel_collapsed:
             st.caption("Assistant collapsed. Click ▶ to expand.")
         else:
-            with st.container(key="assistant_panel_pane"):
-                render_ai_assistant(embedded=True)
+            render_ai_assistant(embedded=True)
 
     st.markdown(
         """
@@ -165,17 +164,14 @@ else:
             }
 
             .st-key-main_scroll_pane {
-                max-height: calc(100vh - 7.5rem);
+                height: calc(100vh - 7rem);
                 overflow-y: auto;
                 overflow-x: hidden;
-                padding-right: 0.45rem;
+                padding: 0 0.45rem 8rem 0;
             }
 
-            .st-key-assistant_panel_pane {
-                max-height: calc(100vh - 11.5rem);
-                overflow-y: auto;
-                overflow-x: hidden;
-                padding-right: 0.35rem;
+            [data-testid="stMain"] {
+                overflow: hidden;
             }
         </style>
         """,
