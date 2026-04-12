@@ -167,7 +167,7 @@ else:
                 height: calc(100vh - 7rem);
                 overflow-y: auto;
                 overflow-x: hidden;
-                padding: 0 0.45rem 8rem 0;
+                padding: 0 0.1rem 8rem 0;
             }
 
             [data-testid="stMain"] {

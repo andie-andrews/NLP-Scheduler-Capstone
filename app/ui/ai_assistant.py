@@ -31,15 +31,29 @@ def render_ai_assistant(embedded: bool = False):
         _render_chat_history()
 
     # -------------------------------
-    # 💬 Chat Input (interactive)
+    # 💬 Chat Input + New Chat footer
     # -------------------------------
     _inject_sticky_new_chat_css()
-    if st.button("🆕 New chat", key="new_chat_sticky", use_container_width=True):
-        _start_new_chat()
-        st.rerun()
+    with st.container(key="assistant_input_footer"):
+        footer_cols = st.columns([2, 8], gap="small")
+        with footer_cols[0]:
+            if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+                _start_new_chat()
+                st.rerun()
 
-    user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
-    if not user_input:
+        with footer_cols[1]:
+            with st.form("assistant_input_form", clear_on_submit=True):
+                input_cols = st.columns([8, 2], gap="small")
+                with input_cols[0]:
+                    user_input = st.text_input(
+                        "Ask something about schedules, shifts, or hours...",
+                        label_visibility="collapsed",
+                        placeholder="Ask something about schedules, shifts, or hours...",
+                    )
+                with input_cols[1]:
+                    submitted = st.form_submit_button("Send", use_container_width=True)
+
+    if not submitted or not user_input:
         return
 
     st.session_state.chat_messages.append({
@@ -69,61 +83,20 @@ def _inject_sticky_new_chat_css():
     st.markdown(
         """
         <style>
-            [data-testid="stChatInput"] {
-                padding-right: 13.75rem;
-            }
-
-            /* Align the top of the button with the chat input bar */
-            .st-key-new_chat_sticky {
-                position: fixed;
-                right: 2.8rem; /* Moved left by ~25px (was 1.25rem) */
-                bottom: 3.55rem; /* Raised by 5px (was 3.2rem) */
-                z-index: 999;
-                width: 12rem;
-                height: 3.2rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-sizing: border-box;
-                padding: 0;
-            }
-
-            .st-key-new_chat_sticky button {
-                height: 100%;
-                width: 100%;
-                font-size: 1.1rem;
-                border-radius: 0.5rem;
-            }
-
-            /* Fallback: align tops if center doesn't look right */
-            .st-key-new_chat_sticky.align-top {
-                bottom: 4.8rem !important; /* Raised by 5px (was 4.5rem) */
-                transform: none !important;
-            }
-
-            /* Fallback: align bottoms if needed */
-            .st-key-new_chat_sticky.align-bottom {
-                bottom: 1.6rem !important; /* Raised by 5px (was 1.25rem) */
-                transform: none !important;
-            }
-
-            @media (max-width: 768px) {
-                [data-testid="stChatInput"] {
-                    padding-right: 10rem;
-                }
-                .st-key-new_chat_sticky {
-                    right: 2.3rem; /* Moved left by ~25px (was 0.75rem) */
-                    bottom: 4.4rem; /* Raised by 5px (was 4.1rem) */
-                    width: 9rem;
-                    height: 2.6rem;
-                }
-            }
-
             .st-key-assistant_chat_scroll {
-                max-height: calc(100vh - 20.5rem);
+                max-height: calc(100vh - 20rem);
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding-right: 0.35rem;
+            }
+
+            .st-key-assistant_input_footer {
+                position: sticky;
+                bottom: 0;
+                z-index: 10;
+                background: var(--background-color, #f6f8fc);
+                padding-top: 0.55rem;
+                border-top: 1px solid rgba(120, 120, 120, 0.2);
             }
         </style>
         """,
