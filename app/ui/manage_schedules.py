@@ -35,6 +35,25 @@ def render():
         except Exception:
             error_payload = response.text or "Unknown error"
 
+        if isinstance(error_payload, dict):
+            errors = error_payload.get("errors") or {}
+
+            overlap_errors = []
+            if isinstance(errors, dict):
+                overlap_errors = errors.get("overlapping_shift") or []
+            elif isinstance(errors, list):
+                overlap_errors = [
+                    item.get("message")
+                    for item in errors
+                    if isinstance(item, dict) and item.get("code") == "overlapping_shift"
+                ]
+
+            if overlap_errors:
+                st.error("Shift not created: it overlaps an existing shift for this employee.")
+                for detail in overlap_errors:
+                    st.caption(detail)
+                return False
+
         st.error(f"Request failed ({response.status_code}): {error_payload}")
         return False
 

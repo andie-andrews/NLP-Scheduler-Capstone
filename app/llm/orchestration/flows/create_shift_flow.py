@@ -134,10 +134,39 @@ def handle_create_shift_flow(
         shifts_missing = list(shifts_to_create)
 
     results = []
+    successful_creates = []
+    failed_creates = []
     for shift_args in shifts_missing:
         print("[create_shift] Calling createShift with args:", shift_args)
         created = call_api(token, operations["createShift"], shift_args)
         print("[create_shift] createShift response:", created)
+
+        status_code = created.get("__httpStatus") if isinstance(created, dict) else None
+        if status_code is not None and not (200 <= status_code < 300):
+            error_detail = None
+            if isinstance(created, dict):
+                errors = created.get("errors") or {}
+                overlap_errors = []
+                if isinstance(errors, dict):
+                    overlap_errors = errors.get("overlapping_shift") or []
+                elif isinstance(errors, list):
+                    overlap_errors = [
+                        item.get("message")
+                        for item in errors
+                        if isinstance(item, dict) and item.get("code") == "overlapping_shift"
+                    ]
+                if overlap_errors:
+                    error_detail = overlap_errors[0]
+                else:
+                    error_detail = created.get("title") or created.get("detail")
+            failed_creates.append({
+                "shift": shift_args,
+                "statusCode": status_code,
+                "error": error_detail or "Validation failed.",
+            })
+        else:
+            successful_creates.append(shift_args)
+
         results.append({"shift": shift_args, "response": created})
 
     verification = None
@@ -166,7 +195,7 @@ def handle_create_shift_flow(
         verification = {
             "startDate": week_start_date.isoformat(),
             "endDate": week_end_date.isoformat(),
-            "expectedNewShiftCount": len(shifts_missing),
+            "expectedNewShiftCount": len(successful_creates),
             "matchingShiftCountBefore": len(existing_matches_before),
             "matchingShiftCount": len(
                 [
@@ -189,19 +218,29 @@ def handle_create_shift_flow(
     clear_pending_shift_state(session)
     if should_skip_existing and not shifts_missing:
         summary = "All requested shifts already exist on that schedule."
+    elif failed_creates and successful_creates:
+        summary = (
+            f"Created {len(successful_creates)} shift(s), but {len(failed_creates)} could not be created "
+            "because they failed validation (for example, overlapping shifts)."
+        )
+    elif failed_creates and not successful_creates:
+        summary = "No shifts were created because all requested shifts failed validation."
     elif len(shifts_to_create) > 1:
-        summary = f"Shifts created successfully ({len(shifts_missing)} new)."
+        summary = f"Shifts created successfully ({len(successful_creates)} new)."
     else:
         summary = "Shift created successfully."
 
     return {
         "summary": summary,
         "data": {
-            "createdCount": len(results),
+            "createdCount": len(successful_creates),
+            "failedCount": len(failed_creates),
+            "failedShifts": failed_creates,
             "createShiftResponses": results,
             "createShiftResponse": results[0]["response"] if len(results) == 1 else None,
             "createdShift": args,
-            "createdShifts": shifts_to_create,
+            "createdShifts": successful_creates,
+            "requestedShifts": shifts_to_create,
             "skippedExistingShifts": [shift for shift in shifts_to_create if shift not in shifts_missing],
             "verification": verification,
         }

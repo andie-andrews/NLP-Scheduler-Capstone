@@ -116,6 +116,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         )
 
         self.assertEqual(result["summary"], "Shifts created successfully (2 new).")
+        self.assertEqual(result["data"]["failedCount"], 0)
         self.assertEqual(len(calls), 2)
         self.assertEqual(calls[0]["start"], "2026-04-20T09:00:00")
         self.assertEqual(calls[1]["start"], "2026-04-21T09:00:00")
@@ -209,7 +210,59 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         self.assertEqual(result["summary"], "Shift created successfully.")
         self.assertEqual(len(create_calls), 1)
         self.assertEqual(result["data"]["createdCount"], 1)
+        self.assertEqual(result["data"]["failedCount"], 0)
         self.assertEqual(result["data"]["createShiftResponse"], {"id": 100})
+
+    def test_create_shift_flow_reports_partial_validation_failures(self):
+        def fake_call_api(_token, operation, _args):
+            if operation == "create-shift-op":
+                fake_call_api.calls += 1
+                if fake_call_api.calls == 1:
+                    return {"id": 123, "__httpStatus": 200}
+                return {
+                    "title": "One or more validation errors occurred.",
+                    "errors": {
+                        "overlapping_shift": ["Shift overlaps existing shift."]
+                    },
+                    "__httpStatus": 400,
+                }
+            return []
+
+        fake_call_api.calls = 0
+
+        result = handle_create_shift_flow(
+            message="create recurring shifts",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": ["2026-04-20", "2026-04-21"],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertIn("could not be created", result["summary"])
+        self.assertEqual(result["data"]["createdCount"], 1)
+        self.assertEqual(result["data"]["failedCount"], 1)
+        self.assertEqual(result["data"]["failedShifts"][0]["statusCode"], 400)
 
 
 if __name__ == "__main__":
