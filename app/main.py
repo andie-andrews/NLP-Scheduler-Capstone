@@ -24,14 +24,17 @@ if "token" not in st.session_state:
 # 🔓 Logged in
 st.sidebar.markdown("<div class='sidebar-brand'>📅 Scheduler Pro</div>", unsafe_allow_html=True)
 st.sidebar.markdown(
-    f"<div class='sidebar-muted'>Signed in as</div><div><b>{st.session_state['full_name']}</b></div>",
+    f"""
+    <div class='sidebar-user'>
+        <div class='sidebar-muted'>Signed in as</div>
+        <div><b>{st.session_state['full_name']}</b></div>
+        <div style='height:0.35rem;'></div>
+        <div class='sidebar-muted'>Role</div>
+        <div><b>{st.session_state['role']}</b></div>
+    </div>
+    """,
     unsafe_allow_html=True,
 )
-st.sidebar.markdown(
-    f"<div class='sidebar-muted'>Role</div><div><b>{st.session_state['role']}</b></div>",
-    unsafe_allow_html=True,
-)
-st.sidebar.markdown("---")
 st.sidebar.subheader("Navigation")
 
 if st.sidebar.button("Logout", use_container_width=True):
@@ -39,7 +42,12 @@ if st.sidebar.button("Logout", use_container_width=True):
     st.rerun()
 
 tabs = get_tabs()
-selected = st.sidebar.radio("Go to", tabs)
+selected = st.sidebar.selectbox(
+    "Go to",
+    tabs,
+    index=tabs.index(st.session_state.get("active_tab", tabs[0])) if st.session_state.get("active_tab") in tabs else 0,
+)
+st.session_state["active_tab"] = selected
 
 if selected == "My Schedule":
     render_my_schedule()
