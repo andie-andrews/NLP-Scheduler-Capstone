@@ -27,18 +27,20 @@ def render_ai_assistant(embedded: bool = False):
         f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
     )
 
-    with st.container(key="assistant_chat_scroll"):
-        _render_chat_history()
-
-    # -------------------------------
-    # 💬 Chat Input + New Chat footer
-    # -------------------------------
-    _inject_sticky_new_chat_css()
-    with st.container(key="assistant_input_footer"):
+    action_cols = st.columns([4, 2], gap="small")
+    with action_cols[1]:
         if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
             _start_new_chat()
             st.rerun()
 
+    with st.container(key="assistant_chat_scroll"):
+        _render_chat_history()
+
+    # -------------------------------
+    # 💬 Chat Input footer
+    # -------------------------------
+    _inject_sticky_new_chat_css()
+    with st.container(key="assistant_input_footer"):
         user_input = st.chat_input(
             "Ask something about schedules, shifts, or hours...",
             key="assistant_chat_input",
@@ -78,23 +80,19 @@ def _inject_sticky_new_chat_css():
                 height: calc(100vh - 19rem);
                 overflow-y: auto;
                 overflow-x: hidden;
-                padding-right: 0.35rem;
-                padding-bottom: 0.6rem;
+                padding: 0.5rem 0.45rem 0.65rem 0.2rem;
+                border: 1px solid rgba(120, 120, 120, 0.2);
+                border-radius: 0.8rem;
+                background: rgba(255, 255, 255, 0.55);
             }
 
             .st-key-assistant_input_footer {
-                position: sticky;
-                bottom: 0;
-                z-index: 10;
                 background: var(--background-color, #f6f8fc);
-                padding-top: 0.55rem;
-                border-top: 1px solid rgba(120, 120, 120, 0.2);
+                padding-top: 0.5rem;
             }
 
             .st-key-assistant_input_footer [data-testid="stChatInput"] {
-                margin-top: 0.45rem;
-                position: sticky;
-                bottom: 0;
+                margin-top: 0.2rem;
             }
 
             .st-key-assistant_chat_scroll::-webkit-scrollbar,
@@ -114,6 +112,11 @@ def _inject_sticky_new_chat_css():
 
 
 def _render_chat_history():
+    if not st.session_state.chat_messages:
+        with st.chat_message("assistant"):
+            st.markdown("Hi! I can help with schedules, shift summaries, and staffing questions.")
+        return
+
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
             render_response(message["content"])
