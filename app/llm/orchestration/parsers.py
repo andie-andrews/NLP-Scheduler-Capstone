@@ -131,11 +131,11 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
     }
 
     range_match = re.search(
-        r"\bnext week\b.*\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*[-–]\s*"
+        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*[-–]\s*"
         r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
         normalized,
     )
-    if range_match:
+    if range_match and ("next week" in normalized or "this week" in normalized):
         start_day = weekdays[range_match.group(1)]
         end_day = weekdays[range_match.group(2)]
         span = []
@@ -147,8 +147,10 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
             day = (day + 1) % 7
 
         days_since_sunday = (now.weekday() + 1) % 7
-        start_of_next_week = (now - timedelta(days=days_since_sunday)).date() + timedelta(days=7)
-        return [start_of_next_week + timedelta(days=(weekday + 1) % 7) for weekday in span]
+        start_of_this_week = (now - timedelta(days=days_since_sunday)).date()
+        week_offset = 7 if "next week" in normalized else 0
+        target_week_start = start_of_this_week + timedelta(days=week_offset)
+        return [target_week_start + timedelta(days=(weekday + 1) % 7) for weekday in span]
 
     every_match = re.search(
         r"\bevery\s+(.+?)\s+for\s+(?:the\s+)?next\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\b",

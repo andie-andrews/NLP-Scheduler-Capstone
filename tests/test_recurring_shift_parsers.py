@@ -26,3 +26,15 @@ def test_extract_recurring_shift_dates_every_two_days_for_weeks():
     assert len(dates) == 12
     assert dates[0].isoformat() == "2026-04-14"
     assert dates[-1].isoformat() == "2026-05-20"
+
+
+def test_extract_recurring_shift_dates_weekday_span_when_next_week_comes_last():
+    now = datetime(2026, 4, 12, 12, 0, 0)
+    dates = extract_recurring_shift_dates("Create shifts for John Doe Monday-Friday next week", now=now)
+    assert [d.isoformat() for d in dates] == [
+        "2026-04-20",
+        "2026-04-21",
+        "2026-04-22",
+        "2026-04-23",
+        "2026-04-24",
+    ]
