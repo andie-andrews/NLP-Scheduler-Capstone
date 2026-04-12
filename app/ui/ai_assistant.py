@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from llm.orchestrator import run_orchestrator
 from llm.memory import ConversationMemory
 import config as config
@@ -55,6 +56,8 @@ def render_ai_assistant(embedded: bool = False):
                 with input_cols[1]:
                     submitted = st.form_submit_button("Send", use_container_width=True)
 
+    _inject_assistant_layout_js()
+
     if not submitted or not user_input:
         return
 
@@ -86,7 +89,6 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_chat_layout {
-                height: calc(var(--assistant-pane-height, 720px) - 10rem);
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
@@ -107,8 +109,6 @@ def _inject_sticky_new_chat_css():
                 background: var(--background-color, #f6f8fc);
                 padding-top: 0.45rem;
                 margin-top: 0.5rem;
-                position: sticky;
-                bottom: 0;
             }
 
             .st-key-assistant_input_footer input {
@@ -128,6 +128,45 @@ def _inject_sticky_new_chat_css():
         </style>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def _inject_assistant_layout_js():
+    components.html(
+        """
+        <script>
+            const syncAssistantLayout = () => {
+                const parentDoc = window.parent.document;
+                const shell = parentDoc.querySelector('.st-key-assistant_shell');
+                const scroll = parentDoc.querySelector('.st-key-assistant_chat_scroll');
+                const footer = parentDoc.querySelector('.st-key-assistant_input_footer');
+                if (!shell || !scroll || !footer) return;
+
+                const shellRect = shell.getBoundingClientRect();
+                const scrollRect = scroll.getBoundingClientRect();
+                const footerRect = footer.getBoundingClientRect();
+
+                const offsetTop = scrollRect.top - shellRect.top;
+                const nextScrollHeight = Math.max(140, shellRect.height - offsetTop - footerRect.height - 12);
+
+                scroll.style.height = `${nextScrollHeight}px`;
+                scroll.style.overflowY = 'auto';
+                footer.style.position = 'sticky';
+                footer.style.bottom = '0';
+                footer.style.zIndex = '6';
+            };
+
+            const parentDoc = window.parent.document;
+            const marker = parentDoc.documentElement;
+            if (!marker.dataset.assistantLayoutBound) {
+                window.parent.addEventListener('resize', syncAssistantLayout);
+                marker.dataset.assistantLayoutBound = '1';
+            }
+
+            setTimeout(syncAssistantLayout, 50);
+        </script>
+        """,
+        height=0,
     )
 
 
