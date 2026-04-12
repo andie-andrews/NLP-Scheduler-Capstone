@@ -54,6 +54,7 @@ def render():
 
     with header_col1:
         st.markdown("## Manage Schedules")
+        st.caption("Plan weekly coverage, assign team members, and edit shifts quickly.")
 
     with header_col2:
         btn_col1, btn_col2, btn_col3 = st.columns(3)

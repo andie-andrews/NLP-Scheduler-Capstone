@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 def render():
     st.subheader("My Schedule")
+    st.caption("Review your weekly shifts and total hours at a glance.")
      # 🔥 INIT STATE
     if "week_offset" not in st.session_state:
         st.session_state["week_offset"] = 0
@@ -46,6 +47,11 @@ def render():
         st.info("No shifts this week")
         return
 
+    total_hours = sum(shift.get("durationHours", 0) for shift in shifts)
+    top_cols = st.columns(2)
+    top_cols[0].metric("Shifts This Week", len(shifts))
+    top_cols[1].metric("Total Hours", total_hours)
+
     # group by day
     days = defaultdict(list)
 
@@ -56,8 +62,11 @@ def render():
 
     # render
     for day, items in days.items():
-        st.markdown(f"### {day}")
-
-        for s in items:
-            start = datetime.fromisoformat(s["start"])
-            st.write(f"{start.strftime('%I:%M %p')} - {s['durationHours']} hrs")
+        day_total = sum(shift.get("durationHours", 0) for shift in items)
+        with st.expander(f"{day} • {day_total} hrs", expanded=True):
+            for s in sorted(items, key=lambda shift: shift["start"]):
+                start = datetime.fromisoformat(s["start"])
+                end = start + timedelta(hours=s["durationHours"])
+                st.markdown(
+                    f"- **{start.strftime('%I:%M %p')} – {end.strftime('%I:%M %p')}** ({s['durationHours']} hrs)"
+                )

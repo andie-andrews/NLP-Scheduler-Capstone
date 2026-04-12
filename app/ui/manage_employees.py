@@ -21,6 +21,7 @@ def _employee_label(employee):
 
 def render():
     st.subheader("Manage Employees")
+    st.caption("Create, update, and maintain your employee directory.")
 
     if "show_create_employee" not in st.session_state:
         st.session_state["show_create_employee"] = False
@@ -57,19 +58,35 @@ def render():
 
     employees = employees_response.json()
 
+    metric_cols = st.columns(3)
+    metric_cols[0].metric("Total Employees", len(employees))
+    metric_cols[1].metric(
+        "Supervisors",
+        len([e for e in employees if e.get("roleId") == ROLE_OPTIONS["Supervisor"]]),
+    )
+    metric_cols[2].metric(
+        "Employees",
+        len([e for e in employees if e.get("roleId") == ROLE_OPTIONS["Employee"]]),
+    )
+
     if not employees:
         st.info("No employees found.")
     else:
         st.markdown("### Employee Directory")
 
+        table_rows = []
         for employee in employees:
-            role_name = ROLE_LABELS.get(employee.get("roleId"), f"Role {employee.get('roleId', '?')}")
-            cols = st.columns([1, 2, 2, 3, 2])
-            cols[0].markdown(f"`#{employee['id']}`")
-            cols[1].markdown(employee["firstName"])
-            cols[2].markdown(employee["lastName"])
-            cols[3].markdown(employee["email"])
-            cols[4].markdown(role_name)
+            table_rows.append(
+                {
+                    "ID": employee["id"],
+                    "First Name": employee["firstName"],
+                    "Last Name": employee["lastName"],
+                    "Email": employee["email"],
+                    "Role": ROLE_LABELS.get(employee.get("roleId"), f"Role {employee.get('roleId', '?')}"),
+                }
+            )
+
+        st.dataframe(table_rows, use_container_width=True, hide_index=True)
 
     if st.session_state.get("show_create_employee"):
 
