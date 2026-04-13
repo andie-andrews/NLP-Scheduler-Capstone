@@ -272,6 +272,21 @@ def render():
         )
 
     st.markdown("---")
+    st.markdown(
+        """
+        <style>
+        [class*="st-key-action_cell_"] div[data-testid="stPopover"] button {
+            background-color: #d9f7be;
+            border-color: #b7eb8f;
+            color: #135200;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.45rem;
+            min-height: 1.6rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # 🔹 ROWS
     for emp in employees:
@@ -304,17 +319,18 @@ def render():
             with row[i + 2]:
                 cell_id = f"{emp['id']}_{day_str}"
 
-                with st.popover("Add", use_container_width=True):
-                    st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+                with st.container(key=f"action_cell_{cell_id}"):
+                    with st.popover("Action"):
+                        st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
 
-                    if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
-                        st.session_state["pending_cell_shift"] = {
-                            "schedule_id": schedule_id,
-                            "employee_id": emp["id"],
-                            "employee_name": full_name,
-                            "day_str": day_str
-                        }
-                        rerun_app()
+                        if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
+                            st.session_state["pending_cell_shift"] = {
+                                "schedule_id": schedule_id,
+                                "employee_id": emp["id"],
+                                "employee_name": full_name,
+                                "day_str": day_str
+                            }
+                            rerun_app()
 
                 if key in shift_lookup:
                     for shift in shift_lookup[key]:
