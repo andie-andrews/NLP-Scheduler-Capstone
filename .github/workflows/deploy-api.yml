@@ -10,7 +10,6 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  SOLUTION_PATH: 'apis/Scheduler.Api/Scheduler.Api.sln'
   PROJECT_PATH: 'apis/Scheduler.Api/Scheduler.Api/Scheduler.Api.csproj'
   PUBLISH_DIR: '${{ github.workspace }}/publish'
 
@@ -27,11 +26,11 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore
-        run: dotnet restore ${{ env.SOLUTION_PATH }}
+      - name: Restore API project
+        run: dotnet restore ${{ env.PROJECT_PATH }}
 
-      - name: Build
-        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+      - name: Build API project
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
       - name: Publish
         run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ env.PUBLISH_DIR }}
