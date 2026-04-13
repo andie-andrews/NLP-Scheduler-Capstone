@@ -251,4 +251,8 @@ def _render_shift_card(shift: dict):
         with cols[2]:
             st.markdown(f"⏱️ **{shift['durationHours']} hrs**")
 
+        schedule_name = shift.get("scheduleName")
+        if schedule_name:
+            st.caption(f"Schedule: {schedule_name}")
+
         st.divider()

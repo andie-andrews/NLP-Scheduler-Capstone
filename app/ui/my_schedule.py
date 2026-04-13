@@ -92,6 +92,8 @@ def render():
             for s in items:
                 start = datetime.fromisoformat(s["start"])
                 end = start + timedelta(hours=s["durationHours"])
+                schedule_name = s.get("scheduleName")
+                schedule_suffix = f" · **{schedule_name}**" if schedule_name else ""
                 st.markdown(
-                    f"- **{start.strftime('%I:%M %p')} - {end.strftime('%I:%M %p')}** ({s['durationHours']} hrs)"
+                    f"- **{start.strftime('%I:%M %p')} - {end.strftime('%I:%M %p')}** ({s['durationHours']} hrs){schedule_suffix}"
                 )

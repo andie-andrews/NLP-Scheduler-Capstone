@@ -40,11 +40,18 @@ namespace Scheduler.Api.Features.Shifts.Handlers
       var queryEndExclusive = effectiveEndDate!.Value.AddDays(1);
 
       var sql = @"
-              SELECT Id, ScheduleId, EmployeeId, Start, DurationHours
-              FROM Shifts
-              WHERE EmployeeId = @employeeId
-                AND Start >= @queryStart
-                AND Start < @queryEndExclusive
+              SELECT
+                  sh.Id,
+                  sh.ScheduleId,
+                  sh.EmployeeId,
+                  sh.Start,
+                  sh.DurationHours,
+                  sc.Name AS ScheduleName
+              FROM Shifts sh
+              INNER JOIN Schedules sc ON sh.ScheduleId = sc.Id
+              WHERE sh.EmployeeId = @employeeId
+                AND sh.Start >= @queryStart
+                AND sh.Start < @queryEndExclusive
           ";
 
       return await connection.QueryAsync<Shift>(sql, new

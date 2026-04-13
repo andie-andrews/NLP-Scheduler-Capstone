@@ -11,5 +11,7 @@
     public DateTime Start { get; set; }
 
     public int DurationHours { get; set; }
+
+    public string? ScheduleName { get; set; }
   }
 }

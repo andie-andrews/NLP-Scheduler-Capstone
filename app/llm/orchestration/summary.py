@@ -59,9 +59,11 @@ def summarize_shifts(shifts, message: str, employee_full_name: str | None = None
         upcoming = [s for s in shifts if datetime.fromisoformat(s["start"]) >= now]
         next_shift = min(upcoming or shifts, key=lambda x: x["start"])
         friendly_start = _format_shift_datetime(next_shift["start"])
+        schedule_name = next_shift.get("scheduleName")
+        schedule_phrase = f" on the {schedule_name} schedule" if schedule_name else ""
         return {
             "summary": (
-                f"The next shift{employee_phrase} is on {friendly_start} for {next_shift.get('durationHours', 0)} hours. "
+                f"The next shift{employee_phrase} is on {friendly_start} for {next_shift.get('durationHours', 0)} hours{schedule_phrase}. "
                 "Would you like to see your shifts?"
             ),
             "totalHours": total_hours,

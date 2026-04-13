@@ -313,7 +313,9 @@ def extract_weekday_date(message: str):
 
 def format_shift_option_line(index: int, shift: dict):
     start = datetime.fromisoformat(shift["start"])
-    return f"{index}. {start.strftime('%I:%M %p')} for {shift.get('durationHours', 0)} hours"
+    schedule_name = shift.get("scheduleName")
+    schedule_phrase = f" ({schedule_name})" if schedule_name else ""
+    return f"{index}. {start.strftime('%I:%M %p')} for {shift.get('durationHours', 0)} hours{schedule_phrase}"
 
 
 def get_week_start():

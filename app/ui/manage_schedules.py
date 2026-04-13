@@ -84,9 +84,11 @@ def render():
             existing_start = datetime.fromisoformat(existing["start"])
             existing_end = existing_start + timedelta(hours=int(existing.get("durationHours", 0)))
             if existing_start < proposed_end and existing_end > proposed_start:
+                schedule_name = existing.get("scheduleName")
+                schedule_phrase = f" on {schedule_name}" if schedule_name else ""
                 detail = (
                     f"Overlaps existing shift on {existing_start.strftime('%A, %b %d, %Y')} "
-                    f"({existing_start.strftime('%I:%M %p')} - {existing_end.strftime('%I:%M %p')})."
+                    f"({existing_start.strftime('%I:%M %p')} - {existing_end.strftime('%I:%M %p')}){schedule_phrase}."
                 )
                 return True, detail
 
