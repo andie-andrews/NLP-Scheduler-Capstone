@@ -297,6 +297,33 @@ def _extract_explicit_employee_id(message: str):
     return int(match.group(1))
 
 
+def _extract_employee_reference_for_schedule_queries(message: str):
+    text = (message or "").strip()
+    if not text:
+        return None
+
+    stop_words = {
+        "i", "me", "my", "you", "we", "they", "he", "she", "it",
+        "who", "what", "when", "where", "why", "how", "show", "list",
+    }
+
+    patterns = [
+        r"\b([a-zA-Z]+(?:\s+[a-zA-Z]+)?)['’]s\s+(?:schedule|shifts?)\b",
+        r"\bwhen\s+does\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\s+work\b",
+        r"\bdoes\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\s+work\b",
+        r"\b(?:schedule|shifts?)\s+for\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        candidate = match.group(1).strip(" .,!?:;\"'").lower()
+        if candidate and candidate not in stop_words:
+            return candidate
+    return None
+
+
 def _extract_employee_name_parts(message: str):
     text = (message or "").strip()
     quoted = re.search(r"['\"]([^'\"]+)['\"]", text)
@@ -934,9 +961,15 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     memory = session.get("memory") if session else None
     last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
-    employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
+    employees = None
 
-    name = find_name_in_message(message, employees)
+    name = _extract_employee_reference_for_schedule_queries(message)
+    if not name:
+        # Fallback to in-memory employee list matching only when a likely
+        # employee/schedule query is detected to avoid extra API round-trips.
+        if re.search(r"\b(schedule|shift|work|hours)\b", lowered_message):
+            employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
+            name = find_name_in_message(message, employees)
     effective_message = message
 
     if explicit_employee_id is not None:
