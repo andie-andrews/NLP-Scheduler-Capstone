@@ -189,6 +189,13 @@ else:
                 overflow: hidden;
             }
 
+            .st-key-main_scroll_pane > [data-testid="stVerticalBlock"] {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+
             .st-key-assistant_shell {
                 height: calc(100vh - 7rem);
                 overflow: hidden;
@@ -233,7 +240,7 @@ else:
 
                 const applyPaneHeights = () => {
                     const viewportHeight = window.parent.innerHeight || 900;
-                    const paneHeight = Math.max(360, viewportHeight - 112);
+                    const paneHeight = Math.max(260, viewportHeight - 112);
                     parentDoc.documentElement.style.setProperty('--assistant-pane-height', `${paneHeight}px`);
 
                     leftCol.style.height = `${paneHeight}px`;
@@ -249,6 +256,14 @@ else:
                         mainScrollPane.style.flexDirection = 'column';
                         mainScrollPane.style.minHeight = '0';
                         mainScrollPane.style.overflow = 'hidden';
+
+                        const mainScrollBlock = mainScrollPane.querySelector(':scope > [data-testid="stVerticalBlock"]');
+                        if (mainScrollBlock) {
+                            mainScrollBlock.style.height = '100%';
+                            mainScrollBlock.style.display = 'flex';
+                            mainScrollBlock.style.flexDirection = 'column';
+                            mainScrollBlock.style.minHeight = '0';
+                        }
                     }
 
                     const assistantShell = parentDoc.querySelector('.st-key-assistant_shell');
