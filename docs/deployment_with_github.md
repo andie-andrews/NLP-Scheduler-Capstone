@@ -15,8 +15,12 @@ Before deploying, configure runtime environment variables:
 
 - `SCHEDULER_API_BASE_URL` (example: `https://api.yourdomain.com`)
 - `SCHEDULER_API_VERIFY_SSL` (`true` in production)
+- `ConnectionStrings__Default` (API DB connection string)
+- `Jwt__Key` (API JWT signing key)
+- `Jwt__Issuer` (API JWT issuer)
 
 These are now supported by the Python client/orchestrator code.
+The API now validates that `ConnectionStrings:Default`, `Jwt:Key`, and `Jwt:Issuer` are set at startup, so each new environment should define these values (through env vars, secret stores, or environment-specific appsettings files).
 
 ## Easiest deployment path from GitHub
 
@@ -91,4 +95,3 @@ Deploying first gives you:
 2. Deploy Streamlit app with env-based API URL.
 3. Add monitoring + smoke tests.
 4. Then start MCP integration in phases.
-
