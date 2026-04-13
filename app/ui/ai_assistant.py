@@ -6,8 +6,11 @@ from datetime import datetime
 from ui.theme import render_page_header
 
 
-def render_ai_assistant():
-    render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
+def render_ai_assistant(embedded: bool = False):
+    if embedded:
+        st.caption("Ask for schedule help, shift summaries, and staffing insights in plain language.")
+    else:
+        render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
 
     # -------------------------------
     # 🧠 Memory (session)
@@ -20,22 +23,41 @@ def render_ai_assistant():
     # -------------------------------
     # 🧪 Debug: which orchestrator
     # -------------------------------
-    st.caption(
-        f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
-    )
-
-    _render_chat_history()
-
-    # -------------------------------
-    # 💬 Chat Input (interactive)
-    # -------------------------------
     _inject_sticky_new_chat_css()
-    if st.button("🆕 New chat", key="new_chat_sticky", use_container_width=True):
-        _start_new_chat()
-        st.rerun()
+    with st.container(key="assistant_panel_body"):
+        with st.container(key="assistant_header"):
+            st.caption(
+                f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
+            )
 
-    user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
-    if not user_input:
+            action_cols = st.columns([4, 2], gap="small")
+            with action_cols[1]:
+                if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+                    _start_new_chat()
+                    st.rerun()
+
+        with st.container(key="assistant_chat_scroll"):
+            st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
+            _render_chat_history()
+
+        # -------------------------------
+        # 💬 Chat Input footer
+        # -------------------------------
+        user_input = None
+        submitted = False
+        with st.container(key="assistant_input_footer"):
+            with st.form("assistant_input_form", clear_on_submit=True):
+                input_cols = st.columns([8, 2], gap="small")
+                with input_cols[0]:
+                    user_input = st.text_input(
+                        "Ask something about schedules, shifts, or hours...",
+                        label_visibility="collapsed",
+                        placeholder="Ask something about schedules, shifts, or hours...",
+                    )
+                with input_cols[1]:
+                    submitted = st.form_submit_button("Send", use_container_width=True)
+
+    if not submitted or not user_input:
         return
 
     st.session_state.chat_messages.append({
@@ -65,61 +87,53 @@ def _inject_sticky_new_chat_css():
     st.markdown(
         """
         <style>
-            [data-testid="stChatInput"] {
-                padding-right: 13.75rem;
+            .st-key-assistant_panel_body {
+                height: calc(var(--assistant-pane-height, 900px) - 4rem);
+                min-height: 0 !important;
+                display: grid;
+                grid-template-rows: auto 1fr auto;
+                row-gap: 0.45rem;
             }
 
-            /* Align the top of the button with the chat input bar */
-            .st-key-new_chat_sticky {
-                position: fixed;
-                right: 2.8rem; /* Moved left by ~25px (was 1.25rem) */
-                bottom: 3.55rem; /* Raised by 5px (was 3.2rem) */
-                z-index: 999;
-                width: 12rem;
-                height: 3.2rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-sizing: border-box;
-                padding: 0;
-            }
-
-            .st-key-new_chat_sticky button {
+            .st-key-assistant_chat_scroll {
                 height: 100%;
-                width: 100%;
-                font-size: 1.1rem;
-                border-radius: 0.5rem;
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 0.5rem 0.45rem 0.65rem 0.2rem;
+                border: 1px solid rgba(120, 120, 120, 0.2);
+                border-radius: 0.8rem;
+                background: rgba(255, 255, 255, 0.55);
             }
 
-            /* Fallback: align tops if center doesn't look right */
-            .st-key-new_chat_sticky.align-top {
-                bottom: 4.8rem !important; /* Raised by 5px (was 4.5rem) */
-                transform: none !important;
+            .assistant-chat-anchor {
+                display: block;
+                min-height: 100%;
             }
 
-            /* Fallback: align bottoms if needed */
-            .st-key-new_chat_sticky.align-bottom {
-                bottom: 1.6rem !important; /* Raised by 5px (was 1.25rem) */
-                transform: none !important;
+            .st-key-assistant_input_footer {
+                background: var(--background-color, #f6f8fc);
+                padding-top: 0.45rem;
             }
 
-            @media (max-width: 768px) {
-                [data-testid="stChatInput"] {
-                    padding-right: 10rem;
-                }
-                .st-key-new_chat_sticky {
-                    right: 2.3rem; /* Moved left by ~25px (was 0.75rem) */
-                    bottom: 4.4rem; /* Raised by 5px (was 4.1rem) */
-                    width: 9rem;
-                    height: 2.6rem;
-                }
+            .st-key-assistant_input_footer input {
+                border-radius: 999px;
+            }
+
+            .st-key-assistant_chat_scroll::-webkit-scrollbar,
+            .st-key-main_scroll_pane::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .st-key-assistant_chat_scroll::-webkit-scrollbar-thumb,
+            .st-key-main_scroll_pane::-webkit-scrollbar-thumb {
+                background: rgba(120, 120, 120, 0.45);
+                border-radius: 999px;
             }
         </style>
         """,
         unsafe_allow_html=True,
     )
-
-
 def _render_chat_history():
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
