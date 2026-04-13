@@ -75,6 +75,11 @@ builder.Services.AddAuthentication("Bearer")
   });
 
 builder.Services.AddAuthorization();
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+
 
 // Add services to the container.
 builder.Services.AddScoped<IDbConnectionFactory, SqlConnectionFactory>();
@@ -127,6 +132,27 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+app.UseExceptionHandler(errorApp =>
+{
+  errorApp.Run(async context =>
+  {
+    var feature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
+    if (feature?.Error != null)
+    {
+      logger.LogError(feature.Error, "Unhandled exception");
+    }
+
+    context.Response.StatusCode = 500;
+    context.Response.ContentType = "application/json";
+
+    await context.Response.WriteAsJsonAsync(new
+    {
+      error = "Internal server error",
+      message = feature?.Error?.Message
+    });
+  });
+});
 
 app.Run();
