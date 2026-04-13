@@ -14,6 +14,15 @@ using Scheduler.Api.Features.Auth.Services;
 using Scheduler.Api.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+  ?? throw new InvalidOperationException("Missing required configuration value: Jwt:Issuer");
+var jwtKey = builder.Configuration["Jwt:Key"]
+  ?? throw new InvalidOperationException("Missing required configuration value: Jwt:Key");
+var defaultConnectionString = builder.Configuration.GetConnectionString("Default")
+  ?? throw new InvalidOperationException("Missing required configuration value: ConnectionStrings:Default");
+_ = defaultConnectionString;
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -59,9 +68,9 @@ builder.Services.AddAuthentication("Bearer")
       ValidateAudience = false,
       ValidateLifetime = true,
       ValidateIssuerSigningKey = true,
-      ValidIssuer = builder.Configuration["Jwt:Issuer"],
+      ValidIssuer = jwtIssuer,
       IssuerSigningKey = new SymmetricSecurityKey(
-        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        Encoding.UTF8.GetBytes(jwtKey))
     };
   });
 
