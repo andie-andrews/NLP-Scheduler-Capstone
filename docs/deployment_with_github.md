@@ -13,7 +13,7 @@ This project currently defaults to localhost URLs and disabled SSL verification 
 
 Before deploying, configure runtime environment variables:
 
-- `SCHEDULER_API_BASE_URL` (example: `https://api.yourdomain.com`)
+- `SCHEDULER_API_BASE_URL` (`https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net`)
 - `SCHEDULER_API_VERIFY_SSL` (`true` in production)
 - `ConnectionStrings__Default` (API DB connection string)
 - `Jwt__Key` (API JWT signing key)
@@ -33,6 +33,26 @@ The API now validates that `ConnectionStrings:Default`, `Jwt:Key`, and `Jwt:Issu
 This is usually the least friction if you want something online quickly.
 
 ## Step-by-step rollout
+
+### Local vs production configuration
+
+Use `.env` locally (loaded by `app/main.py`) and host environment variables in production. Create `app/.env` locally (it is git-ignored), for example by copying `app/.env.example`.
+
+**Local development (`app/.env`)**
+
+- `SCHEDULER_API_BASE_URL=https://localhost:7259`
+- `SCHEDULER_API_VERIFY_SSL=false`
+
+You can copy from `app/.env.example` and adjust as needed.
+
+**Production deployment values**
+
+- `SCHEDULER_API_BASE_URL=https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net/`
+- `SCHEDULER_API_VERIFY_SSL=true`
+
+For Azure App Service (Streamlit host), set these under **Environment variables** and restart the app.
+For Streamlit Community Cloud, set the same keys in **Advanced settings → Secrets** (or in `secrets.toml`).
+
 
 ### 1) Prepare secrets in GitHub
 

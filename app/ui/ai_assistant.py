@@ -1,7 +1,7 @@
 import streamlit as st
 from llm.orchestrator import run_orchestrator
 from llm.memory import ConversationMemory
-import config as config
+import os
 from datetime import datetime
 from ui.theme import render_page_header
 
@@ -26,8 +26,9 @@ def render_ai_assistant(embedded: bool = False):
     _inject_sticky_new_chat_css()
     with st.container(key="assistant_panel_body"):
         with st.container(key="assistant_header"):
+            use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
             st.caption(
-                f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
+                f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
             )
 
             action_cols = st.columns([4, 2], gap="small")
