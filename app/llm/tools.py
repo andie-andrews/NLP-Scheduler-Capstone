@@ -2,8 +2,8 @@ import requests
 from datetime import datetime, timedelta
 import os
 
-BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://localhost:7259").rstrip("/") + "/api"
-VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "false").lower() == "true"
+BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net").rstrip("/") + "/api"
+VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
 
 
 # -------------------------------
