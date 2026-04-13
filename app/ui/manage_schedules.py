@@ -104,6 +104,10 @@ def render():
     if "remove_schedule_employee" not in st.session_state:
         st.session_state["remove_schedule_employee"] = None
 
+    all_schedules_option = "__all_schedules__"
+    toolbar_selection = st.session_state.get("manage_schedules_selected_schedule", all_schedules_option)
+    disable_schedule_delete = toolbar_selection == all_schedules_option
+
     # 🔥 HEADER
     render_page_header("Manage Schedules", "Coordinate weekly staffing, shifts, and schedule assignments with clarity.")
 
@@ -121,7 +125,7 @@ def render():
         if btn_col2.button("✎", use_container_width=True):
             st.session_state["show_edit_schedule"] = True
 
-        if btn_col3.button("🗑️", use_container_width=True):
+        if btn_col3.button("🗑️", use_container_width=True, disabled=disable_schedule_delete):
             st.session_state["show_delete_schedule"] = True
 
     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
@@ -143,18 +147,25 @@ def render():
         for s in schedules
     ]
 
-    all_schedules_option = "__all_schedules__"
     schedule_options = [all_schedules_option] + [s["id"] for s in schedules]
+    selected_schedule_state = st.session_state.get("manage_schedules_selected_schedule")
+    if selected_schedule_state not in schedule_options:
+        st.session_state["manage_schedules_selected_schedule"] = all_schedules_option
+
     selected_schedule_option = st.selectbox(
         "Select Schedule",
         schedule_options,
         format_func=lambda option: "All Schedules"
         if option == all_schedules_option
         else schedule_name_by_id.get(option, f"Schedule {option}"),
+        key="manage_schedules_selected_schedule",
     )
     viewing_all_schedules = selected_schedule_option == all_schedules_option
     schedule_id = None if viewing_all_schedules else selected_schedule_option
     selected_name = "All Schedules" if viewing_all_schedules else schedule_name_by_id.get(schedule_id, "")
+
+    if viewing_all_schedules:
+        st.session_state["show_delete_schedule"] = False
 
     # 🔹 WEEK NAV
     nav_col1, nav_col2, nav_col3 = st.columns([1, 4, 1])
