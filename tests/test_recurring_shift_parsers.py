@@ -50,3 +50,13 @@ def test_extract_recurring_shift_dates_weekday_span_with_through_keyword():
         "2026-04-23",
         "2026-04-24",
     ]
+
+
+def test_extract_recurring_shift_dates_weekday_span_without_week_qualifier():
+    now = datetime(2026, 4, 13, 12, 0, 0)  # Monday
+    dates = extract_recurring_shift_dates("Create shifts Wednesday through Friday for Faith", now=now)
+    assert [d.isoformat() for d in dates] == [
+        "2026-04-15",
+        "2026-04-16",
+        "2026-04-17",
+    ]
