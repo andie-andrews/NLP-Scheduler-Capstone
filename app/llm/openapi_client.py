@@ -37,6 +37,18 @@ def call_api(token, operation, args):
     }
 
     method = operation["method"]
+    local_employee_query = None
+    if (
+        method == "GET"
+        and operation.get("path") == "/api/employees"
+        and isinstance(request_args.get("query"), str)
+        and request_args.get("query", "").strip()
+    ):
+        # Workaround: some API environments hang for non-empty employee query values.
+        # Fetch full directory and filter locally.
+        local_employee_query = request_args["query"].strip().lower()
+        request_args["query"] = ""
+
     print("----- EXECUTING API -----")
     print("Operation:", operation)
     print("Args:", request_args)
@@ -98,6 +110,15 @@ def call_api(token, operation, args):
 
     if isinstance(result, dict) and "__httpStatus" not in result:
         result["__httpStatus"] = res.status_code
+
+    if local_employee_query and isinstance(result, list):
+        result = [
+            employee
+            for employee in result
+            if local_employee_query in (
+                f"{(employee.get('firstName') or '').strip()} {(employee.get('lastName') or '').strip()}".strip().lower()
+            )
+        ]
 
     print("----- API RESULT -----")
     print("URL:", url)
