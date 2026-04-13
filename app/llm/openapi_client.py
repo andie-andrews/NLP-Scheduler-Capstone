@@ -1,6 +1,8 @@
 import requests
+import os
 
-BASE_URL = "https://localhost:7259"
+BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://localhost:7259").rstrip("/")
+VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "false").lower() == "true"
 
 def call_api(token, operation, args):
     # Avoid mutating caller-owned args (some flows reuse args after API calls).
@@ -34,13 +36,13 @@ def call_api(token, operation, args):
     print("Operation:", operation)
     print("Args:", request_args)
     if method == "GET":
-        res = requests.get(url, params=request_args, headers=headers, verify=False)
+        res = requests.get(url, params=request_args, headers=headers, verify=VERIFY_SSL)
     elif method == "POST":
-        res = requests.post(url, json=request_args, headers=headers, verify=False)
+        res = requests.post(url, json=request_args, headers=headers, verify=VERIFY_SSL)
     elif method == "PUT":
-        res = requests.put(url, json=request_args, headers=headers, verify=False)
+        res = requests.put(url, json=request_args, headers=headers, verify=VERIFY_SSL)
     elif method == "DELETE":
-        res = requests.delete(url, headers=headers, verify=False)
+        res = requests.delete(url, headers=headers, verify=VERIFY_SSL)
     else:
         raise Exception(f"Unsupported method {method}")
 
