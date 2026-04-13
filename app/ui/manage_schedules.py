@@ -148,6 +148,10 @@ def render():
     ]
 
     schedule_options = [all_schedules_option] + [s["id"] for s in schedules]
+    selected_schedule_state = st.session_state.get("manage_schedules_selected_schedule")
+    if selected_schedule_state not in schedule_options:
+        st.session_state["manage_schedules_selected_schedule"] = all_schedules_option
+
     selected_schedule_option = st.selectbox(
         "Select Schedule",
         schedule_options,
