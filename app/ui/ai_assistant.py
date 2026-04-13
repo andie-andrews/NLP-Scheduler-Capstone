@@ -96,6 +96,7 @@ def _inject_sticky_new_chat_css():
             }
 
             .st-key-assistant_chat_scroll {
+                height: 100%;
                 min-height: 0;
                 overflow-y: auto;
                 overflow-x: hidden;
@@ -106,7 +107,8 @@ def _inject_sticky_new_chat_css():
             }
 
             .assistant-chat-anchor {
-                min-height: 0.25rem;
+                display: block;
+                min-height: 100%;
             }
 
             .st-key-assistant_input_footer {
