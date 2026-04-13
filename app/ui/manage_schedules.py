@@ -138,9 +138,12 @@ def render():
         return
 
     schedule_map = {s["name"]: s["id"] for s in schedules}
+    schedule_name_by_id = {s["id"]: s["name"] for s in schedules}
 
-    selected_name = st.selectbox("Select Schedule", list(schedule_map.keys()))
-    schedule_id = schedule_map[selected_name]
+    schedule_options = ["All Schedules"] + list(schedule_map.keys())
+    selected_name = st.selectbox("Select Schedule", schedule_options)
+    viewing_all_schedules = selected_name == "All Schedules"
+    schedule_id = None if viewing_all_schedules else schedule_map[selected_name]
 
     # 🔹 WEEK NAV
     nav_col1, nav_col2, nav_col3 = st.columns([1, 4, 1])
@@ -163,15 +166,22 @@ def render():
     )
 
     # 🔹 LOAD EMPLOYEES
-    emp_res = get_schedule_employees(schedule_id)
-    employees = emp_res.json() if emp_res.status_code == 200 else []
-
     # 🔥 LOAD ALL EMPLOYEES
     all_emp_res = get_all_employees()
     all_employees = all_emp_res.json() if all_emp_res.status_code == 200 else []
 
+    if viewing_all_schedules:
+        employees = all_employees
+    else:
+        emp_res = get_schedule_employees(schedule_id)
+        employees = emp_res.json() if emp_res.status_code == 200 else []
+
     # 🔥 ZERO STATE
     if not employees:
+        if viewing_all_schedules:
+            st.info("No employees found.")
+            return
+
         st.info("No employees assigned to this schedule.")
 
         zero_key = f"zero_add_{schedule_id}_{len(employees)}"
@@ -191,14 +201,33 @@ def render():
         return
 
     # 🔹 LOAD SHIFTS
-    shift_res = get_schedule_shifts(
-        schedule_id,
-        params={
-            "startDate": start_of_week.date().isoformat(),
-            "endDate": end_of_week.date().isoformat(),
-        }
-    )
-    shifts = shift_res.json() if shift_res.status_code == 200 else []
+    if viewing_all_schedules:
+        shifts = []
+        for sched in schedules:
+            shift_res = get_schedule_shifts(
+                sched["id"],
+                params={
+                    "startDate": start_of_week.date().isoformat(),
+                    "endDate": end_of_week.date().isoformat(),
+                }
+            )
+            if shift_res.status_code != 200:
+                continue
+            schedule_shifts = shift_res.json() or []
+            for shift in schedule_shifts:
+                shift["scheduleName"] = sched["name"]
+            shifts.extend(schedule_shifts)
+    else:
+        shift_res = get_schedule_shifts(
+            schedule_id,
+            params={
+                "startDate": start_of_week.date().isoformat(),
+                "endDate": end_of_week.date().isoformat(),
+            }
+        )
+        shifts = shift_res.json() if shift_res.status_code == 200 else []
+        for shift in shifts:
+            shift["scheduleName"] = schedule_name_by_id.get(schedule_id)
 
     shift_lookup = defaultdict(list)
 
@@ -237,7 +266,7 @@ def render():
 
         row[0].markdown(f"**{full_name} ({employee_total}h)**")
 
-        if row[1].button("❌", key=f"remove_{emp['id']}"):
+        if not viewing_all_schedules and row[1].button("❌", key=f"remove_{emp['id']}"):
             st.session_state["remove_schedule_employee"] = {
                 "schedule_id": schedule_id,
                 "employee_id": emp["id"],
@@ -251,17 +280,18 @@ def render():
             with row[i + 2]:
                 cell_id = f"{emp['id']}_{day_str}"
 
-                with st.popover("Add", use_container_width=True):
-                    st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+                if not viewing_all_schedules:
+                    with st.popover("Add", use_container_width=True):
+                        st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
 
-                    if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
-                        st.session_state["pending_cell_shift"] = {
-                            "schedule_id": schedule_id,
-                            "employee_id": emp["id"],
-                            "employee_name": full_name,
-                            "day_str": day_str
-                        }
-                        rerun_app()
+                        if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
+                            st.session_state["pending_cell_shift"] = {
+                                "schedule_id": schedule_id,
+                                "employee_id": emp["id"],
+                                "employee_name": full_name,
+                                "day_str": day_str
+                            }
+                            rerun_app()
 
                 if key in shift_lookup:
                     for shift in shift_lookup[key]:
@@ -274,7 +304,14 @@ def render():
                         )
 
                         with st.popover(shift_label, use_container_width=True):
-                            st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+                            schedule_name = shift.get("scheduleName")
+                            if schedule_name:
+                                st.caption(f"{full_name} • {day.strftime('%a %m/%d')} • {schedule_name}")
+                            else:
+                                st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+
+                            if viewing_all_schedules:
+                                continue
 
                             if st.button("Edit shift", key=f"edit_shift_{shift_id}", use_container_width=True):
                                 st.session_state["editing_shift"] = {
@@ -309,7 +346,7 @@ def render():
     assigned_ids = {emp["id"] for emp in employees}
     available = [e for e in all_employees if e["id"] not in assigned_ids]
 
-    if available:
+    if not viewing_all_schedules and available:
 
         ghost_key = f"ghost_add_{schedule_id}_{len(employees)}"
 
@@ -346,7 +383,7 @@ def render():
 
         create_dialog()
 
-    if st.session_state.get("show_edit_schedule"):
+    if not viewing_all_schedules and st.session_state.get("show_edit_schedule"):
 
         @st.dialog("Edit Schedule")
         def edit_dialog():
@@ -361,7 +398,7 @@ def render():
 
         edit_dialog()
 
-    if st.session_state.get("show_delete_schedule"):
+    if not viewing_all_schedules and st.session_state.get("show_delete_schedule"):
 
         @st.dialog("Delete Schedule")
         def delete_dialog():
