@@ -137,17 +137,24 @@ def render():
         st.info("No schedules available")
         return
 
-    schedule_map = {s["name"]: s["id"] for s in schedules}
     schedule_name_by_id = {s["id"]: s["name"] for s in schedules}
     schedule_options_for_forms = [
         {"id": s["id"], "name": s["name"]}
         for s in schedules
     ]
 
-    schedule_options = ["All Schedules"] + list(schedule_map.keys())
-    selected_name = st.selectbox("Select Schedule", schedule_options)
-    viewing_all_schedules = selected_name == "All Schedules"
-    schedule_id = None if viewing_all_schedules else schedule_map[selected_name]
+    all_schedules_option = "__all_schedules__"
+    schedule_options = [all_schedules_option] + [s["id"] for s in schedules]
+    selected_schedule_option = st.selectbox(
+        "Select Schedule",
+        schedule_options,
+        format_func=lambda option: "All Schedules"
+        if option == all_schedules_option
+        else schedule_name_by_id.get(option, f"Schedule {option}"),
+    )
+    viewing_all_schedules = selected_schedule_option == all_schedules_option
+    schedule_id = None if viewing_all_schedules else selected_schedule_option
+    selected_name = "All Schedules" if viewing_all_schedules else schedule_name_by_id.get(schedule_id, "")
 
     # 🔹 WEEK NAV
     nav_col1, nav_col2, nav_col3 = st.columns([1, 4, 1])
