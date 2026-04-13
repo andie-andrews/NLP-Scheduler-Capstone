@@ -23,25 +23,29 @@ def render_ai_assistant(embedded: bool = False):
     # -------------------------------
     # 🧪 Debug: which orchestrator
     # -------------------------------
-    st.caption(
-        f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
-    )
-
-    with st.container(key="assistant_chat_scroll"):
-        _render_chat_history()
-
-    # -------------------------------
-    # 💬 Chat Input + New Chat footer
-    # -------------------------------
     _inject_sticky_new_chat_css()
-    with st.container(key="assistant_input_footer"):
-        footer_cols = st.columns([2, 8], gap="small")
-        with footer_cols[0]:
-            if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
-                _start_new_chat()
-                st.rerun()
+    with st.container(key="assistant_panel_body"):
+        with st.container(key="assistant_header"):
+            st.caption(
+                f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
+            )
 
-        with footer_cols[1]:
+            action_cols = st.columns([4, 2], gap="small")
+            with action_cols[1]:
+                if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+                    _start_new_chat()
+                    st.rerun()
+
+        with st.container(key="assistant_chat_scroll"):
+            st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
+            _render_chat_history()
+
+        # -------------------------------
+        # 💬 Chat Input footer
+        # -------------------------------
+        user_input = None
+        submitted = False
+        with st.container(key="assistant_input_footer"):
             with st.form("assistant_input_form", clear_on_submit=True):
                 input_cols = st.columns([8, 2], gap="small")
                 with input_cols[0]:
@@ -83,20 +87,37 @@ def _inject_sticky_new_chat_css():
     st.markdown(
         """
         <style>
+            .st-key-assistant_panel_body {
+                height: calc(var(--assistant-pane-height, 900px) - 4rem);
+                min-height: 0 !important;
+                display: grid;
+                grid-template-rows: auto 1fr auto;
+                row-gap: 0.45rem;
+            }
+
             .st-key-assistant_chat_scroll {
-                height: calc(100vh - 19rem);
+                height: 100%;
+                min-height: 0;
                 overflow-y: auto;
                 overflow-x: hidden;
-                padding-right: 0.35rem;
+                padding: 0.5rem 0.45rem 0.65rem 0.2rem;
+                border: 1px solid rgba(120, 120, 120, 0.2);
+                border-radius: 0.8rem;
+                background: rgba(255, 255, 255, 0.55);
+            }
+
+            .assistant-chat-anchor {
+                display: block;
+                min-height: 100%;
             }
 
             .st-key-assistant_input_footer {
-                position: sticky;
-                bottom: 0;
-                z-index: 10;
                 background: var(--background-color, #f6f8fc);
-                padding-top: 0.55rem;
-                border-top: 1px solid rgba(120, 120, 120, 0.2);
+                padding-top: 0.45rem;
+            }
+
+            .st-key-assistant_input_footer input {
+                border-radius: 999px;
             }
 
             .st-key-assistant_chat_scroll::-webkit-scrollbar,
@@ -113,8 +134,6 @@ def _inject_sticky_new_chat_css():
         """,
         unsafe_allow_html=True,
     )
-
-
 def _render_chat_history():
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):

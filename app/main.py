@@ -144,6 +144,23 @@ else:
     st.markdown(
         """
         <style>
+            html, body {
+                height: 100%;
+                overflow: hidden !important;
+            }
+
+            [data-testid="stAppViewContainer"],
+            [data-testid="stMain"] {
+                height: 100vh;
+                overflow: hidden !important;
+            }
+
+            [data-testid="stMainBlockContainer"] {
+                height: 100%;
+                overflow: hidden;
+                padding-bottom: 0 !important;
+            }
+
             .ai-resize-handle {
                 width: 100%;
                 height: 4.5rem;
@@ -166,14 +183,24 @@ else:
 
             .st-key-main_scroll_pane {
                 height: calc(100vh - 7rem);
-                overflow-y: auto;
-                overflow-x: hidden;
-                padding: 0 0.1rem 8rem 0;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                padding: 0 0.25rem 1rem 0;
             }
 
             .st-key-assistant_shell {
                 height: calc(100vh - 7rem);
                 overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .st-key-assistant_shell [data-testid="stVerticalBlock"] {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
             }
         </style>
         """,
@@ -190,7 +217,7 @@ else:
                 if (!handles.length) return;
 
                 const handle = handles[handles.length - 1];
-                if (handle.dataset.dragReady === '1') return;
+                const alreadyReady = handle.dataset.dragReady === '1';
 
                 const handleColumn = handle.closest('[data-testid="stColumn"]');
                 const row = handleColumn?.parentElement;
@@ -204,26 +231,61 @@ else:
                 const leftCol = columns[0];
                 const rightCol = columns[2];
 
-                const applyPaneLayout = () => {
+                const applyPaneHeights = () => {
                     const viewportHeight = window.parent.innerHeight || 900;
-                    const paneHeight = Math.max(420, viewportHeight - 120);
+                    const paneHeight = Math.max(360, viewportHeight - 112);
+                    parentDoc.documentElement.style.setProperty('--assistant-pane-height', `${paneHeight}px`);
 
-                    parentDoc.documentElement.style.overflow = 'hidden';
-                    parentDoc.body.style.overflow = 'hidden';
+                    leftCol.style.height = `${paneHeight}px`;
+                    leftCol.style.overflow = 'hidden';
 
-                    const appView = parentDoc.querySelector('[data-testid="stAppViewContainer"]');
-                    if (appView) appView.style.overflow = 'hidden';
+                    rightCol.style.height = `${paneHeight}px`;
+                    rightCol.style.overflow = 'hidden';
 
-                    for (const col of [leftCol, rightCol]) {
-                        col.style.height = `${paneHeight}px`;
-                        col.style.overflow = 'hidden';
-                        const block = col.querySelector('[data-testid="stVerticalBlock"]');
-                        if (block) {
-                            block.style.height = '100%';
-                            block.style.overflow = 'hidden';
+                    const mainScrollPane = parentDoc.querySelector('.st-key-main_scroll_pane');
+                    if (mainScrollPane) {
+                        mainScrollPane.style.height = `${paneHeight}px`;
+                        mainScrollPane.style.overflow = 'hidden';
+                        mainScrollPane.style.display = 'flex';
+                        mainScrollPane.style.flexDirection = 'column';
+                    }
+
+                    const assistantShell = parentDoc.querySelector('.st-key-assistant_shell');
+                    if (assistantShell) {
+                        assistantShell.style.height = `${paneHeight}px`;
+                        assistantShell.style.overflow = 'hidden';
+
+                        const panelBody = assistantShell.querySelector('.st-key-assistant_panel_body');
+                        if (panelBody) {
+                            panelBody.style.height = '100%';
+                            panelBody.style.display = 'flex';
+                            panelBody.style.flexDirection = 'column';
+                            panelBody.style.minHeight = '0';
+
+                            const panelBodyBlock = panelBody.querySelector('[data-testid="stVerticalBlock"]');
+                            if (panelBodyBlock) {
+                                panelBodyBlock.style.height = '100%';
+                                panelBodyBlock.style.display = 'flex';
+                                panelBodyBlock.style.flexDirection = 'column';
+                                panelBodyBlock.style.minHeight = '0';
+                            }
+
+                            const chatScroll = panelBody.querySelector('.st-key-assistant_chat_scroll');
+                            if (chatScroll) {
+                                const chatHeight = Math.max(220, paneHeight - 280);
+                                chatScroll.style.height = `${chatHeight}px`;
+                                chatScroll.style.flex = '0 0 auto';
+                                chatScroll.style.minHeight = `${chatHeight}px`;
+                                chatScroll.style.overflowY = 'auto';
+                            }
                         }
                     }
                 };
+
+                if (alreadyReady) {
+                    applyPaneHeights();
+                    return;
+                }
 
                 handle.dataset.dragReady = '1';
                 let startX = 0;
@@ -240,7 +302,6 @@ else:
 
                     leftCol.style.flex = `0 0 ${nextLeft}px`;
                     rightCol.style.flex = `0 0 ${nextRight}px`;
-                    applyPaneLayout();
                 };
 
                 const onMouseUp = () => {
@@ -259,8 +320,8 @@ else:
                     parentDoc.addEventListener('mouseup', onMouseUp);
                 });
 
-                applyPaneLayout();
-                window.parent.addEventListener('resize', applyPaneLayout);
+                applyPaneHeights();
+                window.parent.addEventListener('resize', applyPaneHeights);
             };
 
             setTimeout(setupDragHandle, 100);

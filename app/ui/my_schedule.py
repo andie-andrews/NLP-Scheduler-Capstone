@@ -8,6 +8,31 @@ from ui.theme import render_page_header
 
 
 def render():
+    st.markdown(
+        """
+        <style>
+            .st-key-my_schedule_scroll_body {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-right: 0.35rem;
+                padding-bottom: 0.5rem;
+            }
+
+            .st-key-my_schedule_scroll_body::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .st-key-my_schedule_scroll_body::-webkit-scrollbar-thumb {
+                background: rgba(120, 120, 120, 0.45);
+                border-radius: 999px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     render_page_header("My Schedule", "View your weekly shifts with clear day-by-day summaries.")
 
     if "week_offset" not in st.session_state:
@@ -61,11 +86,12 @@ def render():
     c1.metric("Total shifts", len(shifts))
     c2.metric("Total hours", total_hours)
 
-    for day, items in sorted(days.items()):
-        st.markdown(f"<div class='section-card'><b>{day}</b></div>", unsafe_allow_html=True)
-        for s in items:
-            start = datetime.fromisoformat(s["start"])
-            end = start + timedelta(hours=s["durationHours"])
-            st.markdown(
-                f"- **{start.strftime('%I:%M %p')} - {end.strftime('%I:%M %p')}** ({s['durationHours']} hrs)"
-            )
+    with st.container(key="my_schedule_scroll_body"):
+        for day, items in sorted(days.items()):
+            st.markdown(f"<div class='section-card'><b>{day}</b></div>", unsafe_allow_html=True)
+            for s in items:
+                start = datetime.fromisoformat(s["start"])
+                end = start + timedelta(hours=s["durationHours"])
+                st.markdown(
+                    f"- **{start.strftime('%I:%M %p')} - {end.strftime('%I:%M %p')}** ({s['durationHours']} hrs)"
+                )
