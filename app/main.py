@@ -272,8 +272,10 @@ else:
 
                             const chatScroll = panelBody.querySelector('.st-key-assistant_chat_scroll');
                             if (chatScroll) {
-                                chatScroll.style.flex = '1';
-                                chatScroll.style.minHeight = '0';
+                                const chatHeight = Math.max(220, paneHeight - 280);
+                                chatScroll.style.height = `${chatHeight}px`;
+                                chatScroll.style.flex = '0 0 auto';
+                                chatScroll.style.minHeight = `${chatHeight}px`;
                                 chatScroll.style.overflowY = 'auto';
                             }
                         }
