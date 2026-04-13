@@ -4,6 +4,7 @@ class ConversationMemory:
         self.last_options = None  # for disambiguation
         self.last_entity_type = None  # "employee" or "shift"
         self.last_employee_id = None
+        self.employee_directory = None
 
     def save_intent(self, intent):
         self.last_intent = intent
@@ -18,3 +19,6 @@ class ConversationMemory:
 
     def save_last_employee(self, employee_id):
         self.last_employee_id = employee_id
+
+    def save_employee_directory(self, employees):
+        self.employee_directory = employees

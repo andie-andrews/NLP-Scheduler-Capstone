@@ -297,31 +297,21 @@ def _extract_explicit_employee_id(message: str):
     return int(match.group(1))
 
 
-def _extract_employee_reference_for_schedule_queries(message: str):
-    text = (message or "").strip()
-    if not text:
-        return None
+def _get_employee_directory(token: str, operations: dict, api_caller, memory):
+    cached = getattr(memory, "employee_directory", None) if memory else None
+    if isinstance(cached, list) and cached:
+        return cached
 
-    stop_words = {
-        "i", "me", "my", "you", "we", "they", "he", "she", "it",
-        "who", "what", "when", "where", "why", "how", "show", "list",
-    }
+    search_op = operations.get("searchEmployees")
+    if not search_op:
+        return []
 
-    patterns = [
-        r"\b([a-zA-Z]+(?:\s+[a-zA-Z]+)?)['’]s\s+(?:schedule|shifts?)\b",
-        r"\bwhen\s+does\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\s+work\b",
-        r"\bdoes\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\s+work\b",
-        r"\b(?:schedule|shifts?)\s+for\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b",
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, text, flags=re.IGNORECASE)
-        if not match:
-            continue
-        candidate = match.group(1).strip(" .,!?:;\"'").lower()
-        if candidate and candidate not in stop_words:
-            return candidate
-    return None
+    employees = api_caller(token, search_op, {"query": ""}) or []
+    if memory and hasattr(memory, "save_employee_directory"):
+        memory.save_employee_directory(employees)
+    elif memory is not None:
+        setattr(memory, "employee_directory", employees)
+    return employees
 
 
 def _extract_employee_name_parts(message: str):
@@ -961,15 +951,8 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     memory = session.get("memory") if session else None
     last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
-    employees = None
-
-    name = _extract_employee_reference_for_schedule_queries(message)
-    if not name:
-        # Fallback to in-memory employee list matching only when a likely
-        # employee/schedule query is detected to avoid extra API round-trips.
-        if re.search(r"\b(schedule|shift|work|hours)\b", lowered_message):
-            employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
-            name = find_name_in_message(message, employees)
+    employees = _get_employee_directory(token, OPERATIONS, call_api, memory)
+    name = find_name_in_message(message, employees) if employees else None
     effective_message = message
 
     if explicit_employee_id is not None:
@@ -1092,6 +1075,12 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     print("----- API RESULT -----")
     print(result)
+
+    if op_id in {"createEmployee", "updateEmployee", "deleteEmployee"} and memory is not None:
+        if hasattr(memory, "save_employee_directory"):
+            memory.save_employee_directory(None)
+        else:
+            setattr(memory, "employee_directory", None)
 
     if op_id == "getEmployeeShifts":
         if memory is not None and args.get("employeeId") is not None:
