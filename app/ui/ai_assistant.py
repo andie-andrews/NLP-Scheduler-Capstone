@@ -88,7 +88,7 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_panel_body {
-                height: 100%;
+                height: calc(var(--assistant-pane-height, 900px) - 4rem);
                 min-height: 0 !important;
                 display: grid;
                 grid-template-rows: auto 1fr auto;

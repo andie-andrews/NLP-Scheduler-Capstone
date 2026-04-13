@@ -217,7 +217,7 @@ else:
                 if (!handles.length) return;
 
                 const handle = handles[handles.length - 1];
-                if (handle.dataset.dragReady === '1') return;
+                const alreadyReady = handle.dataset.dragReady === '1';
 
                 const handleColumn = handle.closest('[data-testid="stColumn"]');
                 const row = handleColumn?.parentElement;
@@ -279,6 +279,11 @@ else:
                         }
                     }
                 };
+
+                if (alreadyReady) {
+                    applyPaneHeights();
+                    return;
+                }
 
                 handle.dataset.dragReady = '1';
                 let startX = 0;
