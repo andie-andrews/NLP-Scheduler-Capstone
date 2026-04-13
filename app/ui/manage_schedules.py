@@ -160,6 +160,17 @@ def render():
         else schedule_name_by_id.get(option, f"Schedule {option}"),
         key="manage_schedules_selected_schedule",
     )
+
+    previous_schedule_option = st.session_state.get(
+        "manage_schedules_previous_schedule",
+        selected_schedule_option
+    )
+    if previous_schedule_option != selected_schedule_option:
+        st.session_state["pending_cell_shift"] = None
+        st.session_state["editing_shift"] = None
+        st.session_state["deleting_shift"] = None
+    st.session_state["manage_schedules_previous_schedule"] = selected_schedule_option
+
     viewing_all_schedules = selected_schedule_option == all_schedules_option
     schedule_id = None if viewing_all_schedules else selected_schedule_option
     selected_name = "All Schedules" if viewing_all_schedules else schedule_name_by_id.get(schedule_id, "")
@@ -272,6 +283,21 @@ def render():
         )
 
     st.markdown("---")
+    st.markdown(
+        """
+        <style>
+        [class*="st-key-action_cell_"] div[data-testid="stPopover"] button {
+            background-color: #2f2f2f;
+            border-color: #2f2f2f;
+            color: #ffffff;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.45rem;
+            min-height: 1.6rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # 🔹 ROWS
     for emp in employees:
@@ -304,17 +330,18 @@ def render():
             with row[i + 2]:
                 cell_id = f"{emp['id']}_{day_str}"
 
-                with st.popover("Add", use_container_width=True):
-                    st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+                with st.container(key=f"action_cell_{cell_id}"):
+                    with st.popover("Action"):
+                        st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
 
-                    if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
-                        st.session_state["pending_cell_shift"] = {
-                            "schedule_id": schedule_id,
-                            "employee_id": emp["id"],
-                            "employee_name": full_name,
-                            "day_str": day_str
-                        }
-                        rerun_app()
+                        if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
+                            st.session_state["pending_cell_shift"] = {
+                                "schedule_id": schedule_id,
+                                "employee_id": emp["id"],
+                                "employee_name": full_name,
+                                "day_str": day_str
+                            }
+                            rerun_app()
 
                 if key in shift_lookup:
                     for shift in shift_lookup[key]:
