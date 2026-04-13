@@ -60,18 +60,17 @@ main_nav_tab = st.session_state.get("main_nav_tab", main_tabs[0])
 if main_nav_tab not in main_tabs:
     main_nav_tab = main_tabs[0]
 
-selected = st.sidebar.selectbox(
-    "Go to",
-    main_tabs,
-    index=main_tabs.index(main_nav_tab),
-)
-st.session_state["main_nav_tab"] = selected
-
 if "active_view" not in st.session_state:
-    st.session_state.active_view = selected
+    st.session_state.active_view = main_nav_tab
 
-# Keep the selected main tab in sync unless the assistant is currently active.
 if st.session_state.active_view != "AI Assistant":
+    selected = st.sidebar.selectbox(
+        "Go to",
+        main_tabs,
+        index=main_tabs.index(main_nav_tab),
+    )
+    st.session_state["main_nav_tab"] = selected
+    # Keep the selected main tab in sync unless the assistant is currently active.
     st.session_state.active_view = selected
 
 st.sidebar.markdown("##### AI Assistant")
