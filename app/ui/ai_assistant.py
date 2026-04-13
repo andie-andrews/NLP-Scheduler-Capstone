@@ -23,40 +23,62 @@ def render_ai_assistant(embedded: bool = False):
     # -------------------------------
     # 🧪 Debug: which orchestrator
     # -------------------------------
-    _inject_sticky_new_chat_css()
-    with st.container(key="assistant_panel_body"):
-        with st.container(key="assistant_header"):
-            use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
-            st.caption(
-                f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
-            )
+    use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
+    submitted = False
+    user_input = None
 
-            action_cols = st.columns([4, 2], gap="small")
-            with action_cols[1]:
-                if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
-                    _start_new_chat()
-                    st.rerun()
+    if embedded:
+        _inject_sticky_new_chat_css()
+        with st.container(key="assistant_panel_body"):
+            with st.container(key="assistant_header"):
+                st.caption(
+                    f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
+                )
 
-        with st.container(key="assistant_chat_scroll"):
-            st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
+                action_cols = st.columns([4, 2], gap="small")
+                with action_cols[1]:
+                    if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+                        _start_new_chat()
+                        st.rerun()
+
+            with st.container(key="assistant_chat_scroll"):
+                st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
+                _render_chat_history()
+
+            with st.container(key="assistant_input_footer"):
+                with st.form("assistant_input_form", clear_on_submit=True):
+                    input_cols = st.columns([8, 2], gap="small")
+                    with input_cols[0]:
+                        user_input = st.text_input(
+                            "Ask something about schedules, shifts, or hours...",
+                            label_visibility="collapsed",
+                            placeholder="Ask something about schedules, shifts, or hours...",
+                        )
+                    with input_cols[1]:
+                        submitted = st.form_submit_button("Send", use_container_width=True)
+    else:
+        st.caption(
+            f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
+        )
+        action_cols = st.columns([8, 2], gap="small")
+        with action_cols[1]:
+            if st.button("🆕 New chat", key="new_chat_full", use_container_width=True):
+                _start_new_chat()
+                st.rerun()
+
+        with st.container():
             _render_chat_history()
 
-        # -------------------------------
-        # 💬 Chat Input footer
-        # -------------------------------
-        user_input = None
-        submitted = False
-        with st.container(key="assistant_input_footer"):
-            with st.form("assistant_input_form", clear_on_submit=True):
-                input_cols = st.columns([8, 2], gap="small")
-                with input_cols[0]:
-                    user_input = st.text_input(
-                        "Ask something about schedules, shifts, or hours...",
-                        label_visibility="collapsed",
-                        placeholder="Ask something about schedules, shifts, or hours...",
-                    )
-                with input_cols[1]:
-                    submitted = st.form_submit_button("Send", use_container_width=True)
+        with st.form("assistant_input_form_full", clear_on_submit=True):
+            input_cols = st.columns([8, 2], gap="small")
+            with input_cols[0]:
+                user_input = st.text_input(
+                    "Ask something about schedules, shifts, or hours...",
+                    label_visibility="collapsed",
+                    placeholder="Ask something about schedules, shifts, or hours...",
+                )
+            with input_cols[1]:
+                submitted = st.form_submit_button("Send", use_container_width=True)
 
     if not submitted or not user_input:
         return
