@@ -1,22 +1,25 @@
-name: Build and deploy API to Azure Web App
+name: Deploy Scheduler API
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - 'apis/Scheduler.Api/**'
+      - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: nlp-scheduler-api
   DOTNET_VERSION: '8.0.x'
-  PROJECT_PATH: apis/Scheduler.Api/Scheduler.Api/Scheduler.Api.csproj
+  SOLUTION_PATH: 'apis/Scheduler.Api/Scheduler.Api.sln'
+  PROJECT_PATH: 'apis/Scheduler.Api/Scheduler.Api/Scheduler.Api.csproj'
+  PUBLISH_DIR: '${{ github.workspace }}/publish'
 
 jobs:
   build-and-deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup .NET
@@ -25,17 +28,17 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore ${{ env.PROJECT_PATH }}
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: Build
-        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
       - name: Publish
-        run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ github.workspace }}/publish
+        run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ env.PUBLISH_DIR }}
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ${{ github.workspace }}/publish
+          package: ${{ env.PUBLISH_DIR }}
