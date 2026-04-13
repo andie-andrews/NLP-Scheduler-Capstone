@@ -186,18 +186,7 @@ else:
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
-                overflow-x: hidden;
-                overflow-y: auto;
-                padding: 0 0.25rem 1rem 0;
-            }
-
-            .st-key-main_scroll_pane::-webkit-scrollbar {
-                width: 10px;
-            }
-
-            .st-key-main_scroll_pane::-webkit-scrollbar-thumb {
-                background: rgba(120, 120, 120, 0.45);
-                border-radius: 999px;
+                overflow: hidden;
             }
 
             .st-key-assistant_shell {
@@ -259,8 +248,7 @@ else:
                         mainScrollPane.style.display = 'flex';
                         mainScrollPane.style.flexDirection = 'column';
                         mainScrollPane.style.minHeight = '0';
-                        mainScrollPane.style.overflowX = 'hidden';
-                        mainScrollPane.style.overflowY = 'auto';
+                        mainScrollPane.style.overflow = 'hidden';
                     }
 
                     const assistantShell = parentDoc.querySelector('.st-key-assistant_shell');

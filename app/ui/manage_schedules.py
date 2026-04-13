@@ -110,6 +110,30 @@ def render():
 
     # 🔥 HEADER
     render_page_header("Manage Schedules", "Coordinate weekly staffing, shifts, and schedule assignments with clarity.")
+    st.markdown(
+        """
+        <style>
+            .st-key-manage_schedules_scroll_body {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding-right: 0.35rem;
+                padding-bottom: 0.5rem;
+            }
+
+            .st-key-manage_schedules_scroll_body::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .st-key-manage_schedules_scroll_body::-webkit-scrollbar-thumb {
+                background: rgba(120, 120, 120, 0.45);
+                border-radius: 999px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     header_col1, header_col2 = st.columns([6, 2])
 
@@ -198,221 +222,221 @@ def render():
         unsafe_allow_html=True
     )
 
-    # 🔹 LOAD EMPLOYEES
-    # 🔥 LOAD ALL EMPLOYEES
-    all_emp_res = get_all_employees()
-    all_employees = all_emp_res.json() if all_emp_res.status_code == 200 else []
+    with st.container(key="manage_schedules_scroll_body"):
+        # 🔹 LOAD EMPLOYEES
+        all_emp_res = get_all_employees()
+        all_employees = all_emp_res.json() if all_emp_res.status_code == 200 else []
 
-    if viewing_all_schedules:
-        employees = all_employees
-    else:
-        emp_res = get_schedule_employees(schedule_id)
-        employees = emp_res.json() if emp_res.status_code == 200 else []
-
-    # 🔥 ZERO STATE
-    if not employees:
         if viewing_all_schedules:
-            st.info("No employees found.")
+            employees = all_employees
+        else:
+            emp_res = get_schedule_employees(schedule_id)
+            employees = emp_res.json() if emp_res.status_code == 200 else []
+
+        # 🔥 ZERO STATE
+        if not employees:
+            if viewing_all_schedules:
+                st.info("No employees found.")
+                return
+
+            st.info("No employees assigned to this schedule.")
+
+            zero_key = f"zero_add_{schedule_id}_{len(employees)}"
+
+            selected = st.selectbox(
+                "Add employee",
+                options=[None] + [e["id"] for e in all_employees],
+                format_func=lambda x: "➕ Select employee..." if x is None else
+                next(f"{e['firstName']} {e['lastName']}" for e in all_employees if e["id"] == x),
+                key=zero_key
+            )
+
+            if selected:
+                add_employee_to_schedule(schedule_id, selected)
+                rerun_app()
+
             return
 
-        st.info("No employees assigned to this schedule.")
-
-        zero_key = f"zero_add_{schedule_id}_{len(employees)}"
-
-        selected = st.selectbox(
-            "Add employee",
-            options=[None] + [e["id"] for e in all_employees],
-            format_func=lambda x: "➕ Select employee..." if x is None else
-            next(f"{e['firstName']} {e['lastName']}" for e in all_employees if e["id"] == x),
-            key=zero_key
-        )
-
-        if selected:
-            add_employee_to_schedule(schedule_id, selected)
-            rerun_app()
-
-        return
-
-    # 🔹 LOAD SHIFTS
-    if viewing_all_schedules:
-        shifts = []
-        for sched in schedules:
+        # 🔹 LOAD SHIFTS
+        if viewing_all_schedules:
+            shifts = []
+            for sched in schedules:
+                shift_res = get_schedule_shifts(
+                    sched["id"],
+                    params={
+                        "startDate": start_of_week.date().isoformat(),
+                        "endDate": end_of_week.date().isoformat(),
+                    }
+                )
+                if shift_res.status_code != 200:
+                    continue
+                schedule_shifts = shift_res.json() or []
+                for shift in schedule_shifts:
+                    shift["scheduleName"] = sched["name"]
+                    shift["scheduleId"] = sched["id"]
+                shifts.extend(schedule_shifts)
+        else:
             shift_res = get_schedule_shifts(
-                sched["id"],
+                schedule_id,
                 params={
                     "startDate": start_of_week.date().isoformat(),
                     "endDate": end_of_week.date().isoformat(),
                 }
             )
-            if shift_res.status_code != 200:
-                continue
-            schedule_shifts = shift_res.json() or []
-            for shift in schedule_shifts:
-                shift["scheduleName"] = sched["name"]
-                shift["scheduleId"] = sched["id"]
-            shifts.extend(schedule_shifts)
-    else:
-        shift_res = get_schedule_shifts(
-            schedule_id,
-            params={
-                "startDate": start_of_week.date().isoformat(),
-                "endDate": end_of_week.date().isoformat(),
-            }
-        )
-        shifts = shift_res.json() if shift_res.status_code == 200 else []
-        for shift in shifts:
-            shift["scheduleName"] = schedule_name_by_id.get(schedule_id)
-            shift["scheduleId"] = schedule_id
+            shifts = shift_res.json() if shift_res.status_code == 200 else []
+            for shift in shifts:
+                shift["scheduleName"] = schedule_name_by_id.get(schedule_id)
+                shift["scheduleId"] = schedule_id
 
-    shift_lookup = defaultdict(list)
+        shift_lookup = defaultdict(list)
 
-    for s in shifts:
-        date_key = s["start"][:10]
-        shift_lookup[(s["employeeId"], date_key)].append(s)
+        for s in shifts:
+            date_key = s["start"][:10]
+            shift_lookup[(s["employeeId"], date_key)].append(s)
 
-    day_totals = defaultdict(int)
+        day_totals = defaultdict(int)
 
-    # 🔹 HEADER
-    header = st.columns(8)
-    header[0].markdown("**Employee**")
-
-    for i, day in enumerate(days):
-        header[i + 1].markdown(
-            f"<div style='text-align:center'>{day.strftime('%a %m/%d')}</div>",
-            unsafe_allow_html=True
-        )
-
-    st.markdown("---")
-    st.markdown(
-        """
-        <style>
-        [class*="st-key-action_cell_"] div[data-testid="stPopover"] button {
-            background-color: #2f2f2f;
-            border-color: #2f2f2f;
-            color: #ffffff;
-            font-size: 0.8rem;
-            padding: 0.2rem 0.45rem;
-            min-height: 1.6rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # 🔹 ROWS
-    for emp in employees:
-
-        full_name = f"{emp['firstName']} {emp['lastName']}"
-
-        employee_total = 0
-        for day in days:
-            key = (emp["id"], day.strftime("%Y-%m-%d"))
-            if key in shift_lookup:
-                for shift in shift_lookup[key]:
-                    employee_total += shift["durationHours"]
-                    day_totals[day.strftime("%Y-%m-%d")] += shift["durationHours"]
-
-        row = st.columns(9)
-
-        row[0].markdown(f"**{full_name} ({employee_total}h)**")
-
-        if not viewing_all_schedules and row[1].button("❌", key=f"remove_{emp['id']}"):
-            st.session_state["remove_schedule_employee"] = {
-                "schedule_id": schedule_id,
-                "employee_id": emp["id"],
-                "employee_name": full_name
-            }
+        # 🔹 HEADER
+        header = st.columns(8)
+        header[0].markdown("**Employee**")
 
         for i, day in enumerate(days):
-            day_str = day.strftime("%Y-%m-%d")
-            key = (emp["id"], day_str)
+            header[i + 1].markdown(
+                f"<div style='text-align:center'>{day.strftime('%a %m/%d')}</div>",
+                unsafe_allow_html=True
+            )
 
-            with row[i + 2]:
-                cell_id = f"{emp['id']}_{day_str}"
-
-                with st.container(key=f"action_cell_{cell_id}"):
-                    with st.popover("Action"):
-                        st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
-
-                        if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
-                            st.session_state["pending_cell_shift"] = {
-                                "schedule_id": schedule_id,
-                                "employee_id": emp["id"],
-                                "employee_name": full_name,
-                                "day_str": day_str
-                            }
-                            rerun_app()
-
-                if key in shift_lookup:
-                    for shift in shift_lookup[key]:
-                        start_dt = datetime.fromisoformat(shift["start"])
-                        end_dt = start_dt + timedelta(hours=shift["durationHours"])
-                        shift_id = shift["id"]
-                        shift_label = (
-                            f"{start_dt.strftime('%I:%M %p')} - "
-                            f"{end_dt.strftime('%I:%M %p')} ({shift['durationHours']}h)"
-                        )
-
-                        with st.popover(shift_label, use_container_width=True):
-                            schedule_name = shift.get("scheduleName")
-                            if schedule_name:
-                                st.caption(f"{full_name} • {day.strftime('%a %m/%d')} • {schedule_name}")
-                            else:
-                                st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
-
-                            if st.button("Edit shift", key=f"edit_shift_{shift_id}", use_container_width=True):
-                                st.session_state["editing_shift"] = {
-                                    "id": shift_id,
-                                    "schedule_id": shift.get("scheduleId"),
-                                    "employee_id": emp["id"],
-                                    "employee_name": full_name,
-                                    "start": shift["start"],
-                                    "durationHours": shift["durationHours"]
-                                }
-                                st.rerun()
-
-                            if st.button("Delete shift", key=f"delete_shift_{shift_id}", use_container_width=True):
-                                st.session_state["deleting_shift"] = {
-                                    "id": shift_id,
-                                    "employee_name": full_name,
-                                    "start": shift["start"],
-                                    "durationHours": shift["durationHours"]
-                                }
-                                st.rerun()
-
-    # 🔹 FOOTER
-    st.markdown("---")
-    footer = st.columns(8)
-
-    footer[0].markdown("Totals")
-
-    for i, day in enumerate(days):
-        total = day_totals[day.strftime("%Y-%m-%d")]
-        footer[i + 1].markdown(f"**{total}h**")
-
-    # 🔥 GHOST ROW
-    assigned_ids = {emp["id"] for emp in employees}
-    available = [e for e in all_employees if e["id"] not in assigned_ids]
-
-    if not viewing_all_schedules and available:
-
-        ghost_key = f"ghost_add_{schedule_id}_{len(employees)}"
-
-        ghost_row = st.columns(9)
-
-        selected = ghost_row[0].selectbox(
-            "Add employee",
-            options=[None] + [e["id"] for e in available],
-            format_func=lambda x: "➕ Add employee..." if x is None else
-            next(f"{e['firstName']} {e['lastName']}" for e in available if e["id"] == x),
-            key=ghost_key,
-            label_visibility="collapsed",
+        st.markdown("---")
+        st.markdown(
+            """
+            <style>
+            [class*="st-key-action_cell_"] div[data-testid="stPopover"] button {
+                background-color: #2f2f2f;
+                border-color: #2f2f2f;
+                color: #ffffff;
+                font-size: 0.8rem;
+                padding: 0.2rem 0.45rem;
+                min-height: 1.6rem;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
         )
 
-        if selected:
-            add_employee_to_schedule(schedule_id, selected)
-            selected = None
-            rerun_app()
+        # 🔹 ROWS
+        for emp in employees:
+
+            full_name = f"{emp['firstName']} {emp['lastName']}"
+
+            employee_total = 0
+            for day in days:
+                key = (emp["id"], day.strftime("%Y-%m-%d"))
+                if key in shift_lookup:
+                    for shift in shift_lookup[key]:
+                        employee_total += shift["durationHours"]
+                        day_totals[day.strftime("%Y-%m-%d")] += shift["durationHours"]
+
+            row = st.columns(9)
+
+            row[0].markdown(f"**{full_name} ({employee_total}h)**")
+
+            if not viewing_all_schedules and row[1].button("❌", key=f"remove_{emp['id']}"):
+                st.session_state["remove_schedule_employee"] = {
+                    "schedule_id": schedule_id,
+                    "employee_id": emp["id"],
+                    "employee_name": full_name
+                }
+
+            for i, day in enumerate(days):
+                day_str = day.strftime("%Y-%m-%d")
+                key = (emp["id"], day_str)
+
+                with row[i + 2]:
+                    cell_id = f"{emp['id']}_{day_str}"
+
+                    with st.container(key=f"action_cell_{cell_id}"):
+                        with st.popover("Action"):
+                            st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+
+                            if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
+                                st.session_state["pending_cell_shift"] = {
+                                    "schedule_id": schedule_id,
+                                    "employee_id": emp["id"],
+                                    "employee_name": full_name,
+                                    "day_str": day_str
+                                }
+                                rerun_app()
+
+                    if key in shift_lookup:
+                        for shift in shift_lookup[key]:
+                            start_dt = datetime.fromisoformat(shift["start"])
+                            end_dt = start_dt + timedelta(hours=shift["durationHours"])
+                            shift_id = shift["id"]
+                            shift_label = (
+                                f"{start_dt.strftime('%I:%M %p')} - "
+                                f"{end_dt.strftime('%I:%M %p')} ({shift['durationHours']}h)"
+                            )
+
+                            with st.popover(shift_label, use_container_width=True):
+                                schedule_name = shift.get("scheduleName")
+                                if schedule_name:
+                                    st.caption(f"{full_name} • {day.strftime('%a %m/%d')} • {schedule_name}")
+                                else:
+                                    st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+
+                                if st.button("Edit shift", key=f"edit_shift_{shift_id}", use_container_width=True):
+                                    st.session_state["editing_shift"] = {
+                                        "id": shift_id,
+                                        "schedule_id": shift.get("scheduleId"),
+                                        "employee_id": emp["id"],
+                                        "employee_name": full_name,
+                                        "start": shift["start"],
+                                        "durationHours": shift["durationHours"]
+                                    }
+                                    st.rerun()
+
+                                if st.button("Delete shift", key=f"delete_shift_{shift_id}", use_container_width=True):
+                                    st.session_state["deleting_shift"] = {
+                                        "id": shift_id,
+                                        "employee_name": full_name,
+                                        "start": shift["start"],
+                                        "durationHours": shift["durationHours"]
+                                    }
+                                    st.rerun()
+
+        # 🔹 FOOTER
+        st.markdown("---")
+        footer = st.columns(8)
+
+        footer[0].markdown("Totals")
+
+        for i, day in enumerate(days):
+            total = day_totals[day.strftime("%Y-%m-%d")]
+            footer[i + 1].markdown(f"**{total}h**")
+
+        # 🔥 GHOST ROW
+        assigned_ids = {emp["id"] for emp in employees}
+        available = [e for e in all_employees if e["id"] not in assigned_ids]
+
+        if not viewing_all_schedules and available:
+
+            ghost_key = f"ghost_add_{schedule_id}_{len(employees)}"
+
+            ghost_row = st.columns(9)
+
+            selected = ghost_row[0].selectbox(
+                "Add employee",
+                options=[None] + [e["id"] for e in available],
+                format_func=lambda x: "➕ Add employee..." if x is None else
+                next(f"{e['firstName']} {e['lastName']}" for e in available if e["id"] == x),
+                key=ghost_key,
+                label_visibility="collapsed",
+            )
+
+            if selected:
+                add_employee_to_schedule(schedule_id, selected)
+                selected = None
+                rerun_app()
 
     # 🔥 MODALS (unchanged)
 
