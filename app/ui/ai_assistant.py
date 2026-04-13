@@ -16,25 +16,26 @@ def render_ai_assistant():
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
 
-    with st.container(key="assistant_sticky_header"):
-        render_page_header(
-            "🤖 AI Scheduler Assistant",
-            "Ask for schedule help, shift summaries, and staffing insights in plain language.",
-        )
+    with st.container(key="assistant_layout"):
+        with st.container(key="assistant_sticky_header"):
+            render_page_header(
+                "🤖 AI Scheduler Assistant",
+                "Ask for schedule help, shift summaries, and staffing insights in plain language.",
+            )
 
-        use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
-        st.caption(
-            f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
-        )
+            use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
+            st.caption(
+                f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
+            )
 
-        action_cols = st.columns([5, 1], gap="small")
-        with action_cols[1]:
-            if st.button("🆕 New chat", use_container_width=True):
-                _start_new_chat()
-                st.rerun()
+            action_cols = st.columns([5, 1], gap="small")
+            with action_cols[1]:
+                if st.button("🆕 New chat", use_container_width=True):
+                    _start_new_chat()
+                    st.rerun()
 
-    with st.container(key="assistant_chat_history"):
-        _render_chat_history()
+        with st.container(key="assistant_chat_history"):
+            _render_chat_history()
 
     user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
     if not user_input:
@@ -75,8 +76,23 @@ def _inject_assistant_sticky_css():
                 padding-bottom: 0.35rem;
             }
 
+            [data-testid="stMainBlockContainer"] {
+                height: calc(100vh - 4.25rem);
+                overflow: hidden;
+            }
+
+            .st-key-assistant_layout {
+                height: 100%;
+                min-height: 0;
+                display: grid;
+                grid-template-rows: auto 1fr;
+            }
+
             .st-key-assistant_chat_history {
-                padding-top: 0.3rem;
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 0.3rem 0.2rem 5rem 0.2rem;
             }
         </style>
         """,
