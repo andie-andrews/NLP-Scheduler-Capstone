@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from llm.orchestrator import run_orchestrator
 from llm.memory import ConversationMemory
 import config as config
@@ -25,15 +26,16 @@ def render_ai_assistant(embedded: bool = False):
     # -------------------------------
     _inject_sticky_new_chat_css()
     with st.container(key="assistant_panel_body"):
-        st.caption(
-            f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
-        )
+        with st.container(key="assistant_header"):
+            st.caption(
+                f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
+            )
 
-        action_cols = st.columns([4, 2], gap="small")
-        with action_cols[1]:
-            if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
-                _start_new_chat()
-                st.rerun()
+            action_cols = st.columns([4, 2], gap="small")
+            with action_cols[1]:
+                if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+                    _start_new_chat()
+                    st.rerun()
 
         with st.container(key="assistant_chat_scroll"):
             st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
@@ -55,6 +57,8 @@ def render_ai_assistant(embedded: bool = False):
                     )
                 with input_cols[1]:
                     submitted = st.form_submit_button("Send", use_container_width=True)
+
+    _sync_assistant_layout()
 
     if not submitted or not user_input:
         return
@@ -87,16 +91,12 @@ def _inject_sticky_new_chat_css():
         """
         <style>
             .st-key-assistant_panel_body {
-                display: flex;
-                flex-direction: column;
-                min-height: 0;
-                flex: 1;
                 height: 100%;
+                min-height: 0;
+                position: relative;
             }
 
             .st-key-assistant_chat_scroll {
-                flex: 1;
-                min-height: 0;
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding: 0.5rem 0.45rem 0.65rem 0.2rem;
@@ -112,7 +112,6 @@ def _inject_sticky_new_chat_css():
             .st-key-assistant_input_footer {
                 background: var(--background-color, #f6f8fc);
                 padding-top: 0.45rem;
-                margin-top: auto;
             }
 
             .st-key-assistant_input_footer input {
@@ -132,6 +131,50 @@ def _inject_sticky_new_chat_css():
         </style>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def _sync_assistant_layout():
+    components.html(
+        """
+        <script>
+            const sync = () => {
+                const doc = window.parent.document;
+                const panel = doc.querySelector('.st-key-assistant_panel_body');
+                const header = doc.querySelector('.st-key-assistant_header');
+                const chat = doc.querySelector('.st-key-assistant_chat_scroll');
+                const footer = doc.querySelector('.st-key-assistant_input_footer');
+                if (!panel || !header || !chat || !footer) return;
+
+                panel.style.position = 'relative';
+                panel.style.height = '100%';
+                panel.style.minHeight = '0';
+
+                const panelRect = panel.getBoundingClientRect();
+                const headerRect = header.getBoundingClientRect();
+                const footerRect = footer.getBoundingClientRect();
+
+                const top = Math.max(0, headerRect.bottom - panelRect.top + 6);
+                const bottom = Math.max(0, panelRect.bottom - footerRect.top + 6);
+
+                chat.style.position = 'absolute';
+                chat.style.left = '0';
+                chat.style.right = '0';
+                chat.style.top = `${top}px`;
+                chat.style.bottom = `${bottom}px`;
+                chat.style.overflowY = 'auto';
+
+                footer.style.position = 'absolute';
+                footer.style.left = '0';
+                footer.style.right = '0';
+                footer.style.bottom = '0';
+            };
+
+            setTimeout(sync, 50);
+            window.parent.addEventListener('resize', sync);
+        </script>
+        """,
+        height=0,
     )
 
 def _render_chat_history():
