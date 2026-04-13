@@ -6,6 +6,13 @@ def inject_global_styles() -> None:
     st.markdown(
         """
         <style>
+            :root,
+            [data-theme="dark"] {
+                --background-color: #f7fbff;
+                --secondary-background-color: #ffffff;
+                --text-color: #1f2a44;
+            }
+
             .stApp {
                 background: linear-gradient(180deg, #f7fbff 0%, #eef4ff 55%, #f5f7ff 100%);
             }
