@@ -6,6 +6,9 @@ def get_tabs():
     if st.session_state["role"] in ["Supervisor", "Manager"]:
         tabs.extend(["Manage Employees", "Manage Schedules"])
 
+    if st.session_state["role"] == "Manager":
+        tabs.append("View Schedule")
+
     # 👇 ADD THIS
     tabs.append("AI Assistant")
 

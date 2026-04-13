@@ -10,6 +10,7 @@ from ui.tabs import get_tabs
 from ui.my_schedule import render as render_my_schedule
 from ui.manage_employees import render as render_manage_employees
 from ui.manage_schedules import render as render_manage_schedules
+from ui.view_schedule import render as render_view_schedule
 from ui.ai_assistant import render_ai_assistant as render_ai_assistant
 from ui.theme import inject_global_styles
 from auth import logout
@@ -52,6 +53,8 @@ def render_main_view(active_view: str):
         render_manage_employees()
     elif active_view == "Manage Schedules":
         render_manage_schedules()
+    elif active_view == "View Schedule":
+        render_view_schedule()
 
 
 tabs = [tab for tab in get_tabs() if tab != "AI Assistant"]
