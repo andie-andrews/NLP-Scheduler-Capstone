@@ -97,7 +97,8 @@ else:
 
     with main_col:
         with st.container(key="main_scroll_pane"):
-            render_main_view(selected)
+            with st.container(key="main_view_scroll_body"):
+                render_main_view(selected)
 
     with resize_col:
         if st.session_state.ai_panel_collapsed:
@@ -183,11 +184,16 @@ else:
 
             .st-key-main_scroll_pane {
                 height: calc(100vh - 7rem);
-                overflow-x: hidden;
-                overflow-y: auto;
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
+            }
+
+            .st-key-main_view_scroll_body {
+                flex: 1;
+                min-height: 0;
+                overflow-x: hidden;
+                overflow-y: auto;
                 padding: 0 0.25rem 1rem 0;
             }
 
@@ -247,11 +253,17 @@ else:
                     const mainScrollPane = parentDoc.querySelector('.st-key-main_scroll_pane');
                     if (mainScrollPane) {
                         mainScrollPane.style.height = `${paneHeight}px`;
-                        mainScrollPane.style.overflowX = 'hidden';
-                        mainScrollPane.style.overflowY = 'auto';
                         mainScrollPane.style.display = 'flex';
                         mainScrollPane.style.flexDirection = 'column';
                         mainScrollPane.style.minHeight = '0';
+
+                        const mainViewScrollBody = mainScrollPane.querySelector('.st-key-main_view_scroll_body');
+                        if (mainViewScrollBody) {
+                            mainViewScrollBody.style.flex = '1';
+                            mainViewScrollBody.style.minHeight = '0';
+                            mainViewScrollBody.style.overflowX = 'hidden';
+                            mainViewScrollBody.style.overflowY = 'auto';
+                        }
                     }
 
                     const assistantShell = parentDoc.querySelector('.st-key-assistant_shell');
