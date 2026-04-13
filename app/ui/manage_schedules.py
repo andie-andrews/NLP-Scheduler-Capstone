@@ -119,7 +119,7 @@ def render():
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding-right: 0.35rem;
-                padding-bottom: 0.5rem;
+                padding-bottom: 2rem;
             }
 
             .st-key-manage_schedules_scroll_body::-webkit-scrollbar {
