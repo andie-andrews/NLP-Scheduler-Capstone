@@ -222,6 +222,17 @@ The final project will include:
 
 ---
 
+## Production Deployment Notes
+
+The Python app supports environment-based API settings so it can run outside localhost:
+
+- `SCHEDULER_API_BASE_URL` (example: `https://api.yourdomain.com`)
+- `SCHEDULER_API_VERIFY_SSL` (`true` for production)
+
+See `docs/deployment_with_github.md` for a practical GitHub-based deployment path for both the API and Streamlit app.
+
+---
+
 # Section 6: Success Criteria
 
 The project will be considered successful if the system reliably translates natural language requests into correct scheduling operations.

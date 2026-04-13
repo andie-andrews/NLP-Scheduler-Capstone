@@ -1,6 +1,9 @@
 import requests
 from datetime import datetime, timedelta
-BASE_URL = "https://localhost:7259/api"
+import os
+
+BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://localhost:7259").rstrip("/") + "/api"
+VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "false").lower() == "true"
 
 
 # -------------------------------
@@ -83,7 +86,7 @@ def get_employee_by_name(token, query: str):
 
     res = requests.get(url, 
                        headers={"Authorization": f"Bearer {token}"},
-                       verify=False)
+                       verify=VERIFY_SSL)
     print("INFO:", res.status_code, res.text)
     # 🔥 Add this
     if not res.ok:
@@ -115,7 +118,7 @@ def get_employee_shifts(token, employee_id, week_offset=0):
             "endDate": week_end.date().isoformat(),
         },
         headers={"Authorization": f"Bearer {token}"},
-        verify=False
+        verify=VERIFY_SSL
     )
 
     return res.json()
@@ -145,7 +148,7 @@ def create_shift(token, schedule_id, employee_id, date, time, duration_hours):
 
     print("CREATE SHIFT PAYLOAD:", payload)
 
-    res = requests.post(url, json=payload, headers=headers, verify=False)
+    res = requests.post(url, json=payload, headers=headers, verify=VERIFY_SSL)
 
     print("STATUS:", res.status_code)
     print("RESPONSE:", res.text)
@@ -170,7 +173,7 @@ def update_shift(shift_id, date=None, time=None, duration=None):
     res = requests.put(
         f"{BASE_URL}/shifts/{shift_id}",
         json=payload,
-        verify=False
+        verify=VERIFY_SSL
     )
 
     return res.json()
@@ -183,7 +186,7 @@ def delete_shift(token, shift_id):
     res = requests.delete(
         f"{BASE_URL}/shifts/{shift_id}",
         headers={"Authorization": f"Bearer {token}"},
-        verify=False
+        verify=VERIFY_SSL
     )
 
     return res.status_code == 200

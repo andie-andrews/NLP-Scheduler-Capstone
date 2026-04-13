@@ -1,7 +1,9 @@
 import requests
 import streamlit as st
+import os
 
-BASE_URL = "https://localhost:7259"
+BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://localhost:7259").rstrip("/")
+VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "false").lower() == "true"
 
 def get_headers():
     token = st.session_state.get("token")
@@ -17,7 +19,7 @@ def post(path, data = None):
         f"{BASE_URL}{path}",
         json=data,
         headers=get_headers(),
-        verify=False  # dev only
+        verify=VERIFY_SSL
     )
 
 def get(path, params=None):
@@ -25,7 +27,7 @@ def get(path, params=None):
         f"{BASE_URL}{path}",
         headers=get_headers(),
         params=params,
-        verify=False
+        verify=VERIFY_SSL
     )
 
 def get_my_schedule(employee_id, params=None):
@@ -63,7 +65,7 @@ def update_shift(shift_id, start=None, duration=None):
         f"{BASE_URL}/api/shifts/{shift_id}",
         json=payload,
         headers=get_headers(),
-        verify=False
+        verify=VERIFY_SSL
     )
 
 
@@ -71,7 +73,7 @@ def delete_shift(shift_id):
     return requests.delete(
         f"{BASE_URL}/api/shifts/{shift_id}",
         headers=get_headers(),
-        verify=False
+        verify=VERIFY_SSL
     )
 
 # -------------------------------
@@ -92,7 +94,7 @@ def update_schedule(schedule_id, name):
         f"{BASE_URL}/api/schedules/{schedule_id}",
         json={"name": name},
         headers=get_headers(),
-        verify=False
+        verify=VERIFY_SSL
     )
 
 
@@ -100,7 +102,7 @@ def delete_schedule(schedule_id):
     return requests.delete(
         f"{BASE_URL}/api/schedules/{schedule_id}",
         headers=get_headers(),
-        verify=False
+        verify=VERIFY_SSL
     )
 
 # -------------------------------
@@ -117,7 +119,7 @@ def remove_employee_from_schedule(schedule_id, employee_id):
     return requests.delete(
         f"{BASE_URL}/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}",
         headers=get_headers(),
-        verify=False
+        verify=VERIFY_SSL
     )
 
 
@@ -159,7 +161,7 @@ def update_employee(employee_id, first_name, last_name, email, role_id=None):
         f"{BASE_URL}/api/employees/{employee_id}",
         json=payload,
         headers=get_headers(),
-        verify=False
+        verify=VERIFY_SSL
     )
 
 
@@ -167,5 +169,5 @@ def delete_employee(employee_id):
     return requests.delete(
         f"{BASE_URL}/api/employees/{employee_id}",
         headers=get_headers(),
-        verify=False
+        verify=VERIFY_SSL
     )
