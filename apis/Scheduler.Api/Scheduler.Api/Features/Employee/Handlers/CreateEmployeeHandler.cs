@@ -15,7 +15,15 @@ public class CreateEmployeeHandler
   public async Task<int> Handle(CreateEmployeeRequest request)
   {
     using var connection = _db.CreateConnection();
-    var sql = @"
+    var hasEmail = await connection.ExecuteScalarAsync<int>(
+      "SELECT CASE WHEN COL_LENGTH('Employees', 'Email') IS NULL THEN 0 ELSE 1 END") == 1;
+    var sql = hasEmail
+      ? @"
+            INSERT INTO Employees (FirstName, LastName, Email, RoleId)
+            VALUES (@FirstName, @LastName, @Email, @RoleId);
+            SELECT CAST(SCOPE_IDENTITY() as int);
+        "
+      : @"
             INSERT INTO Employees (FirstName, LastName, RoleId)
             VALUES (@FirstName, @LastName, @RoleId);
             SELECT CAST(SCOPE_IDENTITY() as int);

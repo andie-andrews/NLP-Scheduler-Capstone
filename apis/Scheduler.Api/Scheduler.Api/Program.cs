@@ -7,6 +7,10 @@ using Scheduler.Api.Infrastructure.Domain.Services;
 using System.Text;
 using Scheduler.Api.Features.Health;
 using Scheduler.Api.Features.Shifts.Handlers;
+using Scheduler.Api.Features.Shifts.Services;
+using Scheduler.Api.Features.Schedules.Services;
+using Scheduler.Api.Features.Employee.Services;
+using Scheduler.Api.Features.Auth.Services;
 using Scheduler.Api.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -70,15 +74,18 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<HealthHandler>();
 builder.Services.AddScoped<GetEmployeeByNameHandler>();
 builder.Services.AddScoped<AuthHandler>();
+builder.Services.AddScoped<AuthDomainService>();
 
 
 builder.Services.AddScoped<GetSchedulesHandler>();
 builder.Services.AddScoped<GetScheduleEmployeesHandler>();
 builder.Services.AddScoped<GetScheduleShiftsHandler>();
 builder.Services.AddScoped<CreateShiftHandler>();
+builder.Services.AddScoped<ValidateShiftOverlapHandler>();
 builder.Services.AddScoped<CreateScheduleHandler>();
 builder.Services.AddScoped<UpdateScheduleHandler>();
 builder.Services.AddScoped<DeleteScheduleHandler>();
+builder.Services.AddScoped<ScheduleDomainService>();
 builder.Services.AddScoped<AddEmployeeToScheduleHandler>();
 builder.Services.AddScoped<DeleteEmployeeToScheduleHandler>();
 builder.Services.AddScoped<GetEmployeeByIdHandler>();
@@ -88,7 +95,10 @@ builder.Services.AddScoped<GetEmployeeShiftsHandler>();
 builder.Services.AddScoped<CreateEmployeeHandler>();
 builder.Services.AddScoped<UpdateEmployeeHandler>();
 builder.Services.AddScoped<DeleteEmployeeHandler>();
+builder.Services.AddScoped<EmployeeDomainService>();
 builder.Services.AddScoped<DeleteShiftHandler>();
+builder.Services.AddScoped<UpdateShiftHandler>();
+builder.Services.AddScoped<ShiftDomainService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

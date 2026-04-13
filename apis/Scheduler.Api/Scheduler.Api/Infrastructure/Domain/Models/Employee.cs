@@ -8,6 +8,8 @@ public class Employee
 
   public string LastName { get; set; } = default!;
 
+  public string Email { get; set; } = default!;
+
   public byte RoleId { get; set; }
 
   public string FullName => $"{FirstName} {LastName}";

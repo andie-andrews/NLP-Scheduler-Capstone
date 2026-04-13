@@ -3,10 +3,14 @@ from llm.orchestrator import run_orchestrator
 from llm.memory import ConversationMemory
 import config as config
 from datetime import datetime
+from ui.theme import render_page_header
 
 
-def render_ai_assistant():
-    st.header("🤖 AI Scheduler Assistant")
+def render_ai_assistant(embedded: bool = False):
+    if embedded:
+        st.caption("Ask for schedule help, shift summaries, and staffing insights in plain language.")
+    else:
+        render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
 
     # -------------------------------
     # 🧠 Memory (session)
@@ -19,17 +23,41 @@ def render_ai_assistant():
     # -------------------------------
     # 🧪 Debug: which orchestrator
     # -------------------------------
-    st.caption(
-        f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
-    )
+    _inject_sticky_new_chat_css()
+    with st.container(key="assistant_panel_body"):
+        with st.container(key="assistant_header"):
+            st.caption(
+                f"Using Orchestrator: {'V2 (OpenAPI)' if config.USE_ORCHESTRATOR_V2 else 'V1 (Legacy)'}"
+            )
 
-    _render_chat_history()
+            action_cols = st.columns([4, 2], gap="small")
+            with action_cols[1]:
+                if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
+                    _start_new_chat()
+                    st.rerun()
 
-    # -------------------------------
-    # 💬 Chat Input (interactive)
-    # -------------------------------
-    user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
-    if not user_input:
+        with st.container(key="assistant_chat_scroll"):
+            st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
+            _render_chat_history()
+
+        # -------------------------------
+        # 💬 Chat Input footer
+        # -------------------------------
+        user_input = None
+        submitted = False
+        with st.container(key="assistant_input_footer"):
+            with st.form("assistant_input_form", clear_on_submit=True):
+                input_cols = st.columns([8, 2], gap="small")
+                with input_cols[0]:
+                    user_input = st.text_input(
+                        "Ask something about schedules, shifts, or hours...",
+                        label_visibility="collapsed",
+                        placeholder="Ask something about schedules, shifts, or hours...",
+                    )
+                with input_cols[1]:
+                    submitted = st.form_submit_button("Send", use_container_width=True)
+
+    if not submitted or not user_input:
         return
 
     st.session_state.chat_messages.append({
@@ -54,10 +82,75 @@ def render_ai_assistant():
     st.rerun()
 
 
+
+def _inject_sticky_new_chat_css():
+    st.markdown(
+        """
+        <style>
+            .st-key-assistant_panel_body {
+                height: calc(var(--assistant-pane-height, 900px) - 4rem);
+                min-height: 0 !important;
+                display: grid;
+                grid-template-rows: auto 1fr auto;
+                row-gap: 0.45rem;
+            }
+
+            .st-key-assistant_chat_scroll {
+                height: 100%;
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 0.5rem 0.45rem 0.65rem 0.2rem;
+                border: 1px solid rgba(120, 120, 120, 0.2);
+                border-radius: 0.8rem;
+                background: rgba(255, 255, 255, 0.55);
+            }
+
+            .assistant-chat-anchor {
+                display: block;
+                min-height: 100%;
+            }
+
+            .st-key-assistant_input_footer {
+                background: var(--background-color, #f6f8fc);
+                padding-top: 0.45rem;
+            }
+
+            .st-key-assistant_input_footer input {
+                border-radius: 999px;
+            }
+
+            .st-key-assistant_chat_scroll::-webkit-scrollbar,
+            .st-key-main_scroll_pane::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .st-key-assistant_chat_scroll::-webkit-scrollbar-thumb,
+            .st-key-main_scroll_pane::-webkit-scrollbar-thumb {
+                background: rgba(120, 120, 120, 0.45);
+                border-radius: 999px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 def _render_chat_history():
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
             render_response(message["content"])
+
+
+def _start_new_chat():
+    st.session_state.chat_messages = []
+    st.session_state.memory = ConversationMemory()
+
+    for key in (
+        "pending_shift",
+        "pending_delete_shift",
+        "pending_show_shifts",
+        "pending_update_shift",
+    ):
+        st.session_state.pop(key, None)
 
 
 def render_response(response):
@@ -98,22 +191,39 @@ def render_response(response):
         return
 
     # -------------------------------
-    # ✅ Created shift payload
+    # ✅ Structured responses (no raw JSON by default)
     # -------------------------------
     if isinstance(response, dict) and "data" in response:
+        data = response.get("data", {}) or {}
         if response.get("summary"):
             st.markdown(response["summary"])
-        st.json(response["data"])
+
+        if isinstance(data, dict) and "failedShifts" in data and data.get("failedShifts"):
+            st.warning("Some shifts could not be created:")
+            for failed in data.get("failedShifts", []):
+                shift = failed.get("shift", {})
+                start_value = shift.get("start", "unknown start")
+                error_value = failed.get("error", "Validation failed")
+                st.markdown(
+                    f"- `{start_value}` ({shift.get('durationHours', '?')}h): {error_value}"
+                )
+
+        # Show lightweight metrics/details only when useful.
+        if isinstance(data, dict) and "totalHours" in data:
+            st.metric("Total Hours", data.get("totalHours", 0))
         return
 
     # -------------------------------
     # 🧠 Fallbacks
     # -------------------------------
     if isinstance(response, dict):
-        st.json(response)
+        if response.get("summary"):
+            st.markdown(response["summary"])
+        else:
+            st.success("Done.")
 
     elif isinstance(response, list):
-        st.json(response)
+        st.success(f"Returned {len(response)} item(s).")
 
     else:
         st.success(response)

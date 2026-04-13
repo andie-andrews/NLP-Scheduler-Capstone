@@ -1,4 +1,5 @@
 import streamlit as st
+from ui.theme import render_page_header
 from api_client import (
     get_all_employees,
     create_employee,
@@ -16,11 +17,11 @@ ROLE_LABELS = {value: key for key, value in ROLE_OPTIONS.items()}
 
 def _employee_label(employee):
     role_name = ROLE_LABELS.get(employee.get("roleId"), f"Role {employee.get('roleId', '?')}")
-    return f"{employee['firstName']} {employee['lastName']} ({role_name})"
+    return f"{employee['firstName']} {employee['lastName']} - {employee['email']} ({role_name})"
 
 
 def render():
-    st.subheader("Manage Employees")
+    render_page_header("Manage Employees", "Search, create, edit, and remove employee accounts from one place.")
 
     if "show_create_employee" not in st.session_state:
         st.session_state["show_create_employee"] = False
@@ -42,7 +43,7 @@ def render():
 
     query = header_left.text_input(
         "Search employees",
-        placeholder="Type first name, last name, or full name",
+        placeholder="Type first name, last name, full name, or email",
     ).strip()
 
     employees_response = get_all_employees(params={"query": query} if query else None)
@@ -61,14 +62,16 @@ def render():
         st.info("No employees found.")
     else:
         st.markdown("### Employee Directory")
+        st.caption("Use search to quickly find people and role details.")
 
         for employee in employees:
             role_name = ROLE_LABELS.get(employee.get("roleId"), f"Role {employee.get('roleId', '?')}")
-            cols = st.columns([1, 3, 3, 2])
+            cols = st.columns([1, 2, 2, 3, 2])
             cols[0].markdown(f"`#{employee['id']}`")
             cols[1].markdown(employee["firstName"])
             cols[2].markdown(employee["lastName"])
-            cols[3].markdown(role_name)
+            cols[3].markdown(employee["email"])
+            cols[4].markdown(role_name)
 
     if st.session_state.get("show_create_employee"):
 
@@ -76,17 +79,19 @@ def render():
         def create_dialog():
             first_name = st.text_input("First Name")
             last_name = st.text_input("Last Name")
+            email = st.text_input("Email")
             role_name = st.selectbox("Role", list(ROLE_OPTIONS.keys()))
 
             submit_col, cancel_col = st.columns(2)
             if submit_col.button("Create", use_container_width=True):
-                if not first_name.strip() or not last_name.strip():
-                    st.error("First and last name are required.")
+                if not first_name.strip() or not last_name.strip() or not email.strip():
+                    st.error("First name, last name, and email are required.")
                     return
 
                 res = create_employee(
                     first_name.strip(),
                     last_name.strip(),
+                    email.strip(),
                     ROLE_OPTIONS[role_name],
                 )
 
@@ -120,6 +125,7 @@ def render():
 
             first_name = st.text_input("First Name", value=selected_employee["firstName"])
             last_name = st.text_input("Last Name", value=selected_employee["lastName"])
+            email = st.text_input("Email", value=selected_employee["email"])
             role_name = st.selectbox(
                 "Role",
                 list(ROLE_OPTIONS.keys()),
@@ -131,14 +137,15 @@ def render():
             submit_col, cancel_col = st.columns(2)
 
             if submit_col.button("Save", use_container_width=True):
-                if not first_name.strip() or not last_name.strip():
-                    st.error("First and last name are required.")
+                if not first_name.strip() or not last_name.strip() or not email.strip():
+                    st.error("First name, last name, and email are required.")
                     return
 
                 res = update_employee(
                     selected_employee["id"],
                     first_name.strip(),
                     last_name.strip(),
+                    email.strip(),
                     ROLE_OPTIONS[role_name],
                 )
 

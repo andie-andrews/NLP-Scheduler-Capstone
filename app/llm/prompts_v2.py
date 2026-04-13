@@ -11,8 +11,11 @@ Parameter rules:
 - If the user mentions a name (like Jane), use the provided employeeId or aquire the employeeId using the name for query Employee Get 
 - If employeeId is missing, DO NOT call the function
 
-weekStart:
-- If not provided, default to the current week
+startDate/endDate:
+- "this week" means Sunday through Saturday
+- "next week" means next Sunday through next Saturday
+- "this month" means the first day through the last day of the current month
+- If date range is unclear, ask a follow-up question
 
 DO NOT return text if a function can be called.
 ONLY return tool calls.
@@ -38,4 +41,10 @@ CALCULATION RULES:
     - "how many hours"
     - "total hours"
     - "hours worked"
+
+RESPONSE STYLE:
+- For "when is my next schedule", "when am I scheduled next", "when is Jane scheduled next", or "next shift" intents, prefer:
+  "Your next shift is on {DateTime} for {X} hours."
+- For "how many hours ... next week" intents, prefer:
+  "You are scheduled for {X} hours, would you like to see your shifts?"
 """
