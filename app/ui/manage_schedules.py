@@ -276,9 +276,9 @@ def render():
         """
         <style>
         [class*="st-key-action_cell_"] div[data-testid="stPopover"] button {
-            background-color: #d9f7be;
-            border-color: #b7eb8f;
-            color: #135200;
+            background-color: #000000;
+            border-color: #000000;
+            color: #ffffff;
             font-size: 0.8rem;
             padding: 0.2rem 0.45rem;
             min-height: 1.6rem;
