@@ -9,28 +9,32 @@ from ui.theme import render_page_header
 
 
 def render_ai_assistant():
-    render_page_header(
-        "🤖 AI Scheduler Assistant",
-        "Ask for schedule help, shift summaries, and staffing insights in plain language.",
-    )
+    _inject_assistant_sticky_css()
 
     if "memory" not in st.session_state:
         st.session_state.memory = ConversationMemory()
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
 
-    use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
-    st.caption(
-        f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
-    )
+    with st.container(key="assistant_sticky_header"):
+        render_page_header(
+            "🤖 AI Scheduler Assistant",
+            "Ask for schedule help, shift summaries, and staffing insights in plain language.",
+        )
 
-    action_cols = st.columns([5, 1], gap="small")
-    with action_cols[1]:
-        if st.button("🆕 New chat", use_container_width=True):
-            _start_new_chat()
-            st.rerun()
+        use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
+        st.caption(
+            f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
+        )
 
-    _render_chat_history()
+        action_cols = st.columns([5, 1], gap="small")
+        with action_cols[1]:
+            if st.button("🆕 New chat", use_container_width=True):
+                _start_new_chat()
+                st.rerun()
+
+    with st.container(key="assistant_chat_history"):
+        _render_chat_history()
 
     user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
     if not user_input:
@@ -56,6 +60,28 @@ def _render_chat_history():
     for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
             render_response(message["content"])
+
+
+def _inject_assistant_sticky_css():
+    st.markdown(
+        """
+        <style>
+            .st-key-assistant_sticky_header {
+                position: sticky;
+                top: 0.25rem;
+                z-index: 20;
+                background: var(--background-color, #f6f8fc);
+                padding-top: 0.1rem;
+                padding-bottom: 0.35rem;
+            }
+
+            .st-key-assistant_chat_history {
+                padding-top: 0.3rem;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _start_new_chat():
