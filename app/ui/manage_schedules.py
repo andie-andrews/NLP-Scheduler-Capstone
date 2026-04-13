@@ -139,6 +139,10 @@ def render():
 
     schedule_map = {s["name"]: s["id"] for s in schedules}
     schedule_name_by_id = {s["id"]: s["name"] for s in schedules}
+    schedule_options_for_forms = [
+        {"id": s["id"], "name": s["name"]}
+        for s in schedules
+    ]
 
     schedule_options = ["All Schedules"] + list(schedule_map.keys())
     selected_name = st.selectbox("Select Schedule", schedule_options)
@@ -216,6 +220,7 @@ def render():
             schedule_shifts = shift_res.json() or []
             for shift in schedule_shifts:
                 shift["scheduleName"] = sched["name"]
+                shift["scheduleId"] = sched["id"]
             shifts.extend(schedule_shifts)
     else:
         shift_res = get_schedule_shifts(
@@ -228,6 +233,7 @@ def render():
         shifts = shift_res.json() if shift_res.status_code == 200 else []
         for shift in shifts:
             shift["scheduleName"] = schedule_name_by_id.get(schedule_id)
+            shift["scheduleId"] = schedule_id
 
     shift_lookup = defaultdict(list)
 
@@ -280,18 +286,17 @@ def render():
             with row[i + 2]:
                 cell_id = f"{emp['id']}_{day_str}"
 
-                if not viewing_all_schedules:
-                    with st.popover("Add", use_container_width=True):
-                        st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
+                with st.popover("Add", use_container_width=True):
+                    st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
 
-                        if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
-                            st.session_state["pending_cell_shift"] = {
-                                "schedule_id": schedule_id,
-                                "employee_id": emp["id"],
-                                "employee_name": full_name,
-                                "day_str": day_str
-                            }
-                            rerun_app()
+                    if st.button("Add shift", key=f"cell_add_shift_{cell_id}", use_container_width=True):
+                        st.session_state["pending_cell_shift"] = {
+                            "schedule_id": schedule_id,
+                            "employee_id": emp["id"],
+                            "employee_name": full_name,
+                            "day_str": day_str
+                        }
+                        rerun_app()
 
                 if key in shift_lookup:
                     for shift in shift_lookup[key]:
@@ -310,12 +315,10 @@ def render():
                             else:
                                 st.caption(f"{full_name} • {day.strftime('%a %m/%d')}")
 
-                            if viewing_all_schedules:
-                                continue
-
                             if st.button("Edit shift", key=f"edit_shift_{shift_id}", use_container_width=True):
                                 st.session_state["editing_shift"] = {
                                     "id": shift_id,
+                                    "schedule_id": shift.get("scheduleId"),
                                     "employee_id": emp["id"],
                                     "employee_name": full_name,
                                     "start": shift["start"],
@@ -419,6 +422,20 @@ def render():
         @st.dialog("Add Shift")
         def add_shift_dialog():
             default_start = datetime.fromisoformat(f"{pending['day_str']}T08:00:00")
+            schedule_ids = [s["id"] for s in schedule_options_for_forms]
+            selected_schedule_id = pending.get("schedule_id")
+            if selected_schedule_id not in schedule_ids and schedule_ids:
+                selected_schedule_id = schedule_ids[0]
+
+            chosen_schedule_id = st.selectbox(
+                "Schedule",
+                options=schedule_ids,
+                index=schedule_ids.index(selected_schedule_id) if selected_schedule_id in schedule_ids else 0,
+                format_func=lambda x: schedule_name_by_id.get(x, f"Schedule {x}"),
+                disabled=not viewing_all_schedules,
+                key=f"add_shift_schedule_{pending['employee_id']}_{pending['day_str']}"
+            )
+
             start_date = st.date_input("Date", value=default_start.date())
             start_time = st.time_input("Start time", value=default_start.time())
             duration = st.number_input("Duration (hours)", min_value=1, max_value=24, value=8, step=1)
@@ -437,7 +454,7 @@ def render():
                     return
 
                 result = create_shift(
-                    pending["schedule_id"],
+                    chosen_schedule_id,
                     pending["employee_id"],
                     shift_start,
                     int(duration)
@@ -458,6 +475,20 @@ def render():
         @st.dialog("Edit Shift")
         def edit_shift_dialog():
             current_start = datetime.fromisoformat(editing["start"])
+            schedule_ids = [s["id"] for s in schedule_options_for_forms]
+            editing_schedule_id = editing.get("schedule_id")
+            if editing_schedule_id not in schedule_ids and schedule_ids:
+                editing_schedule_id = schedule_ids[0]
+
+            chosen_schedule_id = st.selectbox(
+                "Schedule",
+                options=schedule_ids,
+                index=schedule_ids.index(editing_schedule_id) if editing_schedule_id in schedule_ids else 0,
+                format_func=lambda x: schedule_name_by_id.get(x, f"Schedule {x}"),
+                disabled=not viewing_all_schedules,
+                key=f"edit_schedule_{editing['id']}"
+            )
+
             start_date = st.date_input("Date", value=current_start.date(), key=f"edit_date_{editing['id']}")
             start_time = st.time_input("Start time", value=current_start.time(), key=f"edit_time_{editing['id']}")
             duration = st.number_input(
@@ -483,10 +514,25 @@ def render():
                         st.caption(overlap_detail)
                     return
 
-                result = update_shift(editing["id"], start=shift_start, duration=int(duration))
-                if handle_mutation(result, "Shift updated."):
-                    st.session_state["editing_shift"] = None
-                    rerun_app()
+                if chosen_schedule_id == editing.get("schedule_id"):
+                    result = update_shift(editing["id"], start=shift_start, duration=int(duration))
+                    if handle_mutation(result, "Shift updated."):
+                        st.session_state["editing_shift"] = None
+                        rerun_app()
+                else:
+                    create_result = create_shift(
+                        chosen_schedule_id,
+                        editing["employee_id"],
+                        shift_start,
+                        int(duration),
+                    )
+                    if not handle_mutation(create_result, "Shift moved to selected schedule."):
+                        return
+
+                    delete_result = delete_shift(editing["id"])
+                    if handle_mutation(delete_result, "Original shift removed."):
+                        st.session_state["editing_shift"] = None
+                        rerun_app()
 
             if st.button("Cancel", use_container_width=True):
                 st.session_state["editing_shift"] = None
