@@ -1,8 +1,13 @@
 import requests
 import os
+import urllib3
 
 BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net").rstrip("/")
 VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
+REQUEST_TIMEOUT_SECONDS = float(os.getenv("SCHEDULER_API_TIMEOUT_SECONDS", "20"))
+
+if not VERIFY_SSL:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def call_api(token, operation, args):
     # Avoid mutating caller-owned args (some flows reuse args after API calls).
@@ -35,16 +40,50 @@ def call_api(token, operation, args):
     print("----- EXECUTING API -----")
     print("Operation:", operation)
     print("Args:", request_args)
-    if method == "GET":
-        res = requests.get(url, params=request_args, headers=headers, verify=VERIFY_SSL)
-    elif method == "POST":
-        res = requests.post(url, json=request_args, headers=headers, verify=VERIFY_SSL)
-    elif method == "PUT":
-        res = requests.put(url, json=request_args, headers=headers, verify=VERIFY_SSL)
-    elif method == "DELETE":
-        res = requests.delete(url, headers=headers, verify=VERIFY_SSL)
-    else:
-        raise Exception(f"Unsupported method {method}")
+    try:
+        if method == "GET":
+            res = requests.get(
+                url,
+                params=request_args,
+                headers=headers,
+                verify=VERIFY_SSL,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        elif method == "POST":
+            res = requests.post(
+                url,
+                json=request_args,
+                headers=headers,
+                verify=VERIFY_SSL,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        elif method == "PUT":
+            res = requests.put(
+                url,
+                json=request_args,
+                headers=headers,
+                verify=VERIFY_SSL,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        elif method == "DELETE":
+            res = requests.delete(
+                url,
+                headers=headers,
+                verify=VERIFY_SSL,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        else:
+            raise Exception(f"Unsupported method {method}")
+    except requests.RequestException as exc:
+        print("----- API ERROR -----")
+        print("URL:", url)
+        print("ERROR:", str(exc))
+        return {
+            "__httpStatus": 0,
+            "error": f"API request failed: {exc}",
+            "url": url,
+            "args": request_args,
+        }
 
     if not res.text:
         result = {}

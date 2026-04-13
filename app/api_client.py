@@ -1,9 +1,14 @@
 import requests
 import streamlit as st
 import os
+import urllib3
 
 BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net").rstrip("/")
 VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
+REQUEST_TIMEOUT_SECONDS = float(os.getenv("SCHEDULER_API_TIMEOUT_SECONDS", "20"))
+
+if not VERIFY_SSL:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def get_headers():
     token = st.session_state.get("token")
@@ -19,7 +24,8 @@ def post(path, data = None):
         f"{BASE_URL}{path}",
         json=data,
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 def get(path, params=None):
@@ -27,7 +33,8 @@ def get(path, params=None):
         f"{BASE_URL}{path}",
         headers=get_headers(),
         params=params,
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 def get_my_schedule(employee_id, params=None):
@@ -65,7 +72,8 @@ def update_shift(shift_id, start=None, duration=None):
         f"{BASE_URL}/api/shifts/{shift_id}",
         json=payload,
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 
@@ -73,7 +81,8 @@ def delete_shift(shift_id):
     return requests.delete(
         f"{BASE_URL}/api/shifts/{shift_id}",
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 # -------------------------------
@@ -94,7 +103,8 @@ def update_schedule(schedule_id, name):
         f"{BASE_URL}/api/schedules/{schedule_id}",
         json={"name": name},
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 
@@ -102,7 +112,8 @@ def delete_schedule(schedule_id):
     return requests.delete(
         f"{BASE_URL}/api/schedules/{schedule_id}",
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 # -------------------------------
@@ -119,7 +130,8 @@ def remove_employee_from_schedule(schedule_id, employee_id):
     return requests.delete(
         f"{BASE_URL}/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}",
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 
@@ -161,7 +173,8 @@ def update_employee(employee_id, first_name, last_name, email, role_id=None):
         f"{BASE_URL}/api/employees/{employee_id}",
         json=payload,
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
 
@@ -169,5 +182,6 @@ def delete_employee(employee_id):
     return requests.delete(
         f"{BASE_URL}/api/employees/{employee_id}",
         headers=get_headers(),
-        verify=VERIFY_SSL
+        verify=VERIFY_SSL,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
