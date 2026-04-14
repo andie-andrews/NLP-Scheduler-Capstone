@@ -367,9 +367,13 @@ def _attempt_fill_shift_state_from_message(message, token, state):
             }
             _refresh_employee_schedule_state(token, state)
 
+    employee_schedule_options = state.get("employee_schedule_options") or []
+    if not state.get("scheduleId") and len(employee_schedule_options) == 1:
+        state["scheduleId"] = employee_schedule_options[0]["id"]
+        state["awaiting"] = None
+
     if not state.get("scheduleId"):
         raw_message = message.strip()
-        employee_schedule_options = state.get("employee_schedule_options") or []
         if raw_message.isdigit() and employee_schedule_options:
             choice = int(raw_message)
             if 1 <= choice <= len(employee_schedule_options):

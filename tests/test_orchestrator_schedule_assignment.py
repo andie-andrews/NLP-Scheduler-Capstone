@@ -66,6 +66,28 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
         self.assertIsNone(result)
         self.assertIsNone(state["scheduleId"])
 
+    def test_single_employee_schedule_is_auto_selected(self):
+        state = {
+            "intent": "create_shift",
+            "employeeId": 101,
+            "scheduleId": None,
+            "start": None,
+            "pendingStartDate": None,
+            "durationHours": None,
+            "multiShiftDates": [],
+            "awaiting": "schedule",
+            "employee_options": [],
+            "schedule_options": [],
+            "employee_schedule_options": [{"id": 8, "name": "Bartenders"}],
+            "available_schedule_options": [{"id": 8, "name": "Bartenders"}],
+        }
+
+        with patch.object(orchestrator, "OPERATIONS", {}), patch.object(orchestrator, "call_api", return_value=[]):
+            result = orchestrator._attempt_fill_shift_state_from_message("1", "token", state)
+
+        self.assertIsNone(result)
+        self.assertEqual(state["scheduleId"], 8)
+
 
 if __name__ == "__main__":
     unittest.main()
