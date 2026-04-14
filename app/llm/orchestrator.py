@@ -194,6 +194,14 @@ def _attempt_fill_shift_state_from_message(message, token, state):
         resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
         if resolution and resolution.get("type") == "resolved":
             state["employeeId"] = resolution["employeeId"]
+            matched_employee = next(
+                (employee for employee in employees if employee.get("id") == resolution["employeeId"]),
+                None,
+            )
+            if matched_employee:
+                first_name = (matched_employee.get("firstName") or "").strip()
+                last_name = (matched_employee.get("lastName") or "").strip()
+                state["employeeName"] = f"{first_name} {last_name}".strip() or None
             _refresh_employee_schedule_state(token, state)
         elif resolution and resolution.get("type") == "disambiguation":
             state["employee_options"] = resolution["raw"]
@@ -352,6 +360,11 @@ def _attempt_fill_shift_state_from_message(message, token, state):
 
             state["scheduleId"] = selected_schedule["id"]
             state["awaiting"] = None
+            state["recent_schedule_assignment"] = {
+                "employeeName": state.get("employeeName"),
+                "scheduleName": selected_schedule.get("name"),
+                "scheduleId": selected_schedule.get("id"),
+            }
             _refresh_employee_schedule_state(token, state)
 
     if not state.get("scheduleId"):
@@ -420,6 +433,9 @@ def _resolve_disambiguation_reply(message, state):
             return False
         if selected:
             state["employeeId"] = selected["id"]
+            first_name = (selected.get("firstName") or "").strip()
+            last_name = (selected.get("lastName") or "").strip()
+            state["employeeName"] = f"{first_name} {last_name}".strip() or None
             state["awaiting"] = None
             return True
         return None

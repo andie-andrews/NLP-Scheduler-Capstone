@@ -38,6 +38,10 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertEqual(state["scheduleId"], 5)
+        self.assertEqual(
+            state["recent_schedule_assignment"],
+            {"employeeName": None, "scheduleName": "Kitchen", "scheduleId": 5},
+        )
         self.assertIn(("add-op", {"scheduleId": 5, "employeeId": 101}), calls)
 
     def test_numeric_schedule_not_assigned_without_membership_or_add_flow(self):

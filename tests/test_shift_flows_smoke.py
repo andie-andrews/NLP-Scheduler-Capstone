@@ -345,6 +345,48 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             "Okay — I won't create a shift until the employee is assigned to a schedule.",
         )
 
+    def test_create_shift_flow_surfaces_assignment_notice_before_next_question(self):
+        session = {}
+        result = handle_create_shift_flow(
+            message="2",
+            token="t",
+            session=session,
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "employeeName": "Sophia",
+                "scheduleId": 4,
+                "start": "2026-04-15T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": None,
+                "multiShiftDates": [],
+                "awaiting": "add_to_schedule_selection",
+                "employee_options": [],
+                "schedule_options": [],
+                "recent_schedule_assignment": {
+                    "employeeName": "Sophia",
+                    "scheduleName": "Hostesses",
+                    "scheduleId": 4,
+                },
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: "How long should the shift be (in hours)?",
+            next_missing_shift_field=lambda *_: "duration",
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 4,
+            call_api=lambda *_: {},
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(
+            result,
+            "Done — I added Sophia to Hostesses.\n\nHow long should the shift be (in hours)?",
+        )
+
     def test_create_shift_flow_surfaces_non_overlap_validation_message(self):
         def fake_call_api(_token, operation, _args):
             if operation == "create-shift-op":

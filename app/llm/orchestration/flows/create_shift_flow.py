@@ -99,7 +99,12 @@ def handle_create_shift_flow(
         return f"I found multiple {entity}s. Please choose one:\n" + "\n".join(option_lines)
 
     question = build_create_shift_question(state)
+    recent_assignment = state.pop("recent_schedule_assignment", None)
     if question:
+        if recent_assignment:
+            employee_name = recent_assignment.get("employeeName") or "the employee"
+            schedule_name = recent_assignment.get("scheduleName") or f"schedule {recent_assignment.get('scheduleId')}"
+            question = f"Done — I added {employee_name} to {schedule_name}.\n\n{question}"
         print("[create_shift] Missing field, asking follow-up:", {"awaiting": next_missing_shift_field(state), "question": question})
         state["awaiting"] = next_missing_shift_field(state)
         set_pending_shift_state(session, state)
