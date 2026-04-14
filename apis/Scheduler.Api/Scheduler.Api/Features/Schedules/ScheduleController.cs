@@ -74,6 +74,24 @@ public class ScheduleController : ControllerBase
     return Ok(result);
   }
 
+  [Authorize(Roles = "Supervisor")]
+  [HttpGet("/api/employees/{employeeId}/EmployeeSchedules")]
+  [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
+  public async Task<IActionResult> GetEmployeeSchedules([FromRoute] int employeeId)
+  {
+    var result = await _scheduleDomainService.GetEmployeeSchedules(employeeId);
+    return Ok(result);
+  }
+
+  [Authorize(Roles = "Supervisor")]
+  [HttpGet("/api/managers/{managerId}/ManagerSchedules")]
+  [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
+  public async Task<IActionResult> GetManagerSchedules([FromRoute] int managerId)
+  {
+    var result = await _scheduleDomainService.GetManagerSchedules(managerId);
+    return Ok(result);
+  }
+
   [HttpPost("{scheduleId}/scheduleEmployees/{employeeId}")]
   [ProducesResponseType(204)]
   [ProducesResponseType(typeof(Schedule), 201)]

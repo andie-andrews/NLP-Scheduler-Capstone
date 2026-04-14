@@ -93,6 +93,8 @@ builder.Services.AddScoped<AuthDomainService>();
 
 builder.Services.AddScoped<GetSchedulesHandler>();
 builder.Services.AddScoped<GetScheduleEmployeesHandler>();
+builder.Services.AddScoped<GetEmployeeSchedulesHandler>();
+builder.Services.AddScoped<GetManagerSchedulesHandler>();
 builder.Services.AddScoped<GetScheduleShiftsHandler>();
 builder.Services.AddScoped<CreateShiftHandler>();
 builder.Services.AddScoped<ValidateShiftOverlapHandler>();

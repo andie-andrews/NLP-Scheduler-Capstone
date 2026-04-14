@@ -8,6 +8,8 @@ public class ScheduleDomainService
 {
   private readonly GetSchedulesHandler _getSchedules;
   private readonly GetScheduleEmployeesHandler _getEmployees;
+  private readonly GetEmployeeSchedulesHandler _getEmployeeSchedulesHandler;
+  private readonly GetManagerSchedulesHandler _getManagerSchedulesHandler;
   private readonly AddEmployeeToScheduleHandler _addEmployeeToScheduleHandler;
   private readonly DeleteEmployeeToScheduleHandler _deleteEmployeeToScheduleHandler;
   private readonly CreateScheduleHandler _createScheduleHandler;
@@ -17,6 +19,8 @@ public class ScheduleDomainService
   public ScheduleDomainService(
     GetSchedulesHandler getSchedules,
     GetScheduleEmployeesHandler getEmployees,
+    GetEmployeeSchedulesHandler getEmployeeSchedulesHandler,
+    GetManagerSchedulesHandler getManagerSchedulesHandler,
     CreateScheduleHandler createScheduleHandler,
     UpdateScheduleHandler updateScheduleHandler,
     DeleteScheduleHandler deleteScheduleHandler,
@@ -25,6 +29,8 @@ public class ScheduleDomainService
   {
     _getSchedules = getSchedules;
     _getEmployees = getEmployees;
+    _getEmployeeSchedulesHandler = getEmployeeSchedulesHandler;
+    _getManagerSchedulesHandler = getManagerSchedulesHandler;
     _createScheduleHandler = createScheduleHandler;
     _updateScheduleHandler = updateScheduleHandler;
     _deleteScheduleHandler = deleteScheduleHandler;
@@ -46,6 +52,12 @@ public class ScheduleDomainService
 
   public Task<IEnumerable<Scheduler.Api.Infrastructure.Domain.Models.Employee>> GetScheduleEmployees(int scheduleId)
     => _getEmployees.Handle(scheduleId);
+
+  public Task<IEnumerable<Schedule>> GetEmployeeSchedules(int employeeId)
+    => _getEmployeeSchedulesHandler.Handle(employeeId);
+
+  public Task<IEnumerable<Schedule>> GetManagerSchedules(int managerId)
+    => _getManagerSchedulesHandler.Handle(managerId);
 
   public Task AddEmployee(int scheduleId, int employeeId)
     => _addEmployeeToScheduleHandler.Handle(scheduleId, employeeId);

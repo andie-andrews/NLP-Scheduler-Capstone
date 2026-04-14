@@ -711,6 +711,94 @@
           }
         }
       }
+    },
+    "/api/employees/{employeeId}/EmployeeSchedules": {
+      "get": {
+        "tags": [
+          "Schedule"
+        ],
+        "operationId": "getEmployeeSchedules",
+        "summary": "Get schedulable resources for employee",
+        "description": "Returns schedules the employee can be scheduled on.",
+        "x-operation-type": "query",
+        "x-intent": [
+          "get schedules an employee can be scheduled on",
+          "list schedulable schedules for employee",
+          "which schedules can this employee work on"
+        ],
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/managers/{managerId}/ManagerSchedules": {
+      "get": {
+        "tags": [
+          "Schedule"
+        ],
+        "operationId": "getManagerSchedules",
+        "summary": "Get manageable resources for manager",
+        "description": "Returns schedules the manager can create shifts for.",
+        "x-operation-type": "query",
+        "x-intent": [
+          "get schedules a manager can schedule on",
+          "list manageable schedules for manager",
+          "which schedules can this manager create shifts for"
+        ],
+        "parameters": [
+          {
+            "name": "managerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
     }
   },
   "components": {
