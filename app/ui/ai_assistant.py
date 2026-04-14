@@ -21,7 +21,7 @@ def render_ai_assistant():
             "Ask for schedule help, shift summaries, and staffing insights in plain language.",
         )
 
-        st.caption("Using Orchestrator: V2 (OpenAPI)")
+        st.caption("Using Orchestrator (OpenAPI)")
 
     with st.container(key="assistant_chat_history"):
         _render_chat_history()

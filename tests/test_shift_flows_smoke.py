@@ -1,5 +1,6 @@
 import unittest
 from datetime import date
+from unittest.mock import Mock
 
 from app.llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
 from app.llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
@@ -306,6 +307,88 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         self.assertEqual(result["data"]["createdCount"], 0)
         self.assertEqual(result["data"]["failedCount"], 1)
         self.assertIn("No shifts were created", result["summary"])
+
+    def test_create_shift_flow_returns_direct_reply_from_state_fill(self):
+        clear_pending_shift_state = Mock()
+        result = handle_create_shift_flow(
+            message="no",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": None,
+                "start": None,
+                "pendingStartDate": None,
+                "durationHours": None,
+                "multiShiftDates": [],
+                "awaiting": "add_to_schedule_confirmation",
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: {
+                "type": "reply",
+                "message": "Okay — I won't create a shift until the employee is assigned to a schedule.",
+            },
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=clear_pending_shift_state,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=lambda *_: {},
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(
+            result,
+            "Okay — I won't create a shift until the employee is assigned to a schedule.",
+        )
+        clear_pending_shift_state.assert_called_once()
+
+    def test_create_shift_flow_surfaces_assignment_notice_before_next_question(self):
+        session = {}
+        result = handle_create_shift_flow(
+            message="2",
+            token="t",
+            session=session,
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "employeeName": "Sophia",
+                "scheduleId": 4,
+                "start": "2026-04-15T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": None,
+                "multiShiftDates": [],
+                "awaiting": "add_to_schedule_selection",
+                "employee_options": [],
+                "schedule_options": [],
+                "recent_schedule_assignment": {
+                    "employeeName": "Sophia",
+                    "scheduleName": "Hostesses",
+                    "scheduleId": 4,
+                },
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: "How long should the shift be (in hours)?",
+            next_missing_shift_field=lambda *_: "duration",
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 4,
+            call_api=lambda *_: {},
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(
+            result,
+            "Done — I added Sophia to Hostesses.\n\nHow long should the shift be (in hours)?",
+        )
 
     def test_create_shift_flow_surfaces_non_overlap_validation_message(self):
         def fake_call_api(_token, operation, _args):

@@ -107,12 +107,27 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
         "saturday": 5,
         "sunday": 6,
     }
+    weekday_aliases = {
+        "monday": ["monday", "mon"],
+        "tuesday": ["tuesday", "tue", "tues"],
+        "wednesday": ["wednesday", "wed"],
+        "thursday": ["thursday", "thu", "thur", "thurs"],
+        "friday": ["friday", "fri"],
+        "saturday": ["saturday", "sat"],
+        "sunday": ["sunday", "sun"],
+    }
+
+    alias_to_weekday = {
+        alias: canonical
+        for canonical, aliases in weekday_aliases.items()
+        for alias in aliases
+    }
 
     def list_from_weekday_expression(expression: str):
         values = []
-        for day_name, day_index in weekdays.items():
-            if re.search(rf"\b{day_name}\b", expression):
-                values.append(day_index)
+        for alias, canonical_name in alias_to_weekday.items():
+            if re.search(rf"\b{alias}\b", expression):
+                values.append(weekdays[canonical_name])
         return sorted(set(values))
 
     number_words = {
@@ -130,15 +145,16 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
         "twelve": 12,
     }
 
+    weekday_pattern = r"(?:monday|mon|tuesday|tue|tues|wednesday|wed|thursday|thu|thur|thurs|friday|fri|saturday|sat|sunday|sun)"
     range_match = re.search(
-        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s*"
+        rf"\b({weekday_pattern})\b\s*"
         r"(?:-|–|through|thru|to)\s*"
-        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+        rf"\b({weekday_pattern})\b",
         normalized,
     )
-    if range_match and ("next week" in normalized or "this week" in normalized):
-        start_day = weekdays[range_match.group(1)]
-        end_day = weekdays[range_match.group(2)]
+    if range_match:
+        start_day = weekdays[alias_to_weekday[range_match.group(1)]]
+        end_day = weekdays[alias_to_weekday[range_match.group(2)]]
         span = []
         day = start_day
         while True:
@@ -152,7 +168,11 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
 
         week_offset = 7 if "next week" in normalized else 0
         target_week_start = start_of_this_week + timedelta(days=week_offset)
-        return [target_week_start + timedelta(days=(weekday + 1) % 7) for weekday in span]
+        dates = [target_week_start + timedelta(days=(weekday + 1) % 7) for weekday in span]
+        if "next week" not in normalized and "this week" not in normalized:
+            if dates and dates[-1] < now.date():
+                dates = [date + timedelta(days=7) for date in dates]
+        return dates
 
     every_match = re.search(
         r"\bevery\s+(.+?)\s+for\s+(?:the\s+)?next\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+weeks?\b",

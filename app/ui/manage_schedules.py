@@ -3,6 +3,7 @@ from api_client import (
     get_schedules,
     get_schedule_employees,
     get_schedule_shifts,
+    get_employee_schedules,
     get_my_schedule,
     create_shift,
     update_shift,
@@ -146,6 +147,19 @@ def render():
         {"id": s["id"], "name": s["name"]}
         for s in schedules
     ]
+
+    def employee_schedule_options(employee_id: int):
+        employee_schedule_response = get_employee_schedules(employee_id)
+        if employee_schedule_response.status_code != 200:
+            return []
+
+        try:
+            employee_schedules = employee_schedule_response.json() or []
+        except Exception:
+            return []
+
+        available_schedule_ids = {s["id"] for s in schedule_options_for_forms}
+        return [s for s in employee_schedules if s.get("id") in available_schedule_ids]
 
     schedule_options = [all_schedules_option] + [s["id"] for s in schedules]
     selected_schedule_state = st.session_state.get("manage_schedules_selected_schedule")
@@ -467,17 +481,27 @@ def render():
         @st.dialog("Add Shift")
         def add_shift_dialog():
             default_start = datetime.fromisoformat(f"{pending['day_str']}T08:00:00")
-            schedule_ids = [s["id"] for s in schedule_options_for_forms]
+            employee_schedules = employee_schedule_options(pending["employee_id"])
+            schedule_ids = [s["id"] for s in employee_schedules]
             selected_schedule_id = pending.get("schedule_id")
             if selected_schedule_id not in schedule_ids and schedule_ids:
                 selected_schedule_id = schedule_ids[0]
+
+            if not schedule_ids:
+                st.warning(
+                    f"{pending['employee_name']} is not assigned to any schedules yet. "
+                    "Add the employee to a schedule before creating shifts."
+                )
+                if st.button("Close", use_container_width=True):
+                    st.session_state["pending_cell_shift"] = None
+                    rerun_app()
+                return
 
             chosen_schedule_id = st.selectbox(
                 "Schedule",
                 options=schedule_ids,
                 index=schedule_ids.index(selected_schedule_id) if selected_schedule_id in schedule_ids else 0,
                 format_func=lambda x: schedule_name_by_id.get(x, f"Schedule {x}"),
-                disabled=not viewing_all_schedules,
                 key=f"add_shift_schedule_{pending['employee_id']}_{pending['day_str']}"
             )
 
@@ -520,17 +544,27 @@ def render():
         @st.dialog("Edit Shift")
         def edit_shift_dialog():
             current_start = datetime.fromisoformat(editing["start"])
-            schedule_ids = [s["id"] for s in schedule_options_for_forms]
+            employee_schedules = employee_schedule_options(editing["employee_id"])
+            schedule_ids = [s["id"] for s in employee_schedules]
             editing_schedule_id = editing.get("schedule_id")
             if editing_schedule_id not in schedule_ids and schedule_ids:
                 editing_schedule_id = schedule_ids[0]
+
+            if not schedule_ids:
+                st.warning(
+                    f"{editing['employee_name']} is not assigned to any schedules yet. "
+                    "Add the employee to a schedule before editing this shift."
+                )
+                if st.button("Close", use_container_width=True):
+                    st.session_state["editing_shift"] = None
+                    rerun_app()
+                return
 
             chosen_schedule_id = st.selectbox(
                 "Schedule",
                 options=schedule_ids,
                 index=schedule_ids.index(editing_schedule_id) if editing_schedule_id in schedule_ids else 0,
                 format_func=lambda x: schedule_name_by_id.get(x, f"Schedule {x}"),
-                disabled=not viewing_all_schedules,
                 key=f"edit_schedule_{editing['id']}"
             )
 
