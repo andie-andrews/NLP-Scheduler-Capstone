@@ -282,6 +282,34 @@ def _attempt_fill_shift_state_from_message(message, token, state):
                 "type": "reply",
                 "message": "Okay — I won't create a shift until the employee is assigned to a schedule.",
             }
+        else:
+            candidate_schedules = state.get("available_schedule_options") or []
+            if candidate_schedules:
+                selected_from_reply = None
+                choice_match = re.search(r"\b(\d+)\b", message or "")
+                if choice_match:
+                    choice = int(choice_match.group(1))
+                    if 1 <= choice <= len(candidate_schedules):
+                        selected_from_reply = candidate_schedules[choice - 1]
+                    else:
+                        selected_from_reply = next(
+                            (schedule for schedule in candidate_schedules if schedule.get("id") == choice),
+                            None,
+                        )
+
+                if selected_from_reply is None:
+                    reply_text = (message or "").strip().lower()
+                    selected_from_reply = next(
+                        (
+                            schedule
+                            for schedule in candidate_schedules
+                            if (schedule.get("name") or "").strip().lower() == reply_text
+                        ),
+                        None,
+                    )
+
+                if selected_from_reply is not None:
+                    state["awaiting"] = "add_to_schedule_selection"
 
     if state.get("awaiting") == "add_to_schedule_selection":
         candidate_schedules = state.get("available_schedule_options") or []
@@ -291,6 +319,11 @@ def _attempt_fill_shift_state_from_message(message, token, state):
             choice = int(choice_match.group(1))
             if 1 <= choice <= len(candidate_schedules):
                 selected_schedule = candidate_schedules[choice - 1]
+            else:
+                selected_schedule = next(
+                    (schedule for schedule in candidate_schedules if schedule.get("id") == choice),
+                    None,
+                )
 
         if selected_schedule is None:
             schedule_name = extract_schedule_name(message) or (message or "").strip()
@@ -330,11 +363,14 @@ def _attempt_fill_shift_state_from_message(message, token, state):
                 state["scheduleId"] = employee_schedule_options[choice - 1]["id"]
                 state["awaiting"] = None
                 return None
-
-        if raw_message.isdigit():
-            state["scheduleId"] = int(raw_message)
-            state["awaiting"] = None
-            return None
+            matching_schedule = next(
+                (schedule for schedule in employee_schedule_options if schedule.get("id") == choice),
+                None,
+            )
+            if matching_schedule:
+                state["scheduleId"] = matching_schedule["id"]
+                state["awaiting"] = None
+                return None
 
         schedule_name = extract_schedule_name(message)
         if not schedule_name and state.get("awaiting") == "schedule":
