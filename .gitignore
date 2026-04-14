@@ -210,3 +210,5 @@ __marimo__/
 /apis/Scheduler.Api/Scheduler.Api/obj
 /apis/Scheduler.Api/Scheduler.Database/bin/Debug
 /apis/Scheduler.Api/Scheduler.Database/obj/Debug
+/apis/Scheduler.Api/.vs/ProjectEvaluation
+/apis/Scheduler.Api/Scheduler.Database

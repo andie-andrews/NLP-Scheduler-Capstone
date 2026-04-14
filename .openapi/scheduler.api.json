@@ -712,7 +712,7 @@
         }
       }
     },
-    "/api/employees/{employeeId}/EmployeeSchedules": {
+    "/api/employees/{employeeId}/employeeSchedules": {
       "get": {
         "tags": [
           "Schedule"
@@ -756,7 +756,7 @@
         }
       }
     },
-    "/api/managers/{managerId}/ManagerSchedules": {
+    "/api/managers/{managerId}/managerSchedules": {
       "get": {
         "tags": [
           "Schedule"

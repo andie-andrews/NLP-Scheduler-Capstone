@@ -75,7 +75,7 @@ public class ScheduleController : ControllerBase
   }
 
   [Authorize(Roles = "Supervisor")]
-  [HttpGet("/api/employees/{employeeId}/EmployeeSchedules")]
+  [HttpGet("/api/employees/{employeeId}/employeeSchedules")]
   [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
   public async Task<IActionResult> GetEmployeeSchedules([FromRoute] int employeeId)
   {
@@ -84,7 +84,7 @@ public class ScheduleController : ControllerBase
   }
 
   [Authorize(Roles = "Supervisor")]
-  [HttpGet("/api/managers/{managerId}/ManagerSchedules")]
+  [HttpGet("/api/managers/{managerId}/managerSchedules")]
   [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
   public async Task<IActionResult> GetManagerSchedules([FromRoute] int managerId)
   {
