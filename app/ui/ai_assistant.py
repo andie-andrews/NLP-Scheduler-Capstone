@@ -30,7 +30,8 @@ def render_ai_assistant():
     with st.container(key="assistant_chat_history"):
         _render_chat_history()
 
-    with st.container(key="assistant_footer_actions"):
+    footer_cols = st.columns([5, 1], gap="small")
+    with footer_cols[1]:
         if st.button("🆕 New chat", use_container_width=True):
             _start_new_chat()
             st.rerun()
@@ -71,14 +72,6 @@ def _inject_assistant_sticky_css():
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding: 0.3rem 0.2rem 0.75rem 0.2rem;
-            }
-
-            .st-key-assistant_footer_actions {
-                position: fixed;
-                right: 2rem;
-                bottom: 4.7rem;
-                width: 10rem;
-                z-index: 30;
             }
         </style>
         """,
