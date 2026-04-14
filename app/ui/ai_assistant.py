@@ -27,14 +27,13 @@ def render_ai_assistant():
             f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
         )
 
-        action_cols = st.columns([5, 1], gap="small")
-        with action_cols[1]:
-            if st.button("🆕 New chat", use_container_width=True):
-                _start_new_chat()
-                st.rerun()
-
     with st.container(key="assistant_chat_history"):
         _render_chat_history()
+
+    with st.container(key="assistant_footer_actions"):
+        if st.button("🆕 New chat", use_container_width=True):
+            _start_new_chat()
+            st.rerun()
 
     user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
     if not user_input:
@@ -72,6 +71,14 @@ def _inject_assistant_sticky_css():
                 overflow-y: auto;
                 overflow-x: hidden;
                 padding: 0.3rem 0.2rem 0.75rem 0.2rem;
+            }
+
+            .st-key-assistant_footer_actions {
+                position: fixed;
+                right: 2rem;
+                bottom: 4.7rem;
+                width: 10rem;
+                z-index: 30;
             }
         </style>
         """,
