@@ -297,6 +297,52 @@ def _extract_explicit_employee_id(message: str):
     return int(match.group(1))
 
 
+def _get_employee_directory(token: str, operations: dict, api_caller, memory):
+    cached = getattr(memory, "employee_directory", None) if memory else None
+    if isinstance(cached, list) and cached:
+        return cached
+
+    search_op = operations.get("searchEmployees")
+    if not search_op:
+        return []
+
+    employees = api_caller(token, search_op, {"query": ""}) or []
+    if memory and hasattr(memory, "save_employee_directory"):
+        memory.save_employee_directory(employees)
+    elif memory is not None:
+        setattr(memory, "employee_directory", employees)
+    return employees
+
+
+def _resolve_employee_from_directory(name: str, employees: list):
+    normalized = (name or "").strip().lower()
+    if not normalized or not isinstance(employees, list):
+        return None
+
+    exact_full_matches = []
+    exact_first_matches = []
+    partial_matches = []
+
+    for emp in employees:
+        first_name = (emp.get("firstName") or "").strip().lower()
+        last_name = (emp.get("lastName") or "").strip().lower()
+        full_name = f"{first_name} {last_name}".strip()
+
+        if normalized == full_name and full_name:
+            exact_full_matches.append(emp)
+        elif normalized == first_name and first_name:
+            exact_first_matches.append(emp)
+        elif normalized in full_name and full_name:
+            partial_matches.append(emp)
+
+    matches = exact_full_matches or exact_first_matches or partial_matches
+    if not matches:
+        return {"type": "not_found"}
+    if len(matches) == 1:
+        return {"type": "resolved", "employeeId": matches[0]["id"]}
+    return {"type": "disambiguation", "raw": matches}
+
+
 def _extract_employee_name_parts(message: str):
     text = (message or "").strip()
     quoted = re.search(r"['\"]([^'\"]+)['\"]", text)
@@ -934,9 +980,8 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     memory = session.get("memory") if session else None
     last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
-    employees = call_api(token, OPERATIONS["searchEmployees"], {"query": ""})
-
-    name = find_name_in_message(message, employees)
+    employees = _get_employee_directory(token, OPERATIONS, call_api, memory)
+    name = find_name_in_message(message, employees) if employees else None
     effective_message = message
 
     if explicit_employee_id is not None:
@@ -946,7 +991,16 @@ def run_orchestrator(message: str, token: str, session: dict):
         elif memory is not None:
             setattr(memory, "last_employee_id", explicit_employee_id)
     elif name:
-        resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
+        local_resolution = _resolve_employee_from_directory(name, employees)
+        if local_resolution and local_resolution.get("type") == "resolved":
+            resolution = local_resolution
+        elif local_resolution and local_resolution.get("type") == "disambiguation":
+            resolution = {
+                "type": "disambiguation",
+                "raw": local_resolution["raw"],
+            }
+        else:
+            resolution = resolve_employee_id(token, name, OPERATIONS, call_api)
 
         if resolution["type"] == "not_found":
             return f"No employee found for '{name}'"
@@ -1059,6 +1113,12 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     print("----- API RESULT -----")
     print(result)
+
+    if op_id in {"createEmployee", "updateEmployee", "deleteEmployee"} and memory is not None:
+        if hasattr(memory, "save_employee_directory"):
+            memory.save_employee_directory(None)
+        else:
+            setattr(memory, "employee_directory", None)
 
     if op_id == "getEmployeeShifts":
         if memory is not None and args.get("employeeId") is not None:

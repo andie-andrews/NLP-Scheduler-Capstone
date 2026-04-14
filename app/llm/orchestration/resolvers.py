@@ -4,7 +4,31 @@ def resolve_employee_id(token, name, operations, api_caller):
     if not search_op:
         return None
 
-    results = api_caller(token, search_op, {"query": name})
+    target = (name or "").strip().lower()
+    if not target:
+        return {"type": "not_found", "name": name}
+
+    # NOTE: We intentionally avoid query-specific employee searches because
+    # some API deployments hang on non-empty query values. Pull the directory
+    # once and resolve in-process instead.
+    directory = api_caller(token, search_op, {"query": ""}) or []
+
+    exact_full = []
+    exact_first = []
+    partial = []
+    for employee in directory:
+        first_name = (employee.get("firstName") or "").strip().lower()
+        last_name = (employee.get("lastName") or "").strip().lower()
+        full_name = f"{first_name} {last_name}".strip()
+
+        if target == full_name and full_name:
+            exact_full.append(employee)
+        elif target == first_name and first_name:
+            exact_first.append(employee)
+        elif target in full_name and full_name:
+            partial.append(employee)
+
+    results = exact_full or exact_first or partial
 
     if not results:
         return {"type": "not_found", "name": name}

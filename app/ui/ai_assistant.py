@@ -1,70 +1,46 @@
-import streamlit as st
-from llm.orchestrator import run_orchestrator
-from llm.memory import ConversationMemory
 import os
 from datetime import datetime
+
+import streamlit as st
+
+from llm.memory import ConversationMemory
+from llm.orchestrator import run_orchestrator
 from ui.theme import render_page_header
 
 
-def render_ai_assistant(embedded: bool = False):
-    if embedded:
-        st.caption("Ask for schedule help, shift summaries, and staffing insights in plain language.")
-    else:
-        render_page_header("🤖 AI Scheduler Assistant", "Ask for schedule help, shift summaries, and staffing insights in plain language.")
+def render_ai_assistant():
+    _inject_assistant_sticky_css()
 
-    # -------------------------------
-    # 🧠 Memory (session)
-    # -------------------------------
     if "memory" not in st.session_state:
         st.session_state.memory = ConversationMemory()
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
 
-    # -------------------------------
-    # 🧪 Debug: which orchestrator
-    # -------------------------------
-    _inject_sticky_new_chat_css()
-    with st.container(key="assistant_panel_body"):
-        with st.container(key="assistant_header"):
-            use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
-            st.caption(
-                f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
-            )
+    with st.container(key="assistant_sticky_header"):
+        render_page_header(
+            "🤖 AI Scheduler Assistant",
+            "Ask for schedule help, shift summaries, and staffing insights in plain language.",
+        )
 
-            action_cols = st.columns([4, 2], gap="small")
-            with action_cols[1]:
-                if st.button("🆕 New chat", key="new_chat_footer", use_container_width=True):
-                    _start_new_chat()
-                    st.rerun()
+        use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
+        st.caption(
+            f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
+        )
 
-        with st.container(key="assistant_chat_scroll"):
-            st.markdown("<div class='assistant-chat-anchor'></div>", unsafe_allow_html=True)
-            _render_chat_history()
+    with st.container(key="assistant_chat_history"):
+        _render_chat_history()
 
-        # -------------------------------
-        # 💬 Chat Input footer
-        # -------------------------------
-        user_input = None
-        submitted = False
-        with st.container(key="assistant_input_footer"):
-            with st.form("assistant_input_form", clear_on_submit=True):
-                input_cols = st.columns([8, 2], gap="small")
-                with input_cols[0]:
-                    user_input = st.text_input(
-                        "Ask something about schedules, shifts, or hours...",
-                        label_visibility="collapsed",
-                        placeholder="Ask something about schedules, shifts, or hours...",
-                    )
-                with input_cols[1]:
-                    submitted = st.form_submit_button("Send", use_container_width=True)
+    footer_cols = st.columns([5, 1], gap="small")
+    with footer_cols[1]:
+        if st.button("🆕 New chat", use_container_width=True):
+            _start_new_chat()
+            st.rerun()
 
-    if not submitted or not user_input:
+    user_input = st.chat_input("Ask something about schedules, shifts, or hours...")
+    if not user_input:
         return
 
-    st.session_state.chat_messages.append({
-        "role": "user",
-        "content": user_input,
-    })
+    st.session_state.chat_messages.append({"role": "user", "content": user_input})
 
     response = run_orchestrator(
         message=user_input,
@@ -76,69 +52,31 @@ def render_ai_assistant(embedded: bool = False):
         },
     )
 
-    st.session_state.chat_messages.append({
-        "role": "assistant",
-        "content": response,
-    })
+    st.session_state.chat_messages.append({"role": "assistant", "content": response})
     st.rerun()
 
 
+def _render_chat_history():
+    for message in st.session_state.chat_messages:
+        with st.chat_message(message["role"]):
+            render_response(message["content"])
 
-def _inject_sticky_new_chat_css():
+
+def _inject_assistant_sticky_css():
     st.markdown(
         """
         <style>
-            .st-key-assistant_panel_body {
-                height: calc(var(--assistant-pane-height, 900px) - 4rem);
-                min-height: 0 !important;
-                display: grid;
-                grid-template-rows: auto 1fr auto;
-                row-gap: 0.45rem;
-            }
-
-            .st-key-assistant_chat_scroll {
-                height: 100%;
-                min-height: 0;
+            .st-key-assistant_chat_history {
+                height: calc(100vh - 23rem);
+                min-height: 16rem;
                 overflow-y: auto;
                 overflow-x: hidden;
-                padding: 0.5rem 0.45rem 0.65rem 0.2rem;
-                border: 1px solid rgba(120, 120, 120, 0.2);
-                border-radius: 0.8rem;
-                background: rgba(255, 255, 255, 0.55);
-            }
-
-            .assistant-chat-anchor {
-                display: block;
-                min-height: 100%;
-            }
-
-            .st-key-assistant_input_footer {
-                background: var(--background-color, #f6f8fc);
-                padding-top: 0.45rem;
-            }
-
-            .st-key-assistant_input_footer input {
-                border-radius: 999px;
-            }
-
-            .st-key-assistant_chat_scroll::-webkit-scrollbar,
-            .st-key-main_scroll_pane::-webkit-scrollbar {
-                width: 10px;
-            }
-
-            .st-key-assistant_chat_scroll::-webkit-scrollbar-thumb,
-            .st-key-main_scroll_pane::-webkit-scrollbar-thumb {
-                background: rgba(120, 120, 120, 0.45);
-                border-radius: 999px;
+                padding: 0.3rem 0.2rem 0.75rem 0.2rem;
             }
         </style>
         """,
         unsafe_allow_html=True,
     )
-def _render_chat_history():
-    for message in st.session_state.chat_messages:
-        with st.chat_message(message["role"]):
-            render_response(message["content"])
 
 
 def _start_new_chat():
@@ -233,6 +171,7 @@ def render_response(response):
 def format_date(dt_str):
     dt = datetime.fromisoformat(dt_str)
     return dt.strftime("%A, %b %d")
+
 
 def format_time(dt_str):
     dt = datetime.fromisoformat(dt_str)
