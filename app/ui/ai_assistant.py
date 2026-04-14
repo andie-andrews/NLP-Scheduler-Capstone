@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 
 import streamlit as st
@@ -22,10 +21,7 @@ def render_ai_assistant():
             "Ask for schedule help, shift summaries, and staffing insights in plain language.",
         )
 
-        use_orchestrator_v2 = os.getenv("USE_ORCHESTRATOR_V2", "true").lower() == "true"
-        st.caption(
-            f"Using Orchestrator: {'V2 (OpenAPI)' if use_orchestrator_v2 else 'V1 (Legacy)'}"
-        )
+        st.caption("Using Orchestrator: V2 (OpenAPI)")
 
     with st.container(key="assistant_chat_history"):
         _render_chat_history()
