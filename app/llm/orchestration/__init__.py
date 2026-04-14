@@ -1,1 +1,1 @@
-"""Shared helpers for orchestrator_v2."""
+"""Shared helpers for the orchestrator."""

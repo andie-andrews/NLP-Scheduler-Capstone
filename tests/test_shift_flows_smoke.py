@@ -307,6 +307,44 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         self.assertEqual(result["data"]["failedCount"], 1)
         self.assertIn("No shifts were created", result["summary"])
 
+    def test_create_shift_flow_returns_direct_reply_from_state_fill(self):
+        result = handle_create_shift_flow(
+            message="no",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": None,
+                "start": None,
+                "pendingStartDate": None,
+                "durationHours": None,
+                "multiShiftDates": [],
+                "awaiting": "add_to_schedule_confirmation",
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: {
+                "type": "reply",
+                "message": "Okay — I won't create a shift until the employee is assigned to a schedule.",
+            },
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=lambda *_: {},
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(
+            result,
+            "Okay — I won't create a shift until the employee is assigned to a schedule.",
+        )
+
     def test_create_shift_flow_surfaces_non_overlap_validation_message(self):
         def fake_call_api(_token, operation, _args):
             if operation == "create-shift-op":

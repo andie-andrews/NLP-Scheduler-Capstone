@@ -49,6 +49,9 @@ def get_schedule_employees(schedule_id):
 def get_schedule_shifts(schedule_id, params=None):
     return get(f"/api/schedules/{schedule_id}/shifts", params=params)
 
+def get_employee_schedules(employee_id):
+    return get(f"/api/employees/{employee_id}/employeeSchedules")
+
 def create_shift(schedule_id, employee_id, start, duration):
     return post(
         f"/api/schedules/{schedule_id}/shifts",

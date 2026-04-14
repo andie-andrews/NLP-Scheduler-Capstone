@@ -90,6 +90,8 @@ def handle_create_shift_flow(
 
     disambiguation = attempt_fill_shift_state_from_message(message, token, state)
     if disambiguation:
+        if disambiguation.get("type") == "reply":
+            return disambiguation.get("message")
         print("[create_shift] Disambiguation required:", disambiguation)
         options = disambiguation["options"]
         option_lines = [f"{idx + 1}. {value}" for idx, value in enumerate(options)]
