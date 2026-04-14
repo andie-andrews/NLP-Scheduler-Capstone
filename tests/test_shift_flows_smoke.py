@@ -1,5 +1,6 @@
 import unittest
 from datetime import date
+from unittest.mock import Mock
 
 from app.llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
 from app.llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
@@ -308,6 +309,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         self.assertIn("No shifts were created", result["summary"])
 
     def test_create_shift_flow_returns_direct_reply_from_state_fill(self):
+        clear_pending_shift_state = Mock()
         result = handle_create_shift_flow(
             message="no",
             token="t",
@@ -334,7 +336,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             build_create_shift_question=lambda *_: None,
             next_missing_shift_field=lambda *_: None,
             set_pending_shift_state=lambda *_: None,
-            clear_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=clear_pending_shift_state,
             normalize_schedule_id_arg=lambda *_: 22,
             call_api=lambda *_: {},
             week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
@@ -344,6 +346,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             result,
             "Okay — I won't create a shift until the employee is assigned to a schedule.",
         )
+        clear_pending_shift_state.assert_called_once()
 
     def test_create_shift_flow_surfaces_assignment_notice_before_next_question(self):
         session = {}

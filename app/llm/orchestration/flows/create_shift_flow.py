@@ -91,6 +91,7 @@ def handle_create_shift_flow(
     disambiguation = attempt_fill_shift_state_from_message(message, token, state)
     if disambiguation:
         if disambiguation.get("type") == "reply":
+            clear_pending_shift_state(session)
             return disambiguation.get("message")
         print("[create_shift] Disambiguation required:", disambiguation)
         options = disambiguation["options"]
