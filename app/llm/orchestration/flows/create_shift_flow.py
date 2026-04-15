@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def _extract_error_detail(response_payload):
@@ -38,6 +38,29 @@ def _extract_error_detail(response_payload):
             return first_line
 
     return response_payload.get("title") or response_payload.get("detail") or response_payload.get("message")
+
+
+def _format_shift_time(value: datetime) -> str:
+    return value.strftime("%I:%M %p").lstrip("0")
+
+
+def _format_shift_date(value: datetime) -> str:
+    return f"{value.strftime('%B')} {value.day}, {value.year}"
+
+
+def _build_single_shift_success_summary(state: dict, created_shift: dict) -> str:
+    employee_name = (
+        state.get("employeeName")
+        or state.get("employeeDisplayName")
+        or state.get("employee")
+        or f"employee {created_shift.get('employeeId')}"
+    )
+    start_value = datetime.fromisoformat(created_shift["start"])
+    end_value = start_value + timedelta(hours=created_shift["durationHours"])
+    return (
+        f"Shift created for {employee_name} on {_format_shift_date(start_value)} "
+        f"from {_format_shift_time(start_value)} to {_format_shift_time(end_value)}."
+    )
 
 
 def handle_create_shift_flow(
@@ -262,7 +285,7 @@ def handle_create_shift_flow(
     elif len(shifts_to_create) > 1:
         summary = f"Shifts created successfully ({len(successful_creates)} new)."
     else:
-        summary = "Shift created successfully."
+        summary = _build_single_shift_success_summary(state, successful_creates[0])
 
     return {
         "summary": summary,

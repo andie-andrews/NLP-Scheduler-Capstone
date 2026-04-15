@@ -208,7 +208,10 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
         )
 
-        self.assertEqual(result["summary"], "Shift created successfully.")
+        self.assertEqual(
+            result["summary"],
+            "Shift created for employee 10 on April 20, 2026 from 9:00 AM to 5:00 PM.",
+        )
         self.assertEqual(len(create_calls), 1)
         self.assertEqual(result["data"]["createdCount"], 1)
         self.assertEqual(result["data"]["failedCount"], 0)
