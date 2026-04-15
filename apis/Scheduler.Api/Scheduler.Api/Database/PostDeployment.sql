@@ -9,39 +9,68 @@ SET NOCOUNT ON;
 /* Legacy cleanup from prior seed drafts */
 IF OBJECT_ID('dbo.Employees', 'U') IS NOT NULL
 BEGIN
-  DECLARE @LegacyEmployees TABLE (FirstName NVARCHAR(50), LastName NVARCHAR(50), PRIMARY KEY (FirstName, LastName));
-
-  INSERT INTO @LegacyEmployees (FirstName, LastName)
-  VALUES
-    ('Nora', 'Lead'),
-    ('Caleb', 'Floor'),
-    ('Zoe', 'Ops');
-
-  IF OBJECT_ID('dbo.ScheduleEmployees', 'U') IS NOT NULL
+  IF EXISTS (SELECT 1 FROM Employees WHERE FirstName = 'Nora' AND LastName = 'Lead')
   BEGIN
-    DELETE se
-    FROM ScheduleEmployees se
-    JOIN Employees e ON e.Id = se.EmployeeId
-    JOIN @LegacyEmployees le
-      ON le.FirstName = e.FirstName
-     AND le.LastName = e.LastName;
+    IF OBJECT_ID('dbo.ScheduleEmployees', 'U') IS NOT NULL
+    BEGIN
+      DELETE se
+      FROM ScheduleEmployees se
+      JOIN Employees e ON e.Id = se.EmployeeId
+      WHERE e.FirstName = 'Nora' AND e.LastName = 'Lead';
+    END
+
+    IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL
+    BEGIN
+      DELETE u
+      FROM Users u
+      JOIN Employees e ON e.Id = u.EmployeeId
+      WHERE e.FirstName = 'Nora' AND e.LastName = 'Lead';
+    END
+
+    DELETE FROM Employees WHERE FirstName = 'Nora' AND LastName = 'Lead';
   END
 
-  IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL
+  IF EXISTS (SELECT 1 FROM Employees WHERE FirstName = 'Caleb' AND LastName = 'Floor')
   BEGIN
-    DELETE u
-    FROM Users u
-    JOIN Employees e ON e.Id = u.EmployeeId
-    JOIN @LegacyEmployees le
-      ON le.FirstName = e.FirstName
-     AND le.LastName = e.LastName;
+    IF OBJECT_ID('dbo.ScheduleEmployees', 'U') IS NOT NULL
+    BEGIN
+      DELETE se
+      FROM ScheduleEmployees se
+      JOIN Employees e ON e.Id = se.EmployeeId
+      WHERE e.FirstName = 'Caleb' AND e.LastName = 'Floor';
+    END
+
+    IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL
+    BEGIN
+      DELETE u
+      FROM Users u
+      JOIN Employees e ON e.Id = u.EmployeeId
+      WHERE e.FirstName = 'Caleb' AND e.LastName = 'Floor';
+    END
+
+    DELETE FROM Employees WHERE FirstName = 'Caleb' AND LastName = 'Floor';
   END
 
-  DELETE e
-  FROM Employees e
-  JOIN @LegacyEmployees le
-    ON le.FirstName = e.FirstName
-   AND le.LastName = e.LastName;
+  IF EXISTS (SELECT 1 FROM Employees WHERE FirstName = 'Zoe' AND LastName = 'Ops')
+  BEGIN
+    IF OBJECT_ID('dbo.ScheduleEmployees', 'U') IS NOT NULL
+    BEGIN
+      DELETE se
+      FROM ScheduleEmployees se
+      JOIN Employees e ON e.Id = se.EmployeeId
+      WHERE e.FirstName = 'Zoe' AND e.LastName = 'Ops';
+    END
+
+    IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL
+    BEGIN
+      DELETE u
+      FROM Users u
+      JOIN Employees e ON e.Id = u.EmployeeId
+      WHERE e.FirstName = 'Zoe' AND e.LastName = 'Ops';
+    END
+
+    DELETE FROM Employees WHERE FirstName = 'Zoe' AND LastName = 'Ops';
+  END
 END
 
 :r .\Seed.RestaurantScenario.sql
