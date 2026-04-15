@@ -1,4 +1,4 @@
-# Restaurant Seed Scenario + AI Assistant Demo Workflow
+# AI Assistant Demo Workflow
 
 ## Seed script location
 
