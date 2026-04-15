@@ -1,6 +1,11 @@
 from datetime import datetime
 
-from app.llm.orchestration.parsers import extract_recurring_shift_dates, extract_time_range
+from app.llm.orchestration.parsers import (
+    extract_recurring_shift_dates,
+    extract_time_range,
+    extract_weekday_date,
+    extract_weekday_datetime,
+)
 
 
 def test_extract_time_range_with_meridian():
@@ -74,3 +79,15 @@ def test_extract_recurring_shift_dates_weekday_span_supports_abbreviations():
         "2026-04-16",
         "2026-04-17",
     ]
+
+
+def test_extract_weekday_date_supports_tomorrow():
+    now = datetime(2026, 4, 15, 12, 0, 0)
+    parsed = extract_weekday_date("tomorrow", now=now)
+    assert parsed.isoformat() == "2026-04-16"
+
+
+def test_extract_weekday_datetime_supports_tomorrow_with_time():
+    now = datetime(2026, 4, 15, 12, 0, 0)
+    parsed = extract_weekday_datetime("tomorrow 4pm", now=now)
+    assert parsed == "2026-04-16T16:00:00"
