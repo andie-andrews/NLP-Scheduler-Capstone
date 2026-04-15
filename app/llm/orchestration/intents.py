@@ -27,11 +27,30 @@ def is_create_shift_intent(message: str, create_shift_operation: dict | None = N
     if looks_like_schedule_lookup:
         return False
 
-    weekday_terms = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "week"]
+    weekday_terms = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+        "week",
+        "today",
+        "tomorrow",
+        "tonight",
+    ]
     has_weekday_context = any(term in text for term in weekday_terms)
     has_scheduling_action = any(action in text for action in ["schedule", "assign", "book"])
     if has_scheduling_action and has_weekday_context:
-        return True
+        has_shift_specific_context = (
+            "shift" in text
+            or "employee" in text
+            or bool(re.search(r"\b(on|in|for)\s+.+\bschedule\b", text))
+            or bool(re.search(r"\bschedule\s+(?!a\b|an\b|the\b)[a-z]+(?:\s+[a-z]+)?\b", text))
+        )
+        if has_shift_specific_context:
+            return True
 
     return "shift" in text and any(action in text for action in ["schedule", "create", "assign"])
 
