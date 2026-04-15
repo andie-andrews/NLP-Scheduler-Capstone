@@ -196,7 +196,16 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
     return None
 
 
-def extract_weekday_datetime(message: str):
+def _extract_relative_date(text: str, now: datetime):
+    normalized = (text or "").lower()
+    if "tomorrow" in normalized:
+        return now + timedelta(days=1)
+    if "today" in normalized or "tonight" in normalized:
+        return now
+    return None
+
+
+def extract_weekday_datetime(message: str, now: datetime | None = None):
     weekdays = {
         "monday": 0,
         "tuesday": 1,
@@ -213,11 +222,20 @@ def extract_weekday_datetime(message: str):
             target_day = idx
             break
 
+    now = now or datetime.now()
+    relative_date = _extract_relative_date(text, now)
+    if relative_date is not None:
+        parsed_time = extract_time_of_day(text)
+        if not parsed_time:
+            print("[create_shift][datetime] Relative date found but no explicit time in message.")
+            return None
+        hour, minute = parsed_time
+        start = relative_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        return start.isoformat()
+
     if target_day is None:
         print("[create_shift][datetime] No weekday found in message.")
         return None
-
-    now = datetime.now()
 
     if re.search(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
         delta = (target_day - now.weekday()) % 7
@@ -300,7 +318,7 @@ def extract_schedule_name(message: str):
     return None
 
 
-def extract_weekday_date(message: str):
+def extract_weekday_date(message: str, now: datetime | None = None):
     weekdays = {
         "monday": 0,
         "tuesday": 1,
@@ -317,10 +335,11 @@ def extract_weekday_date(message: str):
             target_day = idx
             break
 
+    now = now or datetime.now()
+    relative_date = _extract_relative_date(text, now)
     if target_day is None:
-        return None
+        return relative_date.date() if relative_date is not None else None
 
-    now = datetime.now()
     if re.search(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
         delta = (target_day - now.weekday()) % 7
         if delta == 0:
