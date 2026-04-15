@@ -42,24 +42,30 @@ This document explains how to seed `SchedulerDb` with a restaurant staffing scen
 
 ---
 
-## DACPAC pre-deploy usage
+## DACPAC post-deploy usage
 
-This script is intended to run during pre-deploy in a SQL project/DACPAC pipeline.
+Use `PostDeployment.sql` as the SQL project/DACPAC post-deployment script. It cleans legacy seed rows from prior drafts and then applies the current upsert seed.
 
-Example in a SQL project pre-deploy script:
+Example `PostDeployment.sql`:
 
 ```sql
-:r .\Database\Seed.RestaurantScenario.sql
+:r .\Seed.RestaurantScenario.sql
 ```
 
-If this repository later adds a `.sqlproj`, include the script in the pre-deployment step so seeded data is kept in sync on deploy.
+If this repository later adds a `.sqlproj`, include `Database/PostDeployment.sql` as the post-deployment script so seeded data is kept in sync on deploy.
 
 ---
 
 ## Manual run options
 
 ### Option 1: SQL Server Management Studio (SSMS)
-1. Open `Seed.RestaurantScenario.sql`.
+
+For manual execution, you can run either:
+- `PostDeployment.sql` (in SQLCMD mode), or
+- `Seed.RestaurantScenario.sql` directly.
+
+Steps:
+1. Open the script you want to run.
 2. Connect to your SQL Server instance.
 3. Select the `SchedulerDb` database.
 4. Execute the script.

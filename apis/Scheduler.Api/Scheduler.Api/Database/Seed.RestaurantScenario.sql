@@ -1,5 +1,5 @@
 /*
-  Restaurant scenario pre-deploy seed for SchedulerDb.
+  Restaurant scenario post-deployment seed for SchedulerDb.
   - Upserts schedules: Kitchen, Bartenders, Servers, Hostesses, Managers, Busers
   - Upserts employees for restaurant scenario
   - Enforces Boss Man as the only supervisor in seeded dataset
@@ -222,4 +222,4 @@ BEGIN
   THEN DELETE;
 END
 
-PRINT 'Restaurant scenario pre-deploy seed complete.';
+PRINT 'Restaurant scenario post-deployment seed complete.';
