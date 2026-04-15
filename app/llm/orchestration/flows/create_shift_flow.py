@@ -49,17 +49,54 @@ def _format_shift_date(value: datetime) -> str:
 
 
 def _build_single_shift_success_summary(state: dict, created_shift: dict) -> str:
-    employee_name = (
-        state.get("employeeName")
-        or state.get("employeeDisplayName")
-        or state.get("employee")
-        or f"employee {created_shift.get('employeeId')}"
-    )
+    employee_name = _resolve_employee_label(state, created_shift)
     start_value = datetime.fromisoformat(created_shift["start"])
     end_value = start_value + timedelta(hours=created_shift["durationHours"])
     return (
         f"Shift created for {employee_name} on {_format_shift_date(start_value)} "
         f"from {_format_shift_time(start_value)} to {_format_shift_time(end_value)}."
+    )
+
+
+def _resolve_employee_label(state: dict, shift: dict) -> str:
+    employee_name = (
+        state.get("employeeName")
+        or state.get("employeeDisplayName")
+        or state.get("employee")
+        or f"employee {shift.get('employeeId')}"
+    )
+    return employee_name
+
+
+def _build_multi_shift_success_summary(state: dict, created_shifts: list[dict]) -> str:
+    sorted_shifts = sorted(created_shifts, key=lambda shift: shift["start"])
+    employee_name = _resolve_employee_label(state, sorted_shifts[0])
+    starts = [datetime.fromisoformat(shift["start"]) for shift in sorted_shifts]
+    first_start = starts[0]
+    last_start = starts[-1]
+    same_duration = len({shift["durationHours"] for shift in sorted_shifts}) == 1
+    same_start_time = len({(start.hour, start.minute) for start in starts}) == 1
+    same_weekday = len({start.weekday() for start in starts}) == 1
+
+    if same_duration and same_start_time:
+        end_time = _format_shift_time(first_start + timedelta(hours=sorted_shifts[0]["durationHours"]))
+        if same_weekday and len(starts) > 1:
+            day_name = first_start.strftime("%A")
+            return (
+                f"{len(sorted_shifts)} weekly shifts created for {employee_name} every {day_name} "
+                f"from {_format_shift_time(first_start)} to {end_time} "
+                f"({_format_shift_date(first_start)} to {_format_shift_date(last_start)})."
+            )
+
+        return (
+            f"{len(sorted_shifts)} shifts created for {employee_name} "
+            f"from {_format_shift_time(first_start)} to {end_time} "
+            f"({_format_shift_date(first_start)} to {_format_shift_date(last_start)})."
+        )
+
+    return (
+        f"{len(sorted_shifts)} shifts created for {employee_name} "
+        f"between {_format_shift_date(first_start)} and {_format_shift_date(last_start)}."
     )
 
 
@@ -276,14 +313,20 @@ def handle_create_shift_flow(
     if should_skip_existing and not shifts_missing:
         summary = "All requested shifts already exist on that schedule."
     elif failed_creates and successful_creates:
-        summary = (
-            f"Created {len(successful_creates)} shift(s), but {len(failed_creates)} could not be created "
-            "because they failed validation (for example, overlapping shifts)."
-        )
+        if len(successful_creates) > 1:
+            summary = (
+                f"{_build_multi_shift_success_summary(state, successful_creates)} "
+                f"{len(failed_creates)} additional shift(s) could not be created due to validation issues."
+            )
+        else:
+            summary = (
+                f"{_build_single_shift_success_summary(state, successful_creates[0])} "
+                f"{len(failed_creates)} additional shift(s) could not be created due to validation issues."
+            )
     elif failed_creates and not successful_creates:
         summary = "No shifts were created because all requested shifts failed validation."
     elif len(shifts_to_create) > 1:
-        summary = f"Shifts created successfully ({len(successful_creates)} new)."
+        summary = _build_multi_shift_success_summary(state, successful_creates)
     else:
         summary = _build_single_shift_success_summary(state, successful_creates[0])
 

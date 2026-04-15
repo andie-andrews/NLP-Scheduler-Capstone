@@ -116,11 +116,58 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             week_range_from_date=lambda *_: (None, None),
         )
 
-        self.assertEqual(result["summary"], "Shifts created successfully (2 new).")
+        self.assertEqual(
+            result["summary"],
+            "2 shifts created for employee 10 from 9:00 AM to 5:00 PM (April 20, 2026 to April 21, 2026).",
+        )
         self.assertEqual(result["data"]["failedCount"], 0)
         self.assertEqual(len(calls), 2)
         self.assertEqual(calls[0]["start"], "2026-04-20T09:00:00")
         self.assertEqual(calls[1]["start"], "2026-04-21T09:00:00")
+
+    def test_create_shift_flow_summarizes_weekly_recurring_multi_create(self):
+        calls = []
+
+        def fake_call_api(_token, operation, args):
+            if operation == "create-shift-op":
+                calls.append(args)
+                return {"id": len(calls)}
+            return []
+
+        result = handle_create_shift_flow(
+            message="create shift every monday for next 3 weeks",
+            token="t",
+            session={},
+            pending_shift={
+                "intent": "create_shift",
+                "employeeId": 10,
+                "scheduleId": 22,
+                "start": "2026-04-20T09:00:00",
+                "pendingStartDate": None,
+                "durationHours": 8,
+                "multiShiftDates": ["2026-04-20", "2026-04-27", "2026-05-04"],
+                "awaiting": None,
+                "employee_options": [],
+                "schedule_options": [],
+            },
+            operations={"createShift": "create-shift-op"},
+            is_create_shift_intent=lambda *_: True,
+            resolve_disambiguation_reply=lambda *_: None,
+            attempt_fill_shift_state_from_message=lambda *_: None,
+            build_create_shift_question=lambda *_: None,
+            next_missing_shift_field=lambda *_: None,
+            set_pending_shift_state=lambda *_: None,
+            clear_pending_shift_state=lambda *_: None,
+            normalize_schedule_id_arg=lambda *_: 22,
+            call_api=fake_call_api,
+            week_range_from_date=lambda *_: (date(2026, 4, 19), date(2026, 4, 25)),
+        )
+
+        self.assertEqual(
+            result["summary"],
+            "3 weekly shifts created for employee 10 every Monday from 9:00 AM to 5:00 PM (April 20, 2026 to May 4, 2026).",
+        )
+        self.assertEqual(result["data"]["failedCount"], 0)
 
     def test_create_shift_flow_skips_existing_recurring_shifts(self):
         create_calls = []
