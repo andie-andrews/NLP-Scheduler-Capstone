@@ -88,25 +88,7 @@ Create shifts for {EmployeeName} every {dayOfWeek} for the next {X} weeks from {
 
 ---
 
-### 4) Ensure every employee gets scheduled
-
-**Goal:** Show coverage validation and fill-gaps workflow.
-
-Step 1 prompt:
-
-```text
-Show me which seeded employees do not have shifts scheduled for this week.
-```
-
-Step 2 prompt (fill missing):
-
-```text
-Create weekday shifts for all employees with no shifts this week, matching their schedule, 9:00 AM to 5:00 PM.
-```
-
----
-
-### 5) Manager asks to see employee schedules
+### 4) Manager asks to see employee schedules
 
 **Goal:** Show manager reporting and lookup.
 
@@ -132,5 +114,4 @@ Show next week's shifts for each employee in Bartenders.
 2. Create one single shift.
 3. Create Monday-Friday shifts for this + next week.
 4. Create recurring "every dayOfWeek for next X weeks" shifts.
-5. Ask who is unscheduled and auto-fill missing shifts.
-6. Ask manager-view queries to inspect employee/schedule coverage.
+5. Ask manager-view queries to inspect employee/schedule coverage.
