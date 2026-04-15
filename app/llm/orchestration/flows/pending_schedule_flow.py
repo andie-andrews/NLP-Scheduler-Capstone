@@ -15,15 +15,8 @@ def handle_pending_schedule_flow(
     **_unused,
 ):
     if pending_create_schedule:
-        schedule_name = (message or "").strip()
-        if not schedule_name:
-            return "What should I name the new schedule?"
-        result = call_api(token, operations["createSchedule"], {"name": schedule_name})
         clear_pending_create_schedule_state(session)
-        schedule_id = result.get("id")
-        if schedule_id is not None:
-            return {"summary": f"Created schedule '{schedule_name}' (ID: {schedule_id}).", "data": {"scheduleId": schedule_id, "name": schedule_name}}
-        return {"summary": f"Created schedule '{schedule_name}'.", "data": {"name": schedule_name, "createScheduleResponse": result}}
+        return "Schedule creation is only available in the Manage Schedules UI."
 
     if pending_delete_schedule:
         schedule_target = extract_schedule_name_or_id_from_message(message) or (message or "").strip()

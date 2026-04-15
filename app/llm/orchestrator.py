@@ -100,23 +100,10 @@ def _build_create_shift_question(state):
                 "Got it. Which schedule should I use? Here are this employee's schedules:\n"
                 + _format_schedule_options(employee_schedule_options)
             )
-
-        available_schedule_options = state.get("available_schedule_options") or []
-        if state.get("awaiting") == "add_to_schedule_selection" and available_schedule_options:
-            return (
-                "Great — which schedule should I add the employee to?\n"
-                + _format_schedule_options(available_schedule_options)
-            )
-
-        if available_schedule_options:
-            return (
-                "This employee is not added to a schedule yet, so I can't create the shift. "
-                "Would you like me to add them to a schedule first?\n"
-                "Available schedules:\n"
-                + _format_schedule_options(available_schedule_options)
-            )
-
-        return "This employee is not added to any schedules, and I couldn't find available schedules to assign."
+        return (
+            "I can't create a shift yet because this employee is not on any schedule. "
+            "Please add the employee to a schedule in the Manage Schedules UI, then try again."
+        )
     if not state.get("start"):
         if state.get("multiShiftDates"):
             return "What time should these shifts start?"
@@ -130,8 +117,6 @@ def _build_create_shift_question(state):
 
 
 def _next_missing_shift_field(state):
-    if state.get("awaiting") in {"add_to_schedule_confirmation", "add_to_schedule_selection"}:
-        return state.get("awaiting")
     if not state.get("employeeId"):
         return "employee"
     if not state.get("scheduleId"):
@@ -270,102 +255,6 @@ def _attempt_fill_shift_state_from_message(message, token, state):
 
     if state.get("employeeId") and "employee_schedule_options" not in state:
         _refresh_employee_schedule_state(token, state)
-
-    if (
-        state.get("employeeId")
-        and not state.get("scheduleId")
-        and not (state.get("employee_schedule_options") or [])
-        and state.get("awaiting") not in {"add_to_schedule_confirmation", "add_to_schedule_selection"}
-    ):
-        state["awaiting"] = "add_to_schedule_confirmation"
-
-    if state.get("awaiting") == "add_to_schedule_confirmation":
-        normalized_reply = re.sub(r"\s+", " ", (message or "").strip().lower())
-        affirmative = {"yes", "y", "sure", "ok", "okay", "please", "add", "do it"}
-        negative = {"no", "n", "nope", "cancel", "not now"}
-        if normalized_reply in affirmative or normalized_reply.startswith("yes"):
-            state["awaiting"] = "add_to_schedule_selection"
-        elif normalized_reply in negative or normalized_reply.startswith("no"):
-            return {
-                "type": "reply",
-                "message": "Okay — I won't create a shift until the employee is assigned to a schedule.",
-            }
-        else:
-            candidate_schedules = state.get("available_schedule_options") or []
-            if candidate_schedules:
-                selected_from_reply = None
-                choice_match = re.search(r"\b(\d+)\b", message or "")
-                if choice_match:
-                    choice = int(choice_match.group(1))
-                    if 1 <= choice <= len(candidate_schedules):
-                        selected_from_reply = candidate_schedules[choice - 1]
-                    else:
-                        selected_from_reply = next(
-                            (schedule for schedule in candidate_schedules if schedule.get("id") == choice),
-                            None,
-                        )
-
-                if selected_from_reply is None:
-                    reply_text = (message or "").strip().lower()
-                    selected_from_reply = next(
-                        (
-                            schedule
-                            for schedule in candidate_schedules
-                            if (schedule.get("name") or "").strip().lower() == reply_text
-                        ),
-                        None,
-                    )
-
-                if selected_from_reply is not None:
-                    state["awaiting"] = "add_to_schedule_selection"
-
-    if state.get("awaiting") == "add_to_schedule_selection":
-        candidate_schedules = state.get("available_schedule_options") or []
-        choice_match = re.search(r"\b(\d+)\b", message or "")
-        selected_schedule = None
-        if choice_match:
-            choice = int(choice_match.group(1))
-            if 1 <= choice <= len(candidate_schedules):
-                selected_schedule = candidate_schedules[choice - 1]
-            else:
-                selected_schedule = next(
-                    (schedule for schedule in candidate_schedules if schedule.get("id") == choice),
-                    None,
-                )
-
-        if selected_schedule is None:
-            schedule_name = extract_schedule_name(message) or (message or "").strip()
-            if schedule_name:
-                matched = [
-                    schedule for schedule in candidate_schedules
-                    if (schedule.get("name") or "").strip().lower() == schedule_name.strip().lower()
-                    or str(schedule.get("id")) == schedule_name.strip()
-                ]
-                if len(matched) == 1:
-                    selected_schedule = matched[0]
-
-        if selected_schedule is not None:
-            add_employee_to_schedule_op = OPERATIONS.get("addEmployeeToSchedule")
-            if add_employee_to_schedule_op:
-                add_response = call_api(
-                    token,
-                    add_employee_to_schedule_op,
-                    {"scheduleId": selected_schedule["id"], "employeeId": state["employeeId"]},
-                )
-                if isinstance(add_response, dict) and add_response.get("__httpStatus", 200) >= 400:
-                    return {
-                        "type": "reply",
-                        "message": "I couldn't add that employee to the selected schedule. Please try again.",
-                    }
-
-            state["scheduleId"] = selected_schedule["id"]
-            state["awaiting"] = None
-            state["recent_schedule_assignment"] = {
-                "employeeName": state.get("employeeName"),
-                "scheduleName": selected_schedule.get("name"),
-                "scheduleId": selected_schedule.get("id"),
-            }
-            _refresh_employee_schedule_state(token, state)
 
     employee_schedule_options = state.get("employee_schedule_options") or []
     if not state.get("scheduleId") and len(employee_schedule_options) == 1:
@@ -895,22 +784,13 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     if pending_schedule_member_change:
         if pending_schedule_member_change.get("awaitingCreateSchedule"):
-            schedule_name = pending_schedule_member_change.get("suggestedScheduleName")
-            if _is_affirmative(message):
-                created = call_api(token, OPERATIONS["createSchedule"], {"name": schedule_name})
-                created_id = created.get("id")
-                if created_id is None:
-                    return f"I couldn't create '{schedule_name}'. Please provide an existing schedule name."
-                pending_schedule_member_change["scheduleId"] = created_id
-                pending_schedule_member_change["scheduleName"] = schedule_name
-                pending_schedule_member_change["awaitingCreateSchedule"] = False
-            elif _is_negative(message):
-                pending_schedule_member_change["awaitingCreateSchedule"] = False
-                pending_schedule_member_change["suggestedScheduleName"] = None
-                set_pending_schedule_member_change_state(session, pending_schedule_member_change)
-                return "Okay — which existing schedule should I use?"
-            else:
-                return f"I couldn't find schedule '{schedule_name}'. Do you want me to create it?"
+            pending_schedule_member_change["awaitingCreateSchedule"] = False
+            pending_schedule_member_change["suggestedScheduleName"] = None
+            set_pending_schedule_member_change_state(session, pending_schedule_member_change)
+            return (
+                "I can't create schedules from chat. Please create the schedule in the Manage Schedules UI, "
+                "then tell me the schedule name."
+            )
 
         if not pending_schedule_member_change.get("employeeId"):
             choice = re.search(r"\b(\d+)\b", message or "")
@@ -954,12 +834,12 @@ def run_orchestrator(message: str, token: str, session: dict):
             schedule_target = _extract_schedule_name_or_id_from_message(message)
             resolved_schedule_id = normalize_schedule_id_arg(token, schedule_target, OPERATIONS, call_api)
             if resolved_schedule_id is None:
-                suggested_name = schedule_target if isinstance(schedule_target, str) else None
-                if suggested_name:
-                    pending_schedule_member_change["awaitingCreateSchedule"] = True
-                    pending_schedule_member_change["suggestedScheduleName"] = suggested_name
-                    set_pending_schedule_member_change_state(session, pending_schedule_member_change)
-                    return f"I couldn't find schedule '{suggested_name}'. Do you want me to create it?"
+                set_pending_schedule_member_change_state(session, pending_schedule_member_change)
+                if isinstance(schedule_target, str):
+                    return (
+                        f"I couldn't find schedule '{schedule_target}'. "
+                        "Please create it in the Manage Schedules UI or choose an existing schedule."
+                    )
                 return _build_schedule_member_schedule_question(pending_schedule_member_change)
             pending_schedule_member_change["scheduleId"] = resolved_schedule_id
             if isinstance(schedule_target, str):
@@ -989,21 +869,8 @@ def run_orchestrator(message: str, token: str, session: dict):
         return f"Done — {employee_display} was {action_word} {schedule_display}."
 
     if is_create_schedule_intent(message):
-        schedule_name = _extract_schedule_name_for_create(message)
-        if not schedule_name:
-            set_pending_create_schedule_state(session, {"intent": "create_schedule", "awaiting": "name"})
-            return "What should I name the new schedule?"
-        result = call_api(token, OPERATIONS["createSchedule"], {"name": schedule_name})
-        schedule_id = result.get("id")
-        if schedule_id is not None:
-            return {
-                "summary": f"Created schedule '{schedule_name}' (ID: {schedule_id}).",
-                "data": {"scheduleId": schedule_id, "name": schedule_name},
-            }
-        return {
-            "summary": f"Created schedule '{schedule_name}'.",
-            "data": {"name": schedule_name, "createScheduleResponse": result},
-        }
+        clear_pending_create_schedule_state(session)
+        return "Schedule creation is only available in the Manage Schedules UI."
 
     if is_delete_schedule_intent(message):
         schedule_target = _extract_schedule_name_or_id_from_message(message)
@@ -1112,18 +979,18 @@ def run_orchestrator(message: str, token: str, session: dict):
         raw_schedule_target = _extract_schedule_name_or_id_from_message(message)
         if raw_schedule_target:
             state["scheduleId"] = normalize_schedule_id_arg(token, raw_schedule_target, OPERATIONS, call_api)
-            if state["scheduleId"] is None and isinstance(raw_schedule_target, str):
-                state["awaitingCreateSchedule"] = True
-                state["suggestedScheduleName"] = raw_schedule_target
-            elif isinstance(raw_schedule_target, str):
+            if isinstance(raw_schedule_target, str):
                 state["scheduleName"] = raw_schedule_target
 
         if state["employeeId"] is None or state["scheduleId"] is None:
             set_pending_schedule_member_change_state(session, state)
             if state["employeeId"] is None:
                 return "Who should I update on the schedule?"
-            if state.get("awaitingCreateSchedule") and state.get("suggestedScheduleName"):
-                return f"I couldn't find schedule '{state['suggestedScheduleName']}'. Do you want me to create it?"
+            if isinstance(raw_schedule_target, str):
+                return (
+                    f"I couldn't find schedule '{raw_schedule_target}'. "
+                    "Please create it in the Manage Schedules UI or choose an existing schedule."
+                )
             return _build_schedule_member_schedule_question(state)
 
         operation = _get_schedule_member_operation(action)

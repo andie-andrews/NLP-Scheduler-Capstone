@@ -5,7 +5,7 @@ from llm import orchestrator
 
 
 class OrchestratorScheduleAssignmentTests(unittest.TestCase):
-    def test_schedule_name_reply_adds_employee_to_schedule(self):
+    def test_schedule_name_reply_does_not_auto_add_employee_to_schedule(self):
         state = {
             "intent": "create_shift",
             "employeeId": 101,
@@ -14,7 +14,7 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
             "pendingStartDate": None,
             "durationHours": None,
             "multiShiftDates": [],
-            "awaiting": "add_to_schedule_confirmation",
+            "awaiting": "schedule",
             "employee_options": [],
             "schedule_options": [],
             "employee_schedule_options": [],
@@ -37,12 +37,8 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
             result = orchestrator._attempt_fill_shift_state_from_message("Kitchen", "token", state)
 
         self.assertIsNone(result)
-        self.assertEqual(state["scheduleId"], 5)
-        self.assertEqual(
-            state["recent_schedule_assignment"],
-            {"employeeName": None, "scheduleName": "Kitchen", "scheduleId": 5},
-        )
-        self.assertIn(("add-op", {"scheduleId": 5, "employeeId": 101}), calls)
+        self.assertIsNone(state["scheduleId"])
+        self.assertFalse(any(op == "add-op" for op, _ in calls))
 
     def test_numeric_schedule_not_assigned_without_membership_or_add_flow(self):
         state = {
