@@ -44,43 +44,46 @@ WHEN NOT MATCHED BY TARGET THEN
 DECLARE @Employees TABLE (
   FirstName NVARCHAR(50),
   LastName NVARCHAR(50),
+  Email NVARCHAR(255),
   RoleId INT,
   IsBoss BIT,
   PRIMARY KEY (FirstName, LastName)
 );
 
-INSERT INTO @Employees (FirstName, LastName, RoleId, IsBoss)
+INSERT INTO @Employees (FirstName, LastName, Email, RoleId, IsBoss)
 VALUES
-  ('Boss', 'Man', @SupervisorRoleId, 1),
+  ('Boss', 'Man', 'boss.man@restaurant.local', @SupervisorRoleId, 1),
 
-  ('Kai', 'Grill', @EmployeeRoleId, 0),
-  ('Mia', 'Prep', @EmployeeRoleId, 0),
-  ('Noah', 'Saute', @EmployeeRoleId, 0),
+  ('Kai', 'Grill', 'kai.grill@restaurant.local', @EmployeeRoleId, 0),
+  ('Mia', 'Prep', 'mia.prep@restaurant.local', @EmployeeRoleId, 0),
+  ('Noah', 'Saute', 'noah.saute@restaurant.local', @EmployeeRoleId, 0),
 
-  ('Luca', 'Shaker', @EmployeeRoleId, 0),
-  ('Ava', 'Collins', @EmployeeRoleId, 0),
-  ('Ethan', 'Rocks', @EmployeeRoleId, 0),
+  ('Luca', 'Shaker', 'luca.shaker@restaurant.local', @EmployeeRoleId, 0),
+  ('Ava', 'Collins', 'ava.collins@restaurant.local', @EmployeeRoleId, 0),
+  ('Ethan', 'Rocks', 'ethan.rocks@restaurant.local', @EmployeeRoleId, 0),
 
-  ('Olivia', 'Tray', @EmployeeRoleId, 0),
-  ('Mason', 'Table', @EmployeeRoleId, 0),
-  ('Isla', 'Service', @EmployeeRoleId, 0),
+  ('Olivia', 'Tray', 'olivia.tray@restaurant.local', @EmployeeRoleId, 0),
+  ('Mason', 'Table', 'mason.table@restaurant.local', @EmployeeRoleId, 0),
+  ('Isla', 'Service', 'isla.service@restaurant.local', @EmployeeRoleId, 0),
 
-  ('Harper', 'Door', @EmployeeRoleId, 0),
-  ('James', 'Seating', @EmployeeRoleId, 0),
-  ('Emma', 'Welcome', @EmployeeRoleId, 0),
+  ('Harper', 'Door', 'harper.door@restaurant.local', @EmployeeRoleId, 0),
+  ('James', 'Seating', 'james.seating@restaurant.local', @EmployeeRoleId, 0),
+  ('Emma', 'Welcome', 'emma.welcome@restaurant.local', @EmployeeRoleId, 0),
 
-  ('Leo', 'Polish', @EmployeeRoleId, 0),
-  ('Sofia', 'Reset', @EmployeeRoleId, 0),
-  ('Henry', 'Clears', @EmployeeRoleId, 0);
+  ('Leo', 'Polish', 'leo.polish@restaurant.local', @EmployeeRoleId, 0),
+  ('Sofia', 'Reset', 'sofia.reset@restaurant.local', @EmployeeRoleId, 0),
+  ('Henry', 'Clears', 'henry.clears@restaurant.local', @EmployeeRoleId, 0);
 
 MERGE INTO Employees AS tgt
 USING @Employees AS src
   ON tgt.FirstName = src.FirstName AND tgt.LastName = src.LastName
 WHEN MATCHED THEN
-  UPDATE SET tgt.RoleId = src.RoleId
+  UPDATE SET
+    tgt.Email = src.Email,
+    tgt.RoleId = src.RoleId
 WHEN NOT MATCHED BY TARGET THEN
-  INSERT (FirstName, LastName, RoleId)
-  VALUES (src.FirstName, src.LastName, src.RoleId);
+  INSERT (FirstName, LastName, Email, RoleId)
+  VALUES (src.FirstName, src.LastName, src.Email, src.RoleId);
 
 /* Ensure seeded set has only Boss Man as supervisor */
 UPDATE e
