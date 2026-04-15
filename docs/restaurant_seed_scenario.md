@@ -132,6 +132,10 @@ Optional follow-up:
 List all of my shifts for this week.
 ```
 
+```text
+List all of my shifts for next week.
+```
+
 ---
 
 ## Suggested end-to-end demo order
