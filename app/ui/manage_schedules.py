@@ -104,6 +104,8 @@ def render():
         st.session_state["deleting_shift"] = None
     if "remove_schedule_employee" not in st.session_state:
         st.session_state["remove_schedule_employee"] = None
+    if "manage_schedules_last_selected_schedule" not in st.session_state:
+        st.session_state["manage_schedules_last_selected_schedule"] = "__all_schedules__"
 
     all_schedules_option = "__all_schedules__"
     toolbar_selection = st.session_state.get("manage_schedules_selected_schedule", all_schedules_option)
@@ -162,9 +164,18 @@ def render():
         return [s for s in employee_schedules if s.get("id") in available_schedule_ids]
 
     schedule_options = [all_schedules_option] + [s["id"] for s in schedules]
+
     selected_schedule_state = st.session_state.get("manage_schedules_selected_schedule")
     if selected_schedule_state not in schedule_options:
-        st.session_state["manage_schedules_selected_schedule"] = all_schedules_option
+        remembered_schedule_state = st.session_state.get("manage_schedules_last_selected_schedule")
+        if remembered_schedule_state in schedule_options:
+            st.session_state["manage_schedules_selected_schedule"] = remembered_schedule_state
+        else:
+            st.session_state["manage_schedules_selected_schedule"] = all_schedules_option
+
+    def remember_selected_schedule():
+        selected_value = st.session_state.get("manage_schedules_selected_schedule", all_schedules_option)
+        st.session_state["manage_schedules_last_selected_schedule"] = selected_value
 
     selected_schedule_option = st.selectbox(
         "Select Schedule",
@@ -173,7 +184,9 @@ def render():
         if option == all_schedules_option
         else schedule_name_by_id.get(option, f"Schedule {option}"),
         key="manage_schedules_selected_schedule",
+        on_change=remember_selected_schedule,
     )
+    st.session_state["manage_schedules_last_selected_schedule"] = selected_schedule_option
 
     previous_schedule_option = st.session_state.get(
         "manage_schedules_previous_schedule",

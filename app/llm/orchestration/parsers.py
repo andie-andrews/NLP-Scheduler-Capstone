@@ -294,7 +294,9 @@ def extract_schedule_name(message: str):
     for pattern in patterns:
         match = re.search(pattern, message.lower())
         if match:
-            return match.group(1).strip(" .,!?:;\"'")
+            schedule_name = match.group(1).strip(" .,!?:;\"'")
+            schedule_name = re.sub(r"^(the|a|an)\s+", "", schedule_name, flags=re.IGNORECASE)
+            return schedule_name.strip()
     return None
 
 
