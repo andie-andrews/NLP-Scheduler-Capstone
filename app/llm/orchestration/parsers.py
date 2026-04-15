@@ -4,15 +4,30 @@ from datetime import datetime, timedelta
 
 def find_name_in_message(message: str, employees: list):
     message_lower = (message or "").lower()
+    employee_records = employees
+    if isinstance(employee_records, dict):
+        for key in ("items", "employees", "results", "data", "value", "content"):
+            candidate = employee_records.get(key)
+            if isinstance(candidate, list):
+                employee_records = candidate
+                break
+        else:
+            employee_records = []
+    if not isinstance(employee_records, list):
+        return None
 
     # Pass 1: prefer explicit full-name matches anywhere in the utterance.
-    for emp in employees:
-        full_name = f"{emp['firstName']} {emp['lastName']}".strip().lower()
+    for emp in employee_records:
+        if not isinstance(emp, dict):
+            continue
+        full_name = f"{emp.get('firstName') or ''} {emp.get('lastName') or ''}".strip().lower()
         if full_name and full_name in message_lower:
             return full_name
 
     # Pass 2: fallback to first-name matches only when no full name matched.
-    for emp in employees:
+    for emp in employee_records:
+        if not isinstance(emp, dict):
+            continue
         first_name = (emp.get("firstName") or "").strip().lower()
         if first_name and first_name in message_lower:
             return first_name

@@ -9,6 +9,22 @@ REQUEST_TIMEOUT_SECONDS = float(os.getenv("SCHEDULER_API_TIMEOUT_SECONDS", "20")
 if not VERIFY_SSL:
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
+def _normalize_employee_search_result(operation, result):
+    if operation.get("method") != "GET" or operation.get("path") != "/api/employees":
+        return result
+
+    if isinstance(result, list):
+        return result
+
+    if isinstance(result, dict):
+        for key in ("items", "employees", "results", "data", "value", "content"):
+            candidate = result.get(key)
+            if isinstance(candidate, list):
+                return candidate
+
+    return result
+
 def call_api(token, operation, args):
     # Avoid mutating caller-owned args (some flows reuse args after API calls).
     request_args = dict(args or {})
@@ -108,6 +124,8 @@ def call_api(token, operation, args):
                 "rawText": res.text,
             }
 
+    result = _normalize_employee_search_result(operation, result)
+
     if isinstance(result, dict) and "__httpStatus" not in result:
         result["__httpStatus"] = res.status_code
 
@@ -115,7 +133,8 @@ def call_api(token, operation, args):
         result = [
             employee
             for employee in result
-            if local_employee_query in (
+            if isinstance(employee, dict)
+            and local_employee_query in (
                 f"{(employee.get('firstName') or '').strip()} {(employee.get('lastName') or '').strip()}".strip().lower()
             )
         ]
