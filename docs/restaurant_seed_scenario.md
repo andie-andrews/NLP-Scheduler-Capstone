@@ -1,58 +1,8 @@
 # Restaurant Seed Scenario + AI Assistant Demo Workflow
 
-This document explains how to seed `SchedulerDb` with a restaurant staffing scenario and how to demo AI assistant scheduling workflows.
-
-## What gets seeded
-
-### Schedules
-- Kitchen
-- Bartenders
-- Servers
-- Hostesses
-- Managers
-- Busers
-
-### Employees and manager rules
-- **Boss Man** is enforced as the **only Supervisor** in the seeded set.
-- Boss Man is assigned as manager for **all schedules**.
-- **3 employees are seeded for each non-manager schedule**:
-  - Kitchen
-  - Bartenders
-  - Servers
-  - Hostesses
-  - Busers
-
-### Users
-- A user is upserted for each seeded employee.
-- Username = employee first name.
-- Password = employee first name.
-- Role = Employee for all seeded users except Boss.
-- Boss user is upserted as:
-  - Username: `Boss`
-  - Password: `Password`
-  - Role: Supervisor
-
-> The seed script uses `MERGE`-based upserts and delete-sync logic for seeded records, so it can be re-run safely and will update/replace seeded rows.
-
----
-
 ## Seed script location
 
-`apis/Scheduler.Api/Scheduler.Api/Database/Seed.RestaurantScenario.sql`
-
----
-
-## DACPAC post-deploy usage
-
-Use `PostDeployment.sql` as the SQL project/DACPAC post-deployment script. It cleans legacy seed rows from prior drafts and then applies the current upsert seed.
-
-Example `PostDeployment.sql`:
-
-```sql
-:r .\Seed.RestaurantScenario.sql
-```
-
-If this repository later adds a `.sqlproj`, include `Database/PostDeployment.sql` as the post-deployment script so seeded data is kept in sync on deploy.
+`apis\Scheduler.Api\Scheduler.Database/Seed.RestaurantScenario.sql`
 
 ---
 
@@ -61,7 +11,6 @@ If this repository later adds a `.sqlproj`, include `Database/PostDeployment.sql
 ### Option 1: SQL Server Management Studio (SSMS)
 
 For manual execution, you can run either:
-- `PostDeployment.sql` (in SQLCMD mode), or
 - `Seed.RestaurantScenario.sql` directly.
 
 Steps:
@@ -72,10 +21,10 @@ Steps:
 
 ### Option 2: sqlcmd
 ```bash
-sqlcmd -S .\\SQLSERVER2014 -d SchedulerDb -E -i apis/Scheduler.Api/Scheduler.Api/Database/Seed.RestaurantScenario.sql
+sqlcmd -S .\\SQLSERVER -d SchedulerDb -E -i apis/Scheduler.Api/Scheduler.Api/Database/Seed.RestaurantScenario.sql
 ```
 
-If your SQL Server instance name is different, replace `.\\SQLSERVER2014` with your instance.
+If your SQL Server instance name is different, replace `.\\SQLSERVER` with your instance.
 
 ---
 
