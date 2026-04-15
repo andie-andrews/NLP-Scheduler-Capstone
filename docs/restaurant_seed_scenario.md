@@ -95,15 +95,11 @@ Create shifts for {EmployeeName} every {dayOfWeek} for the next {X} weeks from {
 Example manager prompts:
 
 ```text
-Show me all schedules for employee Olivia Tray.
+Show me Olivia Tray's schedule this week.
 ```
 
 ```text
-As manager, list this week's shifts for Kitchen employees.
-```
-
-```text
-Show next week's shifts for each employee in Bartenders.
+Show next week's shifts for each Luca Shaker.
 ```
 
 ---
