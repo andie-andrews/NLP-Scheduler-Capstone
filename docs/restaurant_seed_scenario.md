@@ -112,18 +112,6 @@ Show next week's shifts for each employee in Bartenders.
 
 **Goal:** Show employee-facing access where a staff member signs in and checks their own schedule and total hours.
 
-Step A - Login as an employee:
-
-```text
-Log me in as Olivia Tray.
-```
-
-Alternative login prompt:
-
-```text
-Sign in as employee Olivia Tray.
-```
-
 Step B - Ask "what is my next shift?":
 
 ```text
