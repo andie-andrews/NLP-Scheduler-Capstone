@@ -108,6 +108,48 @@ Show next week's shifts for each employee in Bartenders.
 
 ---
 
+### 5) Employee login + self-service schedule and hours
+
+**Goal:** Show employee-facing access where a staff member signs in and checks their own schedule and total hours.
+
+Step A - Login as an employee:
+
+```text
+Log me in as Olivia Tray.
+```
+
+Alternative login prompt:
+
+```text
+Sign in as employee Olivia Tray.
+```
+
+Step B - Ask "what is my next shift?":
+
+```text
+When is my next shift?
+```
+
+Step C - Ask for this week's total hours:
+
+```text
+How many hours am I scheduled for this week?
+```
+
+Step D - Ask for next week's total hours:
+
+```text
+How many hours am I scheduled for next week?
+```
+
+Optional follow-up:
+
+```text
+List all of my shifts for this week.
+```
+
+---
+
 ## Suggested end-to-end demo order
 
 1. Run seed script.
@@ -115,3 +157,7 @@ Show next week's shifts for each employee in Bartenders.
 3. Create Monday-Friday shifts for this + next week.
 4. Create recurring "every dayOfWeek for next X weeks" shifts.
 5. Ask manager-view queries to inspect employee/schedule coverage.
+6. Log in as an employee and run self-service queries:
+   - next shift
+   - total hours this week
+   - total hours next week
