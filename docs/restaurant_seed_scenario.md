@@ -39,7 +39,7 @@ Use the prompts below during demos to illustrate core scheduling workflows.
 Example prompt:
 
 ```text
-Create a shift for Kai Grill on Tuesday from 9:00 AM to 5:00 PM on the Kitchen schedule.
+Create a shift for Olivia	Tray on Tuesday from 9:00 AM to 5:00 PM on the Server schedule.
 ```
 
 Alternative prompt:
