@@ -24,10 +24,18 @@ if "token" not in st.session_state:
 
 
 # 🔓 Logged in
+role = str(st.session_state.get("role", "")).strip().lower()
+if role == "employee":
+    sidebar_user_role_class = "sidebar-user--employee"
+elif role == "supervisor":
+    sidebar_user_role_class = "sidebar-user--supervisor"
+else:
+    sidebar_user_role_class = "sidebar-user--default"
+
 st.sidebar.markdown("<div class='sidebar-brand'>📅 Scheduler Pro</div>", unsafe_allow_html=True)
 st.sidebar.markdown(
     f"""
-    <div class='sidebar-user'>
+    <div class='sidebar-user {sidebar_user_role_class}'>
         <div class='sidebar-muted'>Signed in as</div>
         <div><b>{st.session_state['full_name']}</b></div>
         <div style='height:0.35rem;'></div>

@@ -84,6 +84,16 @@ def inject_global_styles() -> None:
                 padding: 0.7rem 0.8rem;
                 margin-bottom: 0.8rem;
             }
+
+            .sidebar-user--employee {
+                background: #fff4e6;
+                border-color: #ffd8a8;
+            }
+
+            .sidebar-user--supervisor {
+                background: #e8f7ec;
+                border-color: #b7e4c7;
+            }
         </style>
         """,
         unsafe_allow_html=True,
