@@ -144,7 +144,7 @@ The UI is designed for adoption. Teams can still use classic pages for detailed 
 
 ---
 
-# 7) Technical Challenges & Next Steps
+# 7) Technical Challenges 
 
 ## Challenges
 
@@ -152,6 +152,15 @@ The UI is designed for adoption. Teams can still use classic pages for detailed 
 - Entity disambiguation and validation safety
 - Balancing LLM flexibility with deterministic control
 - Evolving API schemas and integration reliability
+
+<!--
+Speaker notes:
+This as a foundation and just the beginning. I've learned how to implement end-to-end orchestration with a LLM on real API operations. 
+-->
+
+--- 
+
+# 8) The Future
 
 ## Next Steps
 
@@ -162,7 +171,7 @@ The UI is designed for adoption. Teams can still use classic pages for detailed 
 
 <!--
 Speaker notes:
-Close by framing this as a foundation. We’ve proven end-to-end orchestration on real API operations. The next phase focuses on reliability at scale, smarter scheduling intelligence, and broader interface channels including voice ecosystems.
+The next phase focuses on reliability at scale, smarter scheduling intelligence, reusuanbility and broader interface channels including voice ecosystems.
 -->
 
 ---
