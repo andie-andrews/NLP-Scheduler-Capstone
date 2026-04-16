@@ -14,7 +14,7 @@ title: NLP Scheduler Capstone Demo
 
 <!--
 Speaker notes:
-Welcome everyone. This capstone demonstrates how natural language can sit on top of an existing scheduling API so users can complete operational tasks quickly without navigating complex forms. I’ll walk through the problem, architecture, key features, and a live demo flow.
+Welcome everyone. This capstone demonstrates how natural language can sit on top of a API so users can complete operational tasks quickly without navigating complex forms. I’ll walk through the problem, architecture, key features, and a live demo flow.
 -->
 
 ---
@@ -27,19 +27,19 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 - Managers need to create, update, and review shifts quickly
 - Traditional workflows require multiple screens or direct API knowledge
 - Employees and supervisors often need schedule info while on the go
-- Non-neurotypical users may benefit from voice-first, low-friction task support
+- Users may benefit from voice-first, low-friction task support
 
 ## Solution impact (especially for voice-reliant workflows)
 
 - Natural language reduces cognitive switching and navigation overhead
 - Voice assistants (Alexa, Siri, Gemini, Google Assistant) can help users stay on task
 - Faster check-ins: “When is my next shift?” or “Who is open Friday evening?”
-- Hands-free scheduling support without logging in and navigating multiple screens
+- Hands-free scheduling support without navigating multiple screens
 - Better accessibility by meeting users in familiar assistant interfaces
 
 <!--
 Speaker notes:
-This combines the core problem with why the solution matters in day-to-day life for both employees and managers. For users who rely on assistants like Alexa, Siri, or Gemini to stay organized and focused, natural language scheduling can provide quick, hands-free answers without requiring app login and navigation.
+This combines the core problem with why the solution matters in day-to-day life for both employees and managers. For users who rely on assistants like Alexa, Siri, or Gemini to stay organized and focused, natural language scheduling can provide quick, hands-free answers without requiring multiple navigation actions.
 -->
 
 ---
@@ -68,7 +68,7 @@ Employees / Schedules / Shifts data
 
 <!--
 Speaker notes:
-This is intentionally API-first. Instead of hard-coding every behavior in the chat layer, we parse OpenAPI and map operations dynamically. That keeps the assistant aligned with backend capabilities and allows the same API to serve both conversational and traditional UI workflows.
+This is intentionally API-first. Instead of hard-coding every behavior in the chat layer, we parse OpenAPI specifications and map operations dynamically. That keeps the assistant aligned with backend capabilities and allows the same API to serve both conversational and traditional UI workflows.
 -->
 
 ---
@@ -141,27 +141,10 @@ Speaker notes:
 The UI is designed for adoption. Teams can still use classic pages for detailed edits, while the assistant accelerates common actions. This reduces change risk because conversational workflows are additive, not disruptive.
 -->
 
----
-
-# 7) Demo Flow (Live Walkthrough)
-
-1. Login as manager in Streamlit
-2. Open AI Assistant
-3. Ask: “Schedule Alex next Tuesday 9am for 6 hours”
-4. Assistant resolves employee + schedule (or asks clarifying question)
-5. Assistant confirms/executes create-shift API call
-6. Ask: “Show me total hours for this week”
-7. Review summarized shift metrics/cards
-8. Update or delete a shift with follow-up confirmation
-
-<!--
-Speaker notes:
-During demo, emphasize the clarification loop and API-backed execution. If the assistant cannot disambiguate confidently, it asks for a specific selection rather than guessing. That behavior is key for manager trust.
--->
 
 ---
 
-# 8) Technical Challenges & Next Steps
+# 7) Technical Challenges & Next Steps
 
 ## Challenges
 
@@ -181,3 +164,7 @@ During demo, emphasize the clarification loop and API-backed execution. If the a
 Speaker notes:
 Close by framing this as a foundation. We’ve proven end-to-end orchestration on real API operations. The next phase focuses on reliability at scale, smarter scheduling intelligence, and broader interface channels including voice ecosystems.
 -->
+
+---
+
+Live Demo
