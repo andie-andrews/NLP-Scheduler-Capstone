@@ -19,21 +19,25 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 
 ---
 
-# 1) Problem Statement
+# 1) Problem Statement + Accessibility Solution
 
-## Scheduling is operationally urgent but UX-heavy
+## Scheduling is urgent, complex, and not always desk-friendly
 
 - Managers need to create, update, and review shifts quickly
 - Traditional workflows require multiple screens or direct API knowledge
-- Incomplete requests (missing date/time/employee/schedule) create friction
-- Goal: translate plain language into reliable scheduling actions
+- Employees and supervisors often need schedule info while on the go
+- Non-neurotypical users may benefit from voice-first, low-friction task support
 
-**Example user intent:**
-> “Schedule John Monday at 8am for 8 hours.”
+## Solution impact (especially for voice-reliant workflows)
+
+- Natural language reduces cognitive switching and navigation overhead
+- Voice assistants (Alexa/Google Assistant style) can help users stay on task
+- Faster check-ins: “When is my next shift?” or “Who is open Friday evening?”
+- Better accessibility by meeting users in familiar assistant interfaces
 
 <!--
 Speaker notes:
-The core pain point is speed and cognitive load. Scheduling tasks happen in the middle of busy operations, so forcing users through rigid forms slows them down. Our solution lets users express intent naturally and then handles field extraction, follow-up questions, and API execution.
+This combines the core problem with why the solution matters in day-to-day life. For users who rely on assistants like Alexa to stay organized and focused, natural language scheduling can reduce friction and make task completion more consistent and less stressful.
 -->
 
 ---
@@ -155,28 +159,7 @@ During demo, emphasize the clarification loop and API-backed execution. If the a
 
 ---
 
-# 8) Natural Language On-the-Go (Voice Assistants)
-
-## Why this matters for employees and scheduling managers
-
-- Employees can quickly ask for schedule details while commuting or between tasks
-- Managers can issue fast staffing commands without opening full dashboards
-- Voice channels (Alexa, Google Assistant, Siri-like interfaces) can reduce response time for urgent changes
-- Natural language lowers training burden for new supervisors
-
-**Potential scenarios:**
-- “When is my next shift?”
-- “Who is unassigned Friday evening?”
-- “Add Taylor to the dinner schedule this Saturday.”
-
-<!--
-Speaker notes:
-This extends accessibility and speed. A natural language interface is especially helpful for workers on the go who may not be at a desk. For managers, voice-assisted scheduling can improve coverage decisions during peak operational windows.
--->
-
----
-
-# 9) Technical Challenges & Next Steps
+# 8) Technical Challenges & Next Steps
 
 ## Challenges
 
