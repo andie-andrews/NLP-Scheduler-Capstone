@@ -23,6 +23,7 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 
 ## Scheduling is urgent, complex, and not always desk-friendly
 
+- Employees need quick answers without opening and navigating an app
 - Managers need to create, update, and review shifts quickly
 - Traditional workflows require multiple screens or direct API knowledge
 - Employees and supervisors often need schedule info while on the go
@@ -31,13 +32,14 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 ## Solution impact (especially for voice-reliant workflows)
 
 - Natural language reduces cognitive switching and navigation overhead
-- Voice assistants (Alexa/Google Assistant style) can help users stay on task
+- Voice assistants (Alexa, Siri, Gemini, Google Assistant) can help users stay on task
 - Faster check-ins: “When is my next shift?” or “Who is open Friday evening?”
+- Hands-free scheduling support without logging in and navigating multiple screens
 - Better accessibility by meeting users in familiar assistant interfaces
 
 <!--
 Speaker notes:
-This combines the core problem with why the solution matters in day-to-day life. For users who rely on assistants like Alexa to stay organized and focused, natural language scheduling can reduce friction and make task completion more consistent and less stressful.
+This combines the core problem with why the solution matters in day-to-day life for both employees and managers. For users who rely on assistants like Alexa, Siri, or Gemini to stay organized and focused, natural language scheduling can provide quick, hands-free answers without requiring app login and navigation.
 -->
 
 ---
