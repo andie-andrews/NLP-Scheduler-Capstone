@@ -8,9 +8,9 @@ This folder contains a React + TypeScript recreation of the Python Streamlit UI.
 - My Schedule weekly view
 - Manage Employees (search/create/edit/delete)
 - Manage Schedules overview with weekly totals and schedule CRUD
-- AI Assistant chat shell with pluggable endpoint
+- AI Assistant chat shell backed by the Python orchestrator API
 
-## Run
+## Run React UI
 ```bash
 cd reactUI
 cp .env.example .env
@@ -18,25 +18,31 @@ npm install
 npm run dev
 ```
 
+## Run assistant backend (for chat parity)
+The Streamlit app calls the orchestrator directly in-process. The React app needs an HTTP endpoint, which this repo now provides at `app/assistant_api.py`.
+
+```bash
+cd app
+cp .env.example .env
+pip install -r requirements.txt
+uvicorn assistant_api:app --reload --port 8000
+```
+
+Then set in `reactUI/.env`:
+
+```env
+VITE_AI_ASSISTANT_URL=http://localhost:8000/api/assistant/chat
+```
+
 ## Environment variables
 
 ### `VITE_SCHEDULER_API_BASE_URL`
 Base URL for the Scheduler REST API used by regular app features (login, employees, schedules, shifts).
 
-Example:
-- `https://localhost:7259` for local API
-- `https://<deployed-api-domain>` for deployed API
-
 ### `VITE_AI_ASSISTANT_URL`
-URL for the AI assistant backend endpoint that the React chat UI calls.
-
-This is **not** the Scheduler API base URL. It should point to an endpoint that accepts a chat payload (for example, a backend route that wraps the Python orchestrator and returns a response summary).
-
-Examples:
-- `http://localhost:8000/api/assistant/chat`
-- `https://<assistant-service-domain>/api/assistant/chat`
+URL for the AI assistant backend endpoint that the React chat UI calls. This should point to `/api/assistant/chat` on the assistant backend.
 
 ## Where to put the OpenAI key
 Do **not** put your OpenAI API key in `reactUI/.env` (anything prefixed with `VITE_` is exposed to the browser).
 
-Instead, put `OPENAI_API_KEY` in the backend environment (for this repo, use `app/.env` based on `app/.env.example`). The assistant backend should read that key server-side and the React UI should only call your backend assistant URL.
+Put `OPENAI_API_KEY` in `app/.env` (server-side). The backend endpoint uses that key when the orchestrator calls OpenAI.
