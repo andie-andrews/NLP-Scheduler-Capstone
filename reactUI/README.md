@@ -66,6 +66,15 @@ The default repo config now includes:
 
 Then restart the Scheduler API service.
 
+If it still fails in local dev:
+
+1. Confirm the API was restarted after config/code changes.
+2. Confirm the API is running in `Development` environment.
+3. Trust the ASP.NET HTTPS dev certificate (otherwise browser/network errors can appear as CORS failures):
+   ```bash
+   dotnet dev-certs https --trust
+   ```
+
 
 ## Troubleshooting
 

@@ -81,6 +81,16 @@ builder.Services.AddCors(options =>
 {
   options.AddPolicy("SchedulerFrontend", policy =>
   {
+    // In local development, allow the React dev server without requiring additional configuration.
+    if (builder.Environment.IsDevelopment())
+    {
+      policy
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+      return;
+    }
+
     if (corsAllowedOrigins.Length == 0)
     {
       policy
