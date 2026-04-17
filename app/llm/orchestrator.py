@@ -1,7 +1,9 @@
 import json
 import re
 from datetime import datetime, timedelta
+from pathlib import Path
 
+from dotenv import load_dotenv
 from openai import OpenAI
 
 from llm.openapi_loader import load_openapi_spec
@@ -88,6 +90,12 @@ from llm.orchestration.flows.update_shift_flow import handle_update_shift_flow
 from llm.orchestration.flows.pending_schedule_flow import handle_pending_schedule_flow
 from llm.orchestration.flows.pending_employee_flow import handle_pending_employee_flow
 from .prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
+
+# Load environment variables for non-Streamlit entry points (e.g., assistant_api, tests, scripts).
+APP_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = APP_DIR.parent
+load_dotenv(APP_DIR / ".env")
+load_dotenv(ROOT_DIR / ".env")
 
 client = OpenAI()
 
