@@ -2,12 +2,22 @@ import requests
 import os
 import urllib3
 
-BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net").rstrip("/")
-VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
-REQUEST_TIMEOUT_SECONDS = float(os.getenv("SCHEDULER_API_TIMEOUT_SECONDS", "20"))
+DEFAULT_BASE_URL = "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
 
-if not VERIFY_SSL:
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def _base_url() -> str:
+    return os.getenv("SCHEDULER_API_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+
+
+def _verify_ssl() -> bool:
+    verify_ssl = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
+    if not verify_ssl:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    return verify_ssl
+
+
+def _request_timeout_seconds() -> float:
+    return float(os.getenv("SCHEDULER_API_TIMEOUT_SECONDS", "20"))
 
 
 def _normalize_employee_search_result(operation, result):
@@ -28,7 +38,9 @@ def _normalize_employee_search_result(operation, result):
 def call_api(token, operation, args):
     # Avoid mutating caller-owned args (some flows reuse args after API calls).
     request_args = dict(args or {})
-    url = BASE_URL + operation["path"]
+    verify_ssl = _verify_ssl()
+    request_timeout_seconds = _request_timeout_seconds()
+    url = _base_url() + operation["path"]
     request_body_schema = (
         (operation.get("requestBody") or {})
         .get("content", {})
@@ -74,31 +86,31 @@ def call_api(token, operation, args):
                 url,
                 params=request_args,
                 headers=headers,
-                verify=VERIFY_SSL,
-                timeout=REQUEST_TIMEOUT_SECONDS,
+                verify=verify_ssl,
+                timeout=request_timeout_seconds,
             )
         elif method == "POST":
             res = requests.post(
                 url,
                 json=request_args,
                 headers=headers,
-                verify=VERIFY_SSL,
-                timeout=REQUEST_TIMEOUT_SECONDS,
+                verify=verify_ssl,
+                timeout=request_timeout_seconds,
             )
         elif method == "PUT":
             res = requests.put(
                 url,
                 json=request_args,
                 headers=headers,
-                verify=VERIFY_SSL,
-                timeout=REQUEST_TIMEOUT_SECONDS,
+                verify=verify_ssl,
+                timeout=request_timeout_seconds,
             )
         elif method == "DELETE":
             res = requests.delete(
                 url,
                 headers=headers,
-                verify=VERIFY_SSL,
-                timeout=REQUEST_TIMEOUT_SECONDS,
+                verify=verify_ssl,
+                timeout=request_timeout_seconds,
             )
         else:
             raise Exception(f"Unsupported method {method}")

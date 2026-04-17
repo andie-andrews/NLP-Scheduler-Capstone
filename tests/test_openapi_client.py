@@ -109,3 +109,27 @@ def test_call_api_employee_query_filters_locally_and_avoids_non_empty_query():
     called_params = mock_get.call_args.kwargs["params"]
     assert called_params["query"] == ""
     assert result == [{"id": 5, "firstName": "Lori", "lastName": "Martin"}]
+
+
+def test_call_api_uses_current_env_base_url_at_call_time():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "method": "GET",
+        "path": "/api/employees",
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict("os.environ", {"SCHEDULER_API_BASE_URL": "https://localhost:7259"}),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert called_url == "https://localhost:7259/api/employees"
