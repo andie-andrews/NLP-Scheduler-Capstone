@@ -28,6 +28,7 @@ public class ScheduleController : ControllerBase
   }
 
   [HttpGet("{scheduleId}")]
+  [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(typeof(Schedule), 200)]
   [ProducesResponseType(404)]
   public async Task<IActionResult> GetSchedule([FromRoute] int scheduleId)
@@ -37,6 +38,7 @@ public class ScheduleController : ControllerBase
   }
 
   [HttpPost]
+  [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(typeof(Schedule), 201)]
   public async Task<IActionResult> CreateSchedule([FromBody] CreateScheduleRequest request)
   {
@@ -49,6 +51,7 @@ public class ScheduleController : ControllerBase
   }
 
   [HttpPut("{scheduleId}")]
+  [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(204)]
   [ProducesResponseType(404)]
   public async Task<IActionResult> UpdateSchedule([FromRoute] int scheduleId, [FromBody] UpdateScheduleRequest request)
@@ -58,6 +61,7 @@ public class ScheduleController : ControllerBase
   }
 
   [HttpDelete("{scheduleId}")]
+  [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(204)]
   [ProducesResponseType(404)]
   public async Task<IActionResult> DeleteSchedule([FromRoute] int scheduleId)
@@ -67,6 +71,7 @@ public class ScheduleController : ControllerBase
   }
 
   [HttpGet("{scheduleId}/scheduleEmployees")]
+  [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(typeof(Infrastructure.Domain.Models.Employee), 200)]
   public async Task<IActionResult> GetEmployees([FromRoute] int scheduleId)
   {
@@ -74,11 +79,21 @@ public class ScheduleController : ControllerBase
     return Ok(result);
   }
 
-  [Authorize(Roles = "Supervisor")]
   [HttpGet("/api/employees/{employeeId}/employeeSchedules")]
   [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
+  [ProducesResponseType(403)]
   public async Task<IActionResult> GetEmployeeSchedules([FromRoute] int employeeId)
   {
+    if (!User.IsInRole("Supervisor"))
+    {
+      var employeeIdClaim = User.FindFirst("employeeId")?.Value;
+      if (!int.TryParse(employeeIdClaim, out var userEmployeeId))
+        return Forbid();
+
+      if (userEmployeeId != employeeId)
+        return Forbid();
+    }
+
     var result = await _scheduleDomainService.GetEmployeeSchedules(employeeId);
     return Ok(result);
   }
@@ -93,6 +108,7 @@ public class ScheduleController : ControllerBase
   }
 
   [HttpPost("{scheduleId}/scheduleEmployees/{employeeId}")]
+  [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(204)]
   [ProducesResponseType(typeof(Schedule), 201)]
   public async Task<IActionResult> AddScheduledEmployee([FromRoute] int scheduleId, [FromRoute] int employeeId)
@@ -102,6 +118,7 @@ public class ScheduleController : ControllerBase
   }
 
   [HttpDelete("{scheduleId}/scheduleEmployees/{employeeId}")]
+  [Authorize(Roles = "Supervisor")]
   public async Task<IActionResult> DeleteScheduledEmployee([FromRoute] int scheduleId, [FromRoute] int employeeId)
   {
     await _scheduleDomainService.RemoveEmployee(scheduleId, employeeId);
