@@ -1,5 +1,4 @@
 import re
-from app.llm.orchestration.parsers import normalize_temporal_text
 
 DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS = [
     "create shift",
@@ -10,7 +9,7 @@ DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS = [
 
 
 def is_create_shift_intent(message: str, create_shift_operation: dict | None = None):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     openapi_keywords = (create_shift_operation or {}).get("intent_phrases") or []
     keywords = [k.strip().lower() for k in (openapi_keywords or DEFAULT_CREATE_SHIFT_INTENT_KEYWORDS) if k]
 
@@ -57,19 +56,19 @@ def is_create_shift_intent(message: str, create_shift_operation: dict | None = N
 
 
 def is_delete_shift_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = message.lower()
     has_delete_action = any(action in text for action in ["delete", "remove", "cancel"])
     return has_delete_action and "shift" in text
 
 
 def is_update_shift_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = message.lower()
     has_update_action = any(action in text for action in ["update", "edit", "change", "move", "reschedule"])
     return has_update_action and "shift" in text
 
 
 def is_create_schedule_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     if "schedule" not in text:
         return False
     if "shift" in text:
@@ -80,7 +79,7 @@ def is_create_schedule_intent(message: str):
 
 
 def is_add_schedule_member_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     add_words = any(word in text for word in ["add", "assign", "include", "put"])
     member_words = any(word in text for word in ["employee", "manager", "supervisor"])
     explicit_member_phrase = bool(re.search(r"\b(add|assign|include|put)\b.+\bto\b.+\bschedule\b", text))
@@ -88,7 +87,7 @@ def is_add_schedule_member_intent(message: str):
 
 
 def is_remove_schedule_member_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     remove_words = any(word in text for word in ["remove", "unassign", "delete", "take off"])
     explicit_member_phrase = bool(re.search(r"\b(remove|unassign|delete|take off)\b.+\b(from|off)\b.+\bschedule\b", text))
     member_words = any(word in text for word in ["employee", "staff member", "teammate"])
@@ -96,7 +95,7 @@ def is_remove_schedule_member_intent(message: str):
 
 
 def is_delete_schedule_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     has_delete_action = any(action in text for action in ["delete", "remove", "cancel"])
     if not has_delete_action or "schedule" not in text:
         return False
@@ -106,28 +105,28 @@ def is_delete_schedule_intent(message: str):
 
 
 def is_create_employee_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     if "employee" not in text:
         return False
     return any(action in text for action in ["create", "add", "new", "hire"])
 
 
 def is_update_employee_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     if "employee" not in text:
         return False
     return any(action in text for action in ["update", "edit", "change"])
 
 
 def is_delete_employee_intent(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     if "employee" not in text:
         return False
     return any(action in text for action in ["delete", "remove", "terminate"])
 
 
 def is_schedule_domain_message(message: str):
-    text = normalize_temporal_text(message)
+    text = (message or "").lower()
     if not text.strip():
         return False
 
