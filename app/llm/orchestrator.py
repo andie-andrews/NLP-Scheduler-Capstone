@@ -1194,11 +1194,19 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
-        if op_id == "getEmployeeShifts" and "employeeId" not in args:
-            if explicit_employee_id is not None:
-                args["employeeId"] = explicit_employee_id
-            elif last_employee_id is not None:
-                args["employeeId"] = last_employee_id
+        if op_id == "getEmployeeShifts":
+            # Keep "my ..." schedule questions deterministic in case the model
+            # chooses another employee id for supervisors with broad access.
+            if (
+                current_employee_id is not None
+                and is_self_referential_employee_query(lowered_message)
+            ):
+                args["employeeId"] = current_employee_id
+            elif "employeeId" not in args:
+                if explicit_employee_id is not None:
+                    args["employeeId"] = explicit_employee_id
+                elif last_employee_id is not None:
+                    args["employeeId"] = last_employee_id
 
         inferred_range = extract_week_range_from_message(message)
         if inferred_range:
