@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import jwt
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -409,6 +410,22 @@ def _extract_explicit_employee_id(message: str):
     if not match:
         return None
     return int(match.group(1))
+
+
+def _extract_employee_id_from_token(token: str | None) -> int | None:
+    if not token:
+        return None
+    try:
+        claims = jwt.decode(token, options={"verify_signature": False})
+    except Exception:  # noqa: BLE001
+        return None
+    employee_id_value = claims.get("employeeId")
+    if employee_id_value is None:
+        return None
+    try:
+        return int(employee_id_value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _get_employee_directory(token: str, operations: dict, api_caller, memory):
@@ -1073,6 +1090,10 @@ def run_orchestrator(message: str, token: str, session: dict):
     memory = session.get("memory") if session else None
     has_supervisor_access = is_supervisor(session)
     current_employee_id = session.get("employee_id") if session else None
+    if current_employee_id is None:
+        current_employee_id = _extract_employee_id_from_token(token)
+        if session is not None and current_employee_id is not None:
+            session["employee_id"] = current_employee_id
     last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
     employees = _get_employee_directory(token, OPERATIONS, call_api, memory)
     name = find_name_in_message(message, employees) if employees else None
