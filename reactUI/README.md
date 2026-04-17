@@ -49,6 +49,23 @@ Do **not** put your OpenAI API key in `reactUI/.env` (anything prefixed with `VI
 
 Put `OPENAI_API_KEY` in `app/.env` (server-side). The backend endpoint uses that key when the orchestrator calls OpenAI.
 
+## Scheduler API CORS for React
+If login requests to `https://localhost:7259` are blocked by CORS from `http://localhost:5173`, update the API CORS settings in:
+
+- `apis/Scheduler.Api/Scheduler.Api/appsettings.Development.json` (`Cors:AllowedOrigins`)
+
+The default repo config now includes:
+
+```json
+{
+  "Cors": {
+    "AllowedOrigins": ["http://localhost:5173"]
+  }
+}
+```
+
+Then restart the Scheduler API service.
+
 
 ## Troubleshooting
 

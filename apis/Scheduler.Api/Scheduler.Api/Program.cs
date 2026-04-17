@@ -23,6 +23,8 @@ var defaultConnectionString = builder.Configuration.GetConnectionString("Default
   ?? throw new InvalidOperationException("Missing required configuration value: ConnectionStrings:Default");
 _ = defaultConnectionString;
 
+var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -75,6 +77,25 @@ builder.Services.AddAuthentication("Bearer")
   });
 
 builder.Services.AddAuthorization();
+builder.Services.AddCors(options =>
+{
+  options.AddPolicy("SchedulerFrontend", policy =>
+  {
+    if (corsAllowedOrigins.Length == 0)
+    {
+      policy
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+      return;
+    }
+
+    policy
+      .WithOrigins(corsAllowedOrigins)
+      .AllowAnyHeader()
+      .AllowAnyMethod();
+  });
+});
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
@@ -130,7 +151,9 @@ app.UseSwaggerUI();
 
 
 app.UseHttpsRedirection();
+app.UseCors("SchedulerFrontend");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
