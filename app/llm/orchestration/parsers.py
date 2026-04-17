@@ -2,8 +2,24 @@ import re
 from datetime import datetime, timedelta
 
 
+TEMPORAL_MISSPELLINGS = {
+    "wek": "week",
+    "weks": "weeks",
+    "tomorow": "tomorrow",
+    "tommorow": "tomorrow",
+    "tmrw": "tomorrow",
+}
+
+
+def normalize_temporal_text(message: str):
+    text = (message or "").lower()
+    for misspelling, correction in TEMPORAL_MISSPELLINGS.items():
+        text = re.sub(rf"\b{re.escape(misspelling)}\b", correction, text)
+    return text
+
+
 def find_name_in_message(message: str, employees: list):
-    message_lower = (message or "").lower()
+    message_lower = normalize_temporal_text(message)
     employee_records = employees
     if isinstance(employee_records, dict):
         for key in ("items", "employees", "results", "data", "value", "content"):
@@ -36,14 +52,14 @@ def find_name_in_message(message: str, employees: list):
 
 
 def extract_duration_hours(message: str):
-    match = re.search(r"(\d+)\s*(hour|hours|hr|hrs)\b", message.lower())
+    match = re.search(r"(\d+)\s*(hour|hours|hr|hrs)\b", normalize_temporal_text(message))
     if not match:
         return None
     return int(match.group(1))
 
 
 def extract_time_of_day(message: str):
-    text = (message or "").lower()
+    text = normalize_temporal_text(message)
     time_match = re.search(r"(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", text)
     if not time_match:
         return None
@@ -64,7 +80,7 @@ def extract_time_of_day(message: str):
 
 
 def extract_time_range(message: str):
-    text = (message or "").lower()
+    text = normalize_temporal_text(message)
     match = re.search(
         r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:-|to)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?",
         text,
@@ -109,7 +125,7 @@ def extract_time_range(message: str):
 
 
 def extract_recurring_shift_dates(message: str, now: datetime | None = None):
-    text = (message or "").lower()
+    text = normalize_temporal_text(message)
     now = now or datetime.now()
     normalized = re.sub(r"\s+", " ", text)
 
@@ -212,7 +228,7 @@ def extract_recurring_shift_dates(message: str, now: datetime | None = None):
 
 
 def _extract_relative_date(text: str, now: datetime):
-    normalized = (text or "").lower()
+    normalized = normalize_temporal_text(text)
     if "tomorrow" in normalized:
         return now + timedelta(days=1)
     if "today" in normalized or "tonight" in normalized:
@@ -230,7 +246,7 @@ def extract_weekday_datetime(message: str, now: datetime | None = None):
         "saturday": 5,
         "sunday": 6,
     }
-    text = message.lower()
+    text = normalize_temporal_text(message)
     target_day = None
     for name, idx in weekdays.items():
         if name in text:
@@ -293,7 +309,7 @@ def week_range_from_date(target: datetime):
 
 
 def extract_week_range_from_message(message: str, now: datetime | None = None):
-    text = (message or "").lower()
+    text = normalize_temporal_text(message)
     now = now or datetime.now()
 
     if "this week" in text:
@@ -317,6 +333,7 @@ def extract_week_range_from_message(message: str, now: datetime | None = None):
 
 
 def extract_schedule_name(message: str):
+    normalized_message = normalize_temporal_text(message)
     patterns = [
         r"(?:to|on|in)\s+([a-zA-Z0-9 _'’-]+?)['’]s\s+schedule\b",
         r"(?:from)\s+([a-zA-Z0-9 _'’-]+?)['’]s\s+schedule\b",
@@ -325,7 +342,7 @@ def extract_schedule_name(message: str):
         r"schedule\s+(?:for|on|in|from)\s+([a-zA-Z0-9 _'’-]+)",
     ]
     for pattern in patterns:
-        match = re.search(pattern, message.lower())
+        match = re.search(pattern, normalized_message)
         if match:
             schedule_name = match.group(1).strip(" .,!?:;\"'")
             schedule_name = re.sub(r"^(the|a|an)\s+", "", schedule_name, flags=re.IGNORECASE)
@@ -343,7 +360,7 @@ def extract_weekday_date(message: str, now: datetime | None = None):
         "saturday": 5,
         "sunday": 6,
     }
-    text = message.lower()
+    text = normalize_temporal_text(message)
     target_day = None
     for name, idx in weekdays.items():
         if name in text:

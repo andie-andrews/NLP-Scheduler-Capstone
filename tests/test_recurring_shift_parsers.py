@@ -91,3 +91,21 @@ def test_extract_weekday_datetime_supports_tomorrow_with_time():
     now = datetime(2026, 4, 15, 12, 0, 0)
     parsed = extract_weekday_datetime("tomorrow 4pm", now=now)
     assert parsed == "2026-04-16T16:00:00"
+
+
+def test_extract_weekday_datetime_supports_common_tomorrow_misspelling():
+    now = datetime(2026, 4, 15, 12, 0, 0)
+    parsed = extract_weekday_datetime("tomorow 4pm", now=now)
+    assert parsed == "2026-04-16T16:00:00"
+
+
+def test_extract_recurring_shift_dates_supports_common_week_misspelling():
+    now = datetime(2026, 4, 12, 12, 0, 0)
+    dates = extract_recurring_shift_dates("Schedule Jane next wek Monday-Friday 9am-5pm", now=now)
+    assert [d.isoformat() for d in dates] == [
+        "2026-04-20",
+        "2026-04-21",
+        "2026-04-22",
+        "2026-04-23",
+        "2026-04-24",
+    ]

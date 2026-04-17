@@ -15,3 +15,7 @@ def test_is_create_shift_intent_false_for_schedule_noun_lookup():
 
 def test_is_create_shift_intent_with_relative_day_and_no_shift_word():
     assert is_create_shift_intent("Schedule Emma on Hostesses schedule tomorrow 4 PM to 10 PM") is True
+
+
+def test_is_create_shift_intent_supports_common_temporal_misspellings():
+    assert is_create_shift_intent("Schedule Emma on Hostesses schedule tomorow 4 PM to 10 PM next wek") is True
