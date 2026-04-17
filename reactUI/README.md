@@ -21,6 +21,8 @@ npm run dev
 ## Run assistant backend (for chat parity)
 The Streamlit app calls the orchestrator directly in-process. The React app needs an HTTP endpoint, which this repo now provides at `app/assistant_api.py`.
 
+Detailed backend notes: `docs/react_assistant_backend.md`.
+
 ```bash
 cd app
 cp .env.example .env
