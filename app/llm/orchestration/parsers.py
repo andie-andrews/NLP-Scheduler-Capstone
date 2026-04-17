@@ -333,7 +333,9 @@ def extract_week_range_from_message(message: str, now: datetime | None = None):
 
 
 def extract_schedule_name(message: str):
-    normalized_message = normalize_temporal_text(message)
+    # Preserve raw schedule identifiers and only normalize case. Applying temporal
+    # typo normalization here can rewrite legitimate entity names (e.g. "Wek").
+    normalized_message = (message or "").lower()
     patterns = [
         r"(?:to|on|in)\s+([a-zA-Z0-9 _'’-]+?)['’]s\s+schedule\b",
         r"(?:from)\s+([a-zA-Z0-9 _'’-]+?)['’]s\s+schedule\b",
