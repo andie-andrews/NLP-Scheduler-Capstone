@@ -1064,7 +1064,7 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     if (
         not has_supervisor_access
-        and looks_like_other_employee_schedule_request(message)
+        and looks_like_other_employee_schedule_request(message, current_employee_id)
         and not is_self_referential_employee_query(lowered_message)
     ):
         return ACCESS_GUARD_MESSAGE

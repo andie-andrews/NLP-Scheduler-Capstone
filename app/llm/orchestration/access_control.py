@@ -11,7 +11,16 @@ def is_supervisor(session: dict | None) -> bool:
     return role == "supervisor"
 
 
-def looks_like_other_employee_schedule_request(message: str) -> bool:
+def _extract_referenced_employee_id(lowered_message: str) -> int | None:
+    match = re.search(r"\b(?:employee|associate|worker)\s+(\d+)\b", lowered_message)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def looks_like_other_employee_schedule_request(
+    message: str, requester_employee_id: int | None = None
+) -> bool:
     text = (message or "").strip()
     if not text:
         return False
@@ -31,7 +40,10 @@ def looks_like_other_employee_schedule_request(message: str) -> bool:
         if owner_words.isdisjoint(temporal_tokens):
             return True
 
-    if re.search(r"\b(?:employee|associate|worker)\s+\d+\b", lowered):
+    referenced_employee_id = _extract_referenced_employee_id(lowered)
+    if referenced_employee_id is not None:
+        if requester_employee_id is not None and referenced_employee_id == requester_employee_id:
+            return False
         return True
 
     if re.search(r"\b(?:for|of)\s+[a-z]+(?:\s+[a-z]+)?\s+(?:schedule|shifts?)\b", lowered):

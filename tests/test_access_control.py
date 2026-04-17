@@ -26,3 +26,15 @@ def test_temporal_phrase_next_weeks_schedule_is_not_detected_as_other_employee()
 
 def test_employee_id_reference_is_detected_as_other_employee_request():
     assert looks_like_other_employee_schedule_request("Get shifts for employee 105") is True
+
+
+def test_employee_id_reference_matching_requester_is_not_blocked():
+    assert looks_like_other_employee_schedule_request(
+        "Get shifts for employee 105", requester_employee_id=105
+    ) is False
+
+
+def test_employee_id_reference_for_different_requester_is_still_blocked():
+    assert looks_like_other_employee_schedule_request(
+        "Get shifts for employee 105", requester_employee_id=101
+    ) is True
