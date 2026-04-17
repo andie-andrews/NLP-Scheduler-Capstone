@@ -18,4 +18,25 @@ npm install
 npm run dev
 ```
 
-Set `VITE_AI_ASSISTANT_URL` if you want AI chat responses from a backend endpoint.
+## Environment variables
+
+### `VITE_SCHEDULER_API_BASE_URL`
+Base URL for the Scheduler REST API used by regular app features (login, employees, schedules, shifts).
+
+Example:
+- `https://localhost:7259` for local API
+- `https://<deployed-api-domain>` for deployed API
+
+### `VITE_AI_ASSISTANT_URL`
+URL for the AI assistant backend endpoint that the React chat UI calls.
+
+This is **not** the Scheduler API base URL. It should point to an endpoint that accepts a chat payload (for example, a backend route that wraps the Python orchestrator and returns a response summary).
+
+Examples:
+- `http://localhost:8000/api/assistant/chat`
+- `https://<assistant-service-domain>/api/assistant/chat`
+
+## Where to put the OpenAI key
+Do **not** put your OpenAI API key in `reactUI/.env` (anything prefixed with `VITE_` is exposed to the browser).
+
+Instead, put `OPENAI_API_KEY` in the backend environment (for this repo, use `app/.env` based on `app/.env.example`). The assistant backend should read that key server-side and the React UI should only call your backend assistant URL.
