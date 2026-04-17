@@ -48,3 +48,20 @@ URL for the AI assistant backend endpoint that the React chat UI calls. This sho
 Do **not** put your OpenAI API key in `reactUI/.env` (anything prefixed with `VITE_` is exposed to the browser).
 
 Put `OPENAI_API_KEY` in `app/.env` (server-side). The backend endpoint uses that key when the orchestrator calls OpenAI.
+
+
+## Troubleshooting
+
+### `TypeError: crypto.getRandomValues is not a function`
+This usually means Node is too old or does not expose Web Crypto correctly.
+
+1. Use Node 18.18+ (recommended: Node 20 LTS).
+2. Reinstall dependencies after switching Node:
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
+```
+
+The Vite config also includes a compatibility fallback that assigns `globalThis.crypto` from `node:crypto.webcrypto` when needed.
