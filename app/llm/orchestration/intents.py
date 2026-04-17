@@ -123,3 +123,40 @@ def is_delete_employee_intent(message: str):
     if "employee" not in text:
         return False
     return any(action in text for action in ["delete", "remove", "terminate"])
+
+
+def is_schedule_domain_message(message: str):
+    text = (message or "").lower()
+    if not text.strip():
+        return False
+
+    if any(
+        intent_check(message)
+        for intent_check in [
+            is_create_shift_intent,
+            is_delete_shift_intent,
+            is_update_shift_intent,
+            is_create_schedule_intent,
+            is_add_schedule_member_intent,
+            is_remove_schedule_member_intent,
+            is_delete_schedule_intent,
+            is_create_employee_intent,
+            is_update_employee_intent,
+            is_delete_employee_intent,
+        ]
+    ):
+        return True
+
+    schedule_keywords = [
+        "schedule",
+        "shift",
+        "shifts",
+        "hours",
+        "timesheet",
+        "roster",
+        "employee id",
+        "manager",
+        "supervisor",
+        "staffing",
+    ]
+    return any(keyword in text for keyword in schedule_keywords)

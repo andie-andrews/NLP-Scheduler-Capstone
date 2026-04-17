@@ -1,4 +1,4 @@
-from app.llm.orchestration.intents import is_create_schedule_intent
+from app.llm.orchestration.intents import is_create_schedule_intent, is_schedule_domain_message
 
 
 def test_is_create_schedule_intent_false_when_message_is_about_shift_creation():
@@ -8,3 +8,11 @@ def test_is_create_schedule_intent_false_when_message_is_about_shift_creation():
 
 def test_is_create_schedule_intent_true_for_actual_schedule_creation():
     assert is_create_schedule_intent("Create a new Kitchen schedule") is True
+
+
+def test_is_schedule_domain_message_true_for_shift_question():
+    assert is_schedule_domain_message("How many hours am I working next week?") is True
+
+
+def test_is_schedule_domain_message_false_for_general_chat():
+    assert is_schedule_domain_message("Tell me a joke about coffee.") is False

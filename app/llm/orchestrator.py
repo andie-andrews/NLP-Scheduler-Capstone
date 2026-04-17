@@ -13,6 +13,7 @@ from llm.orchestration.intents import (
     is_add_schedule_member_intent,
     is_create_employee_intent,
     is_create_schedule_intent,
+    is_schedule_domain_message,
     is_create_shift_intent,
     is_delete_employee_intent,
     is_delete_schedule_intent,
@@ -101,6 +102,13 @@ client = OpenAI()
 
 spec = load_openapi_spec()
 OPERATIONS = parse_operations(spec)
+GENERAL_CONVERSATION_SYSTEM_PROMPT = """
+You are a friendly assistant in a workforce scheduling app.
+
+When the user asks non-scheduling questions, answer normally and conversationally.
+If the question is scheduling-related, politely suggest they can ask about schedules, shifts, staffing, and hours.
+Keep responses concise and helpful.
+"""
 
 
 def _build_create_shift_question(state):
@@ -1162,9 +1170,19 @@ def run_orchestrator(message: str, token: str, session: dict):
     msg = response.choices[0].message
 
     if not msg.tool_calls:
-        if re.search(r"\b(hours?|work|worked|schedule|shift)\b", lowered_message):
+        if is_schedule_domain_message(message):
             return "What date range should I use? I can use this week, next week, or this month."
-        return "I couldn't determine what action to take. Try rephrasing."
+        if re.fullmatch(r"\s*(hi|hello|hey|yo|good (morning|afternoon|evening))[\s!?.]*", lowered_message):
+            return "Hey! 👋 I can chat and also help with schedules, shifts, and hours. What’s up?"
+
+        general_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": GENERAL_CONVERSATION_SYSTEM_PROMPT},
+                {"role": "user", "content": message},
+            ],
+        )
+        return (general_response.choices[0].message.content or "").strip() or "I’m here—ask me anything."
 
     tool_call = msg.tool_calls[0]
 
