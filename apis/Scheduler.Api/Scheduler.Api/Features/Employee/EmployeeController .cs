@@ -23,11 +23,15 @@ public class EmployeeController : ControllerBase
   [ProducesResponseType(404)]
   public async Task<IActionResult> GetEmployee([FromRoute] int employeeId)
   {
-    var jwtEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
-    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+    if (!User.IsInRole("Supervisor"))
+    {
+      var employeeIdClaim = User.FindFirst("employeeId")?.Value;
+      if (!int.TryParse(employeeIdClaim, out var jwtEmployeeId))
+        return Forbid();
 
-    if (role != "Supervisor" && jwtEmployeeId != employeeId)
-      return Forbid();
+      if (jwtEmployeeId != employeeId)
+        return Forbid();
+    }
 
     var result = await _employeeDomainService.GetEmployee(employeeId);
 

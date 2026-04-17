@@ -76,6 +76,11 @@ from llm.orchestration.flow_context import (
     build_pending_flow_kwargs,
     build_shift_flow_kwargs,
 )
+from llm.orchestration.access_control import (
+    ACCESS_GUARD_MESSAGE,
+    is_supervisor,
+    looks_like_other_employee_schedule_request,
+)
 from llm.orchestration.registry import FlowRegistry
 from llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
 from llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
@@ -1050,12 +1055,23 @@ def run_orchestrator(message: str, token: str, session: dict):
         return flow_result
 
     memory = session.get("memory") if session else None
+    has_supervisor_access = is_supervisor(session)
+    current_employee_id = session.get("employee_id") if session else None
     last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
     employees = _get_employee_directory(token, OPERATIONS, call_api, memory)
     name = find_name_in_message(message, employees) if employees else None
     effective_message = message
 
+    if (
+        not has_supervisor_access
+        and looks_like_other_employee_schedule_request(message)
+        and not is_self_referential_employee_query(lowered_message)
+    ):
+        return ACCESS_GUARD_MESSAGE
+
     if explicit_employee_id is not None:
+        if not has_supervisor_access and current_employee_id is not None and explicit_employee_id != current_employee_id:
+            return ACCESS_GUARD_MESSAGE
         effective_message += f" (employeeId = {explicit_employee_id})"
         if memory and hasattr(memory, "save_last_employee"):
             memory.save_last_employee(explicit_employee_id)
@@ -1089,6 +1105,8 @@ def run_orchestrator(message: str, token: str, session: dict):
 
         if resolution["type"] == "resolved":
             employee_id = resolution["employeeId"]
+            if not has_supervisor_access and current_employee_id is not None and employee_id != current_employee_id:
+                return ACCESS_GUARD_MESSAGE
             effective_message += f" (employeeId = {employee_id})"
             if memory and hasattr(memory, "save_last_employee"):
                 memory.save_last_employee(employee_id)
@@ -1199,6 +1217,8 @@ def run_orchestrator(message: str, token: str, session: dict):
                 setattr(memory, "last_employee_id", args["employeeId"])
         employee_full_name = None
         target_employee_id = args.get("employeeId")
+        if target_employee_id is not None and current_employee_id is not None and target_employee_id == current_employee_id:
+            employee_full_name = "you"
         if target_employee_id is not None and isinstance(employees, list):
             matched_employee = next(
                 (emp for emp in employees if emp.get("id") == target_employee_id),
