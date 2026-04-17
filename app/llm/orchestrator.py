@@ -34,6 +34,7 @@ from llm.orchestration.parsers import (
     extract_weekday_datetime,
     find_name_in_message,
     format_shift_option_line,
+    normalize_temporal_text,
     week_range_from_date,
 )
 from llm.orchestration.resolvers import (
@@ -708,10 +709,12 @@ ONLY return tool calls.
 
 
 def run_orchestrator(message: str, token: str, session: dict):
-
+    raw_message = message or ""
+    normalized_message = normalize_temporal_text(raw_message)
     print("----- USER MESSAGE -----")
-    print(message)
-    lowered_message = (message or "").lower()
+    print(raw_message)
+    message = normalized_message
+    lowered_message = normalized_message
     explicit_employee_id = _extract_explicit_employee_id(message)
 
     pending_shift = get_pending_shift_state(session)
@@ -1200,7 +1203,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": GENERAL_CONVERSATION_SYSTEM_PROMPT},
-                {"role": "user", "content": message},
+                {"role": "user", "content": raw_message},
             ],
         )
         return (general_response.choices[0].message.content or "").strip() or "I’m here—ask me anything."
