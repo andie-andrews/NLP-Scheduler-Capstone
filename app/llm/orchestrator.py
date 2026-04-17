@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import jwt
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -409,6 +410,22 @@ def _extract_explicit_employee_id(message: str):
     if not match:
         return None
     return int(match.group(1))
+
+
+def _extract_employee_id_from_token(token: str | None) -> int | None:
+    if not token:
+        return None
+    try:
+        claims = jwt.decode(token, options={"verify_signature": False})
+    except Exception:  # noqa: BLE001
+        return None
+    employee_id_value = claims.get("employeeId")
+    if employee_id_value is None:
+        return None
+    try:
+        return int(employee_id_value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _get_employee_directory(token: str, operations: dict, api_caller, memory):
@@ -1073,6 +1090,10 @@ def run_orchestrator(message: str, token: str, session: dict):
     memory = session.get("memory") if session else None
     has_supervisor_access = is_supervisor(session)
     current_employee_id = session.get("employee_id") if session else None
+    if current_employee_id is None:
+        current_employee_id = _extract_employee_id_from_token(token)
+        if session is not None and current_employee_id is not None:
+            session["employee_id"] = current_employee_id
     last_employee_id = getattr(memory, "last_employee_id", None) if memory else None
     employees = _get_employee_directory(token, OPERATIONS, call_api, memory)
     name = find_name_in_message(message, employees) if employees else None
@@ -1194,11 +1215,22 @@ def run_orchestrator(message: str, token: str, session: dict):
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
-        if op_id == "getEmployeeShifts" and "employeeId" not in args:
-            if explicit_employee_id is not None:
-                args["employeeId"] = explicit_employee_id
-            elif last_employee_id is not None:
-                args["employeeId"] = last_employee_id
+        if op_id == "getEmployeeShifts":
+            # Keep "my ..." schedule questions deterministic in case the model
+            # chooses another employee id for supervisors with broad access.
+            # Preserve explicit employee targets already resolved from the prompt.
+            if (
+                current_employee_id is not None
+                and explicit_employee_id is None
+                and name is None
+                and is_self_referential_employee_query(lowered_message)
+            ):
+                args["employeeId"] = current_employee_id
+            elif "employeeId" not in args:
+                if explicit_employee_id is not None:
+                    args["employeeId"] = explicit_employee_id
+                elif last_employee_id is not None:
+                    args["employeeId"] = last_employee_id
 
         inferred_range = extract_week_range_from_message(message)
         if inferred_range:
