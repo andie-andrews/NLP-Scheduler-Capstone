@@ -6,6 +6,11 @@ def inject_global_styles() -> None:
     st.markdown(
         """
         <style>
+            html, body, [class*="st-"] {
+                font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif !important;
+                color: #1f2a44 !important;
+            }
+
             :root,
             [data-theme="dark"] {
                 --background-color: #f7fbff;
@@ -17,6 +22,12 @@ def inject_global_styles() -> None:
                 background: linear-gradient(180deg, #f7fbff 0%, #eef4ff 55%, #f5f7ff 100%);
             }
 
+            [data-testid="stAppViewContainer"],
+            [data-testid="stAppViewContainer"] > .main,
+            [data-testid="stAppViewContainer"] > .main > div {
+                background: transparent !important;
+            }
+
             [data-testid="stSidebar"] {
                 background: linear-gradient(180deg, #f8fbff 0%, #f1f5ff 100%);
                 border-right: 1px solid #dbe7ff;
@@ -24,6 +35,48 @@ def inject_global_styles() -> None:
 
             [data-testid="stSidebar"] * {
                 color: #1f2a44;
+            }
+
+            [data-testid="stMarkdownContainer"] p,
+            [data-testid="stMarkdownContainer"] li,
+            [data-testid="stMarkdownContainer"] span,
+            [data-testid="stMetricValue"],
+            [data-testid="stMetricLabel"],
+            [data-testid="stChatMessage"] {
+                color: #1f2a44 !important;
+                opacity: 1 !important;
+            }
+
+            [data-testid="stChatMessage"] {
+                background: #ffffff !important;
+                border: 1px solid #dbe7ff !important;
+                border-radius: 12px !important;
+                padding: 0.4rem 0.75rem !important;
+            }
+
+            button[kind],
+            [data-testid="baseButton-secondary"],
+            [data-testid="baseButton-primary"] {
+                min-height: 2rem;
+                border-radius: 10px !important;
+                font-weight: 600 !important;
+                background-color: #0f172a !important;
+                color: #ffffff !important;
+                border: 1px solid #0f172a !important;
+            }
+
+            button[kind]:hover,
+            [data-testid="baseButton-secondary"]:hover,
+            [data-testid="baseButton-primary"]:hover {
+                background-color: #1e293b !important;
+                border-color: #1e293b !important;
+            }
+
+            [data-testid="stChatInput"] textarea {
+                background: #ffffff !important;
+                color: #1f2a44 !important;
+                border: 1px solid #dbe7ff !important;
+                border-radius: 10px !important;
             }
 
             .app-shell {
