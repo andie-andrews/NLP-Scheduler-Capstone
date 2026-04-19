@@ -182,18 +182,45 @@ npm run dev
 
 ### Tests
 
-If `pytest` is not installed yet in your active Python environment, install it first:
+You run tests from the **repo root** (`tests/` lives at root), while your Python environment and `.env` live in `app/`.
+
+Use this exact flow:
 
 ```bash
+# from repo root
 cd app
 source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 pip install pytest
+cd ..
 ```
 
-Then run tests from repo root using:
+Then run tests from root:
 
 ```bash
+# from repo root
 python -m pytest
 ```
 
-> Why this helps: if you see `pytest: command not found`, either your virtual environment is not activated or `pytest` is not installed in that environment.
+If your tests need environment values from `app/.env`, export them before running pytest:
+
+```bash
+# from repo root (macOS/Linux)
+set -a
+source app/.env
+set +a
+python -m pytest
+```
+
+Windows PowerShell equivalent:
+
+```powershell
+Get-Content app/.env | ForEach-Object {
+  if ($_ -match '^\s*#' -or $_ -match '^\s*$') { return }
+  $name, $value = $_ -split '=', 2
+  [System.Environment]::SetEnvironmentVariable($name.Trim(), $value.Trim())
+}
+python -m pytest
+```
+
+> Why this is confusing: the virtual environment and `.env` are under `app/`, but the test suite directory is at repo root (`tests/`). You still execute pytest from root so test discovery finds all test files.
