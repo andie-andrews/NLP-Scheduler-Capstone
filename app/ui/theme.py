@@ -83,6 +83,12 @@ def inject_global_styles() -> None:
                 opacity: 1 !important;
             }
 
+            [data-testid="stButton"] > button [data-testid="stMarkdownContainer"] p,
+            [data-testid="stButton"] > button [data-testid="stMarkdownContainer"] li,
+            [data-testid="stButton"] > button [data-testid="stMarkdownContainer"] span {
+                color: inherit !important;
+            }
+
             [data-testid="stChatMessage"] {
                 background: #ffffff !important;
                 border: 1px solid #dbe7ff !important;
