@@ -182,8 +182,18 @@ npm run dev
 
 ### Tests
 
-From repo root:
+If `pytest` is not installed yet in your active Python environment, install it first:
 
 ```bash
-pytest
+cd app
+source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
+pip install pytest
 ```
+
+Then run tests from repo root using:
+
+```bash
+python -m pytest
+```
+
+> Why this helps: if you see `pytest: command not found`, either your virtual environment is not activated or `pytest` is not installed in that environment.
