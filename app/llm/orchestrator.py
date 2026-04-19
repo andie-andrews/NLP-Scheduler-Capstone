@@ -5,7 +5,6 @@ from pathlib import Path
 
 import jwt
 from dotenv import load_dotenv
-from openai import OpenAI
 
 from llm.openapi_loader import load_openapi_spec
 from llm.openapi_parser import parse_operations
@@ -93,6 +92,7 @@ from llm.orchestration.flows.update_shift_flow import handle_update_shift_flow
 from llm.orchestration.flows.pending_schedule_flow import handle_pending_schedule_flow
 from llm.orchestration.flows.pending_employee_flow import handle_pending_employee_flow
 from .prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
+from .langchain_orchestration import OrchestrationLLM
 
 # Load environment variables for non-Streamlit entry points (e.g., assistant_api, tests, scripts).
 APP_DIR = Path(__file__).resolve().parents[1]
@@ -100,7 +100,7 @@ ROOT_DIR = APP_DIR.parent
 load_dotenv(APP_DIR / ".env")
 load_dotenv(ROOT_DIR / ".env")
 
-client = OpenAI()
+llm_client = OrchestrationLLM(model="gpt-4o")
 
 spec = load_openapi_spec()
 OPERATIONS = parse_operations(spec)
@@ -1181,37 +1181,21 @@ def run_orchestrator(message: str, token: str, session: dict):
     print("----- SYSTEM PROMPT -----")
     print(system_prompt)
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": effective_message}
-        ],
-        tools=tools,
-        tool_choice="auto"
-    )
+    model_response = llm_client.invoke_with_tools(system_prompt, effective_message, tools)
 
-    msg = response.choices[0].message
-
-    if not msg.tool_calls:
+    if not model_response.tool_calls:
         if is_schedule_domain_message(message):
             return "What date range should I use? I can use this week, next week, or this month."
         if re.fullmatch(r"\s*(hi|hello|hey|yo|good (morning|afternoon|evening))[\s!?.]*", lowered_message):
             return "Hey! 👋 I can chat and also help with schedules, shifts, and hours. What’s up?"
 
-        general_response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": GENERAL_CONVERSATION_SYSTEM_PROMPT},
-                {"role": "user", "content": raw_message},
-            ],
-        )
-        return (general_response.choices[0].message.content or "").strip() or "I’m here—ask me anything."
+        general_response = llm_client.invoke_plain(GENERAL_CONVERSATION_SYSTEM_PROMPT, raw_message)
+        return general_response or "I’m here—ask me anything."
 
-    tool_call = msg.tool_calls[0]
+    tool_call = model_response.tool_calls[0]
 
-    op_id = tool_call.function.name
-    args = json.loads(tool_call.function.arguments or "{}")
+    op_id = tool_call["function"]["name"]
+    args = json.loads(tool_call["function"]["arguments"] or "{}")
 
     print("----- TOOL CALL -----")
     print(op_id)
