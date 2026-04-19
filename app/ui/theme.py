@@ -39,6 +39,36 @@ def inject_global_styles() -> None:
                 border-right: 1px solid #dbe7ff;
             }
 
+            [data-testid="stHeader"] {
+                background: linear-gradient(180deg, rgba(248, 251, 255, 0.95) 0%, rgba(239, 245, 255, 0.95) 100%) !important;
+                border-bottom: 1px solid #dbe7ff !important;
+            }
+
+            [data-testid="stToolbar"],
+            [data-testid="stToolbar"] *,
+            [data-testid="stStatusWidget"],
+            [data-testid="stStatusWidget"] *,
+            [data-testid="stToolbarActions"],
+            [data-testid="stMainMenu"],
+            [data-testid="stMainMenu"] * {
+                color: #1f2a44 !important;
+            }
+
+            [data-testid="stHeader"] [data-testid="stBaseButton-header"],
+            [data-testid="stMainMenuButton"] {
+                background: #ffffff !important;
+                color: #1f2a44 !important;
+                border: 1px solid #c9dafd !important;
+                border-radius: 8px !important;
+            }
+
+            [data-testid="stHeader"] [data-testid="stBaseButton-header"]:hover,
+            [data-testid="stMainMenuButton"]:hover {
+                background: #edf4ff !important;
+                border-color: #b7cdfa !important;
+                color: #13213f !important;
+            }
+
             [data-testid="stSidebar"] * {
                 color: #1f2a44;
             }
@@ -84,6 +114,20 @@ def inject_global_styles() -> None:
                 color: #7a8aa9 !important;
                 border-color: #d7e2f7 !important;
                 box-shadow: none !important;
+            }
+
+            [data-testid="stSidebar"] [data-baseweb="select"] > div,
+            [data-testid="stAppViewContainer"] [data-baseweb="select"] > div {
+                background: #ffffff !important;
+                color: #1f2a44 !important;
+                border: 1px solid #c9dafd !important;
+                border-radius: 10px !important;
+            }
+
+            [data-baseweb="popover"] [role="listbox"],
+            [data-baseweb="popover"] [role="option"] {
+                background: #ffffff !important;
+                color: #1f2a44 !important;
             }
 
             [data-testid="stChatInput"] textarea {
