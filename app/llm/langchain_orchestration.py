@@ -19,11 +19,28 @@ if LANGCHAIN_AVAILABLE:
 
 @dataclass
 class ModelResponse:
+    """Unified response shape consumed by the existing orchestrator logic.
+
+    Attributes:
+        content: Assistant text content (empty when the model decides to only call tools).
+        tool_calls: Tool call payload normalized to an OpenAI-like structure:
+            [{"id": "...", "function": {"name": "...", "arguments": "{...json...}"}}]
+    """
+
     content: str
     tool_calls: list[dict[str, Any]]
 
 
 def _normalize_content(content: Any) -> str:
+    """Convert provider-specific message content into a plain string.
+
+    Why:
+        LangChain/OpenAI can return content as either:
+        - a direct string, or
+        - a list of structured blocks.
+        The orchestrator expects a single string, so we flatten and sanitize here.
+    """
+
     if isinstance(content, str):
         return content.strip()
 
@@ -42,6 +59,14 @@ def _normalize_content(content: Any) -> str:
 
 
 def _to_openai_tool_calls(tool_calls: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Normalize LangChain tool calls to the OpenAI tool-call shape.
+
+    Why:
+        The existing orchestrator parsing expects `function.name` and
+        `function.arguments` (as JSON string). Keeping this shape avoids touching
+        broad downstream business logic.
+    """
+
     normalized = []
     for idx, tool_call in enumerate(tool_calls or [], start=1):
         normalized.append(
@@ -57,20 +82,51 @@ def _to_openai_tool_calls(tool_calls: list[dict[str, Any]] | None) -> list[dict[
 
 
 class OrchestrationLLM:
+    """Small orchestration adapter that prefers LangChain but keeps OpenAI fallback.
+
+    Why:
+        - Centralizes model invocation in one place.
+        - Reduces duplicated completion/tool-call code in `orchestrator.py`.
+        - Allows teams to adopt LangChain incrementally without breaking existing flows.
+    """
+
     def __init__(self, model: str = "gpt-4o", client: OpenAI | None = None):
+        """Initialize the adapter.
+
+        Args:
+            model: Chat model name used by both LangChain and OpenAI fallback paths.
+            client: Optional prebuilt OpenAI client (useful for tests/mocking).
+        """
+
         self.model = model
         self._openai_client = client
         self._langchain_client = None
 
         if LANGCHAIN_AVAILABLE:
+            # We intentionally create a single reusable ChatOpenAI client.
+            # This keeps call-sites simple and avoids repeated client creation.
             self._langchain_client = ChatOpenAI(model=model, temperature=0)
 
     def _get_openai_client(self) -> OpenAI:
+        """Lazily build the OpenAI client only when fallback is actually used.
+
+        Why:
+            Importing the orchestrator in tests/CLI should not require an API key
+            unless a model call is made.
+        """
+
         if self._openai_client is None:
             self._openai_client = OpenAI()
         return self._openai_client
 
     def invoke_with_tools(self, system_prompt: str, user_message: str, tools: list[dict[str, Any]]) -> ModelResponse:
+        """Run a tool-aware chat turn and return a normalized response.
+
+        Behavior:
+            1) If LangChain is available, call `bind_tools(..., tool_choice="auto")`.
+            2) Otherwise, fallback to OpenAI chat completions with the same tool schema.
+        """
+
         if self._langchain_client:
             runnable = self._langchain_client.bind_tools(tools, tool_choice="auto")
             response = runnable.invoke(
@@ -108,6 +164,13 @@ class OrchestrationLLM:
         return ModelResponse(content=(message.content or "").strip(), tool_calls=tool_calls)
 
     def invoke_plain(self, system_prompt: str, user_message: str) -> str:
+        """Run a plain conversational chat turn without tools.
+
+        Why:
+            The orchestrator uses this for non-scheduling/general conversation
+            responses when no tool call is needed.
+        """
+
         if self._langchain_client:
             response = self._langchain_client.invoke(
                 [

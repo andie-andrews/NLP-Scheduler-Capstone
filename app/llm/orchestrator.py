@@ -100,6 +100,11 @@ ROOT_DIR = APP_DIR.parent
 load_dotenv(APP_DIR / ".env")
 load_dotenv(ROOT_DIR / ".env")
 
+# Centralized model adapter for orchestration.
+# Why:
+# - Keeps provider-specific invocation details (LangChain vs OpenAI fallback)
+#   out of business logic.
+# - Reduces duplicated completion/tool-call code paths in `run_orchestrator`.
 llm_client = OrchestrationLLM(model="gpt-4o")
 
 spec = load_openapi_spec()
@@ -1181,6 +1186,9 @@ def run_orchestrator(message: str, token: str, session: dict):
     print("----- SYSTEM PROMPT -----")
     print(system_prompt)
 
+    # Run a single tool-aware LLM turn through the adapter.
+    # The adapter normalizes responses into one shape so the rest of this
+    # orchestrator can stay focused on scheduling rules/state instead of SDK differences.
     model_response = llm_client.invoke_with_tools(system_prompt, effective_message, tools)
 
     if not model_response.tool_calls:
@@ -1189,11 +1197,16 @@ def run_orchestrator(message: str, token: str, session: dict):
         if re.fullmatch(r"\s*(hi|hello|hey|yo|good (morning|afternoon|evening))[\s!?.]*", lowered_message):
             return "Hey! 👋 I can chat and also help with schedules, shifts, and hours. What’s up?"
 
+        # If the model does not select a tool, we intentionally route to a separate
+        # plain-chat call that uses a friendlier non-domain system prompt.
         general_response = llm_client.invoke_plain(GENERAL_CONVERSATION_SYSTEM_PROMPT, raw_message)
         return general_response or "I’m here—ask me anything."
 
     tool_call = model_response.tool_calls[0]
 
+    # Tool calls are normalized by the adapter to:
+    # {"id": "...", "function": {"name": "...", "arguments": "{...json...}"}}
+    # This mirrors the OpenAI shape and minimizes downstream refactor surface.
     op_id = tool_call["function"]["name"]
     args = json.loads(tool_call["function"]["arguments"] or "{}")
 
