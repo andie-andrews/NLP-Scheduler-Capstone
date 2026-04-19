@@ -1,36 +1,39 @@
 # React AI Assistant Backend
 
-This project now includes a Python HTTP backend (`app/assistant_api.py`) that wraps the same orchestrator used by the Streamlit app.
+The assistant backend is implemented in .NET at:
 
-## Why this exists
+- `apis/Assistant.Api/src/Assistant.Api`
 
-- Streamlit calls `run_orchestrator(...)` in-process.
-- React runs in the browser and cannot safely call OpenAI directly.
-- The backend endpoint keeps chat state server-side and forwards requests to the orchestrator.
+It preserves the same frontend API contract.
 
-## Endpoints
+## API contract
 
 - `GET /health`
 - `POST /api/assistant/chat`
   - body: `{ "message": "...", "conversationId": "optional" }`
-  - returns: `{ "conversationId": "...", "response": <orchestrator-response> }`
+  - returns: `{ "conversationId": "...", "response": <assistant-response> }`
 - `DELETE /api/assistant/chat/{conversationId}`
 
-## Local run
+## OpenAPI-driven orchestration (minimal manual intent code)
 
-```bash
-cd app
-cp .env.example .env
-pip install -r requirements.txt
-uvicorn assistant_api:app --reload --port 8000
-```
+The .NET orchestrator now loads `.openapi/scheduler.api.json` and converts operations into OpenAI function tools dynamically.
 
-> `assistant_api.py` and the orchestrator now load `.env` automatically (`app/.env` first, then repo-root `.env`), so `OPENAI_API_KEY` is picked up even if the process is started from a different working directory.
+Flow:
+1. User message is sent to OpenAI with generated tools from the OpenAPI spec.
+2. Model selects tool(s) and arguments (intent + params decided by model).
+3. Backend executes mapped Scheduler API operations.
+4. Tool outputs are returned to OpenAI for final assistant response.
 
-- `OPENAI_API_KEY` (in `app/.env`)
-- `SCHEDULER_API_BASE_URL` / `SCHEDULER_API_VERIFY_SSL`
+This removes most hardcoded intent routing and keeps behavior tied to the OpenAPI contract.
 
-## Optional environment
+## Can we "train" the model on OpenAPI?
 
+Not in the fine-tuning sense inside this service. Instead, we provide the OpenAPI operations as runtime tools/context each request. This is the correct pattern for intent/action selection over your API surface.
+
+## Environment variables
+
+- `OPENAI_API_KEY` (required)
+- `ASSISTANT_OPENAI_MODEL` (default `gpt-4o-mini`)
 - `ASSISTANT_API_ALLOW_ORIGINS` (default `*`)
-- `ASSISTANT_SESSION_TTL_SECONDS` (default `28800`, 8 hours)
+- `ASSISTANT_SESSION_TTL_SECONDS` (default `28800`)
+- `SCHEDULER_API_BASE_URL` (default `http://localhost:5048`)
