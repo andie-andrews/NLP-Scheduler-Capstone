@@ -6,8 +6,14 @@ def inject_global_styles() -> None:
     st.markdown(
         """
         <style>
-            html, body, [class*="st-"] {
+            html, body {
                 font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif !important;
+            }
+
+            [data-testid="stAppViewContainer"],
+            [data-testid="stAppViewContainer"] *,
+            [data-testid="stSidebar"],
+            [data-testid="stSidebar"] * {
                 color: #1f2a44 !important;
             }
 
@@ -54,9 +60,8 @@ def inject_global_styles() -> None:
                 padding: 0.4rem 0.75rem !important;
             }
 
-            button[kind],
-            [data-testid="baseButton-secondary"],
-            [data-testid="baseButton-primary"] {
+            [data-testid="stSidebar"] [data-testid="stButton"] > button,
+            [data-testid="stAppViewContainer"] [data-testid="stButton"] > button {
                 min-height: 2rem;
                 border-radius: 10px !important;
                 font-weight: 600 !important;
@@ -65,9 +70,8 @@ def inject_global_styles() -> None:
                 border: 1px solid #0f172a !important;
             }
 
-            button[kind]:hover,
-            [data-testid="baseButton-secondary"]:hover,
-            [data-testid="baseButton-primary"]:hover {
+            [data-testid="stSidebar"] [data-testid="stButton"] > button:hover,
+            [data-testid="stAppViewContainer"] [data-testid="stButton"] > button:hover {
                 background-color: #1e293b !important;
                 border-color: #1e293b !important;
             }
