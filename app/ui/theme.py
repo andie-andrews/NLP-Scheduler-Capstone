@@ -65,15 +65,25 @@ def inject_global_styles() -> None:
                 min-height: 2rem;
                 border-radius: 10px !important;
                 font-weight: 600 !important;
-                background-color: #0f172a !important;
-                color: #ffffff !important;
-                border: 1px solid #0f172a !important;
+                background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%) !important;
+                color: #1f2a44 !important;
+                border: 1px solid #c9dafd !important;
+                box-shadow: 0 1px 2px rgba(31, 42, 68, 0.08) !important;
             }
 
             [data-testid="stSidebar"] [data-testid="stButton"] > button:hover,
             [data-testid="stAppViewContainer"] [data-testid="stButton"] > button:hover {
-                background-color: #1e293b !important;
-                border-color: #1e293b !important;
+                background: linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%) !important;
+                border-color: #b7cdfa !important;
+                color: #13213f !important;
+            }
+
+            [data-testid="stSidebar"] [data-testid="stButton"] > button:disabled,
+            [data-testid="stAppViewContainer"] [data-testid="stButton"] > button:disabled {
+                background: #eef3fc !important;
+                color: #7a8aa9 !important;
+                border-color: #d7e2f7 !important;
+                box-shadow: none !important;
             }
 
             [data-testid="stChatInput"] textarea {
