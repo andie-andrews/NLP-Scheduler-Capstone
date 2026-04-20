@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { AppShell, Button, Divider, Group, NavLink, Stack, Text, Title } from '@mantine/core'
 import { useAuth } from '../context/AuthContext'
 
 export type ViewKey = 'my-schedule' | 'employees' | 'schedules' | 'assistant'
@@ -8,20 +9,54 @@ export function Layout({ activeView, onChangeView, children }: { activeView: Vie
   const isManager = ['Supervisor', 'Manager'].includes(user?.role ?? '')
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <aside style={{ borderRight: '1px solid #ddd', padding: 16 }}>
-        <h2>📅 Scheduler Pro</h2>
-        <p><strong>{user?.fullName}</strong><br/>{user?.role}</p>
-        <nav style={{ display: 'grid', gap: 8 }}>
-          <button onClick={() => onChangeView('my-schedule')}>My Schedule</button>
-          {isManager && <button onClick={() => onChangeView('employees')}>Manage Employees</button>}
-          {isManager && <button onClick={() => onChangeView('schedules')}>Manage Schedules</button>}
-        </nav>
-        <hr/>
-        <button onClick={() => onChangeView('assistant')}>🤖 Open AI Assistant</button>
-        <button onClick={logout} style={{ marginTop: 8 }}>Logout</button>
-      </aside>
-      <main style={{ padding: 24 }}>{children}</main>
-    </div>
+    <AppShell
+      header={{ height: 64 }}
+      navbar={{ width: 280, breakpoint: 'sm' }}
+      padding='lg'
+    >
+      <AppShell.Header>
+        <Group h='100%' px='md' justify='space-between'>
+          <Title order={3}>Scheduler Pro</Title>
+          <Text size='sm' c='dimmed'>
+            {user?.fullName} ({user?.role})
+          </Text>
+        </Group>
+      </AppShell.Header>
+
+      <AppShell.Navbar p='md'>
+        <Stack gap='xs'>
+          <NavLink
+            label='My Schedule'
+            active={activeView === 'my-schedule'}
+            onClick={() => onChangeView('my-schedule')}
+          />
+          {isManager && (
+            <NavLink
+              label='Manage Employees'
+              active={activeView === 'employees'}
+              onClick={() => onChangeView('employees')}
+            />
+          )}
+          {isManager && (
+            <NavLink
+              label='Manage Schedules'
+              active={activeView === 'schedules'}
+              onClick={() => onChangeView('schedules')}
+            />
+          )}
+          <NavLink
+            label='AI Assistant'
+            active={activeView === 'assistant'}
+            onClick={() => onChangeView('assistant')}
+          />
+        </Stack>
+        <Divider my='md' />
+        <Button variant='light' color='red' onClick={logout}>
+          Logout
+        </Button>
+      </AppShell.Navbar>
+
+      <AppShell.Main>{children}</AppShell.Main>
+    </AppShell>
   )
 }
