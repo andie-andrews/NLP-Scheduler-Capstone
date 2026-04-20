@@ -5,6 +5,7 @@ import jsonref
 
 OPENAPI_MANIFEST_ENV_VAR = "SCHEDULER_OPENAPI_SPECS"
 DEFAULT_API_NAME = "scheduler"
+ROOT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_SPEC_PATH = Path(__file__).parent.parent.parent / ".openapi" / "scheduler.api.json"
 
 
@@ -30,7 +31,11 @@ def parse_openapi_manifest(manifest: str) -> dict[str, Path]:
                 f"Invalid manifest entry '{entry}'. Expected non-empty api_name and spec_path."
             )
 
-        specs[api_name] = Path(spec_path)
+        parsed_path = Path(spec_path)
+        if not parsed_path.is_absolute():
+            parsed_path = ROOT_DIR / parsed_path
+
+        specs[api_name] = parsed_path.resolve(strict=False)
 
     if not specs:
         raise ValueError(

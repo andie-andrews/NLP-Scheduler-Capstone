@@ -76,3 +76,19 @@ def test_load_openapi_spec_supports_directory_entries(monkeypatch, tmp_path):
     assert set(loaded_specs.keys()) == {"auth", "employee"}
     assert loaded_specs["auth"]["info"]["title"] == "auth"
     assert loaded_specs["employee"]["info"]["title"] == "employee"
+
+
+def test_parse_openapi_manifest_resolves_relative_paths_from_repo_root(monkeypatch, tmp_path):
+    project_root = tmp_path / "repo-root"
+    app_dir = project_root / "app"
+    app_dir.mkdir(parents=True)
+
+    monkeypatch.setattr("app.llm.openapi_loader.ROOT_DIR", project_root)
+    manifest = "scheduler=.openapi/scheduler.api.json,auth=specs/auth.json"
+
+    parsed_manifest = parse_openapi_manifest(manifest)
+
+    assert parsed_manifest == {
+        "scheduler": project_root / ".openapi" / "scheduler.api.json",
+        "auth": project_root / "specs" / "auth.json",
+    }
