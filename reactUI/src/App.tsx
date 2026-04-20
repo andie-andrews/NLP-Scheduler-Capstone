@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Layout, type ViewKey } from './components/Layout'
 import { useAuth } from './context/AuthContext'
-import { AIAssistantPage } from './pages/AIAssistantPage'
 import { LoginPage } from './pages/LoginPage'
 import { ManageEmployeesPage } from './pages/ManageEmployeesPage'
 import { ManageSchedulesPage } from './pages/ManageSchedulesPage'
@@ -10,8 +9,7 @@ import { MySchedulePage } from './pages/MySchedulePage'
 function renderView(view: ViewKey) {
   if (view === 'my-schedule') return <MySchedulePage />
   if (view === 'employees') return <ManageEmployeesPage />
-  if (view === 'schedules') return <ManageSchedulesPage />
-  return <AIAssistantPage />
+  return <ManageSchedulesPage />
 }
 
 export default function App() {
