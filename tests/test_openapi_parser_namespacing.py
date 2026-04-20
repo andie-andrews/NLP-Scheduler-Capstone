@@ -121,3 +121,21 @@ def test_parse_operations_keeps_operation_id_keys_for_single_spec():
     assert operations["getEmployee"]["api_name"] == "default"
     assert operations["getEmployee"]["operationId"] == "getEmployee"
     assert operations["getEmployee"]["callable_id"] == "default__getEmployee"
+
+
+def test_build_tools_keeps_single_spec_function_names_aligned_with_operation_keys():
+    spec = {
+        "paths": {
+            "/employees/{employeeId}": {
+                "get": {
+                    "operationId": "getEmployee",
+                    "parameters": [],
+                }
+            }
+        }
+    }
+
+    operations = parse_operations(spec)
+    tools = build_tools(operations)
+
+    assert tools[0]["function"]["name"] == "getEmployee"
