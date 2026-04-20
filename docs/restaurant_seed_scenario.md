@@ -57,10 +57,12 @@ Schedule Emma Welcome for Hostesses on Tuesday 4 PM to 10 PM.
 Example prompt:
 
 ```text
-Create shifts Monday through Friday for this week and next week for Olivia Tray, 11:00 AM to 7:00 PM on Servers.
+Create shifts Monday through Friday for next week for Olivia Tray, 11:00 AM to 7:00 PM on Servers.
 ```
 
 Alternative prompt with multiple employees:
+
+TODO: THIS IS NOT SUPPORTED YET
 
 ```text
 Schedule Mia Prep, Noah Saute, and Kai Grill on Kitchen for Monday-Friday this week and next week, 8 AM to 4 PM.
