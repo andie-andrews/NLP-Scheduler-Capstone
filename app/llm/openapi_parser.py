@@ -46,6 +46,7 @@ def parse_operations_by_api(specs_by_api):
                     "callable_id": callable_id,
                     "method": method.upper(),
                     "path": path,
+                    "servers": spec.get("servers", []),
                     "parameters": merged_parameters,
                     "requestBody": details.get("requestBody"),
                     "summary": details.get("summary", ""),

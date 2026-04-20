@@ -2,11 +2,32 @@ import requests
 import os
 import urllib3
 
-DEFAULT_BASE_URL = "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
+DEFAULT_LOCAL_BASE_URL = "http://localhost/schedulerapi"
+DEFAULT_PROD_BASE_URL = "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
 
 
-def _base_url() -> str:
-    return os.getenv("SCHEDULER_API_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+def _runtime_environment() -> str:
+    for env_var in ("SCHEDULER_RUNTIME_ENV", "APP_ENV", "ASPNETCORE_ENVIRONMENT", "ENVIRONMENT"):
+        env_value = os.getenv(env_var)
+        if env_value and env_value.strip():
+            return env_value.strip().lower()
+    return "development"
+
+
+def _base_url(operation: dict) -> str:
+    requested_environment = "production" if _runtime_environment() in {"production", "prod"} else "development"
+    servers = operation.get("servers") or []
+
+    for server in servers:
+        environment_name = (server.get("x-environment-name") or "").strip().lower()
+        if environment_name == requested_environment and server.get("url"):
+            return str(server["url"]).rstrip("/")
+
+    for server in servers:
+        if server.get("url"):
+            return str(server["url"]).rstrip("/")
+
+    return DEFAULT_PROD_BASE_URL if requested_environment == "production" else DEFAULT_LOCAL_BASE_URL
 
 
 def _verify_ssl() -> bool:
@@ -40,7 +61,7 @@ def call_api(token, operation, args):
     request_args = dict(args or {})
     verify_ssl = _verify_ssl()
     request_timeout_seconds = _request_timeout_seconds()
-    url = _base_url() + operation["path"]
+    url = _base_url(operation) + operation["path"]
     request_body_schema = (
         (operation.get("requestBody") or {})
         .get("content", {})
