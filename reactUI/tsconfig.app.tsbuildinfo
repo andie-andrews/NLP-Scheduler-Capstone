@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/api/client.ts","./src/components/layout.tsx","./src/context/authcontext.tsx","./src/pages/aiassistantpage.tsx","./src/pages/loginpage.tsx","./src/pages/manageemployeespage.tsx","./src/pages/manageschedulespage.tsx","./src/pages/myschedulepage.tsx","./src/types/index.ts","./src/utils/date.ts"],"version":"5.9.3"}

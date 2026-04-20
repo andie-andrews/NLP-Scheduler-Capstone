@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ActionIcon, Button, Card, Group, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useAuth } from '../context/AuthContext'
 import type { ChatMessage } from '../types'
 
@@ -90,17 +91,45 @@ export function AIAssistantPage() {
   }
 
   return (
-    <section>
-      <h2>🤖 AI Scheduler Assistant</h2>
-      <button onClick={resetConversation}>🆕 New chat</button>
-      <div style={{ minHeight: 360, border: '1px solid #ddd', marginTop: 12, padding: 12, whiteSpace: 'pre-wrap' }}>
-        {messages.map((m, i) => <p key={i}><strong>{m.role}:</strong> {m.content}</p>)}
-        {!messages.length && <p>Ask something about schedules, shifts, or hours...</p>}
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <input style={{ flex: 1 }} value={input} onChange={(e) => setInput(e.target.value)} placeholder='Ask something about schedules, shifts, or hours...' />
-        <button disabled={loading} onClick={send}>{loading ? '...' : 'Send'}</button>
-      </div>
-    </section>
+    <Stack>
+      <Group justify='space-between' align='center'>
+        <Title order={2}>AI Scheduler Assistant</Title>
+        <ActionIcon variant='light' size='lg' onClick={resetConversation} aria-label='Reset chat'>
+          ↺
+        </ActionIcon>
+      </Group>
+
+      <Card withBorder radius='md' p='md' mih={360}>
+        <Stack gap='sm'>
+          {messages.map((m, i) => (
+            <Card key={i} withBorder radius='sm' bg={m.role === 'assistant' ? 'gray.0' : 'blue.0'}>
+              <Text fw={600} tt='capitalize'>
+                {m.role}
+              </Text>
+              <Text style={{ whiteSpace: 'pre-wrap' }}>{m.content}</Text>
+            </Card>
+          ))}
+          {!messages.length && <Text c='dimmed'>Ask something about schedules, shifts, or hours...</Text>}
+        </Stack>
+      </Card>
+
+      <Group align='end' wrap='nowrap'>
+        <TextInput
+          style={{ flex: 1 }}
+          value={input}
+          onChange={(e) => setInput(e.currentTarget.value)}
+          placeholder='Ask something about schedules, shifts, or hours...'
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              void send()
+            }
+          }}
+        />
+        <Button loading={loading} onClick={() => void send()}>
+          Send
+        </Button>
+      </Group>
+    </Stack>
   )
 }
