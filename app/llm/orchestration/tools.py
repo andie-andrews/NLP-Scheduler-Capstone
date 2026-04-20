@@ -31,8 +31,8 @@ def build_tools(operations):
         tools.append({
             "type": "function",
             "function": {
-                "name": op_id,
-                "description": op["summary"] or op_id,
+                "name": op.get("callable_id", op_id),
+                "description": op["summary"] or op.get("operationId", op_id),
                 "parameters": {
                     "type": "object",
                     "properties": properties,
