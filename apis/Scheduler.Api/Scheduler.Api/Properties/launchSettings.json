@@ -3,6 +3,10 @@
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
+    "iis": {
+      "applicationUrl": "http://localhost/schedulerapi",
+      "sslPort": 0
+    },
     "iisExpress": {
       "applicationUrl": "http://localhost:41160",
       "sslPort": 44387

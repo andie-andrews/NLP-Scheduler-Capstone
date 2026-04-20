@@ -51,10 +51,13 @@ If Visual Studio shows:
 
 - `The IIS settings are missing the App Url property.`
 
-Set these values in `Scheduler.Api.csproj.user`:
+Confirm these values are present:
+
+- `Properties/launchSettings.json` → `iisSettings.iis.applicationUrl = "http://localhost/schedulerapi"`
+- `Scheduler.Api.csproj.user`:
 
 - `<UseIIS>True</UseIIS>`
 - `<UseIISExpress>False</UseIISExpress>`
 - `<IISUrl>http://localhost/schedulerapi</IISUrl>`
 
-Then restart Visual Studio and pick the `IIS` profile again.
+If the error persists, close Visual Studio, delete the solution `.vs` folder, reopen the solution, and pick the `IIS` profile again.
