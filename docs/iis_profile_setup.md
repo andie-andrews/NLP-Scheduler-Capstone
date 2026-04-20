@@ -24,7 +24,30 @@ Then restart if prompted.
 4. Choose or create an app pool with **No Managed Code** (for ASP.NET Core hosting model behind ANCM).
 5. Apply and start the site/application.
 
-## 3) Add an IIS launch profile in `launchSettings.json`
+## 3) Grant SQL access to the IIS app pool identity
+
+If your connection string uses `Trusted_Connection=True`, run this in SQL Server so the IIS app pool can log in:
+
+```sql
+CREATE LOGIN [IIS APPPOOL\schedulerapi AppPool] FROM WINDOWS;
+GO
+USE [SchedulerDb];
+GO
+CREATE USER [IIS APPPOOL\schedulerapi AppPool] FOR LOGIN [IIS APPPOOL\schedulerapi AppPool];
+GO
+ALTER ROLE db_datareader ADD MEMBER [IIS APPPOOL\schedulerapi AppPool];
+ALTER ROLE db_datawriter ADD MEMBER [IIS APPPOOL\schedulerapi AppPool];
+```
+
+## 4) Seed starter data
+
+The database seed script is in:
+
+- `apis/Scheduler.Api/Scheduler.Database/PostDeployment.sql`
+
+That script inserts baseline roles and a supervisor user for local testing.
+
+## 5) Add an IIS launch profile in `launchSettings.json`
 
 The API project now includes an `IIS` profile:
 
@@ -35,7 +58,7 @@ The API project now includes an `IIS` profile:
 
 This makes local debugging honor the virtual directory base path.
 
-## 4) Run from Visual Studio
+## 6) Run from Visual Studio
 
 1. Open the API project properties.
 2. Select the **IIS** profile from the run target dropdown.
