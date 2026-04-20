@@ -16,6 +16,7 @@ public class UpdateShiftHandler
 
   public async Task<bool> Handle(
     int shiftId,
+    int employeeId,
     DateTime start,
     int durationHours,
     IDbConnection? connection = null,
@@ -28,41 +29,17 @@ public class UpdateShiftHandler
     {
       var rows = await connection.ExecuteAsync(@"
         UPDATE Shifts
-        SET Start = @start,
+        SET EmployeeId = @employeeId,
+            Start = @start,
             DurationHours = @durationHours
         WHERE Id = @shiftId
-          AND NOT EXISTS (
-            SELECT 1
-            FROM Shifts WITH (UPDLOCK, HOLDLOCK)
-            WHERE EmployeeId = (
-              SELECT EmployeeId
-              FROM Shifts
-              WHERE Id = @shiftId
-            )
-              AND Id <> @shiftId
-              AND Start < DATEADD(hour, @durationHours, @start)
-              AND DATEADD(hour, DurationHours, Start) > @start
-          )
       ", new
       {
         shiftId,
+        employeeId,
         start,
         durationHours,
       }, transaction: transaction);
-
-      if (rows == 0)
-      {
-        var shiftExists = await connection.ExecuteScalarAsync<int?>(@"
-          SELECT 1
-          FROM Shifts
-          WHERE Id = @shiftId
-        ", new { shiftId }, transaction: transaction);
-
-        if (shiftExists is not null)
-          throw new ShiftValidationException(
-            "Shift overlaps an existing shift for this employee.",
-            "overlapping_shift");
-      }
 
       return rows > 0;
     }

@@ -105,6 +105,14 @@ def call_api(token, operation, args):
                 verify=verify_ssl,
                 timeout=request_timeout_seconds,
             )
+        elif method == "PATCH":
+            res = requests.patch(
+                url,
+                json=request_args,
+                headers=headers,
+                verify=verify_ssl,
+                timeout=request_timeout_seconds,
+            )
         elif method == "DELETE":
             res = requests.delete(
                 url,

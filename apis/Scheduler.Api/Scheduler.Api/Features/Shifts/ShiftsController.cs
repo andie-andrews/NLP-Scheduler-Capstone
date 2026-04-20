@@ -154,4 +154,31 @@ public class ShiftsController : ControllerBase
     return Ok(ApiResponse.Ok(new { message = "Shift updated successfully." }));
   }
 
+  /// <summary>
+  /// Patch a shift (Supervisor only).
+  /// </summary>
+  [HttpPatch("shifts/{shiftId}")]
+  [Authorize(Roles = "Supervisor")]
+  [ProducesResponseType(200)]
+  [ProducesResponseType(404)]
+  public async Task<IActionResult> PatchShift([FromRoute] int shiftId, PatchShiftRequest request)
+  {
+    var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
+    bool wasUpdated;
+
+    try
+    {
+      wasUpdated = await _shiftDomainService.PatchShift(shiftId, request, userEmployeeId);
+    }
+    catch (ShiftValidationException ex)
+    {
+      return ApiResponse.Error(this, ex.StatusCode, ex.ErrorCode, ex.Message);
+    }
+
+    if (!wasUpdated)
+      return NotFound();
+
+    return Ok(ApiResponse.Ok(new { message = "Shift patched successfully." }));
+  }
+
 }
