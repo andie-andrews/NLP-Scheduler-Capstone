@@ -2,11 +2,24 @@ import requests
 import os
 import urllib3
 
-DEFAULT_BASE_URL = "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
+DEFAULT_LOCAL_BASE_URL = "http://localhost/schedulerapi"
+DEFAULT_PROD_BASE_URL = "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
+
+
+def _runtime_environment() -> str:
+    for env_var in ("SCHEDULER_RUNTIME_ENV", "APP_ENV", "ASPNETCORE_ENVIRONMENT", "ENVIRONMENT"):
+        env_value = os.getenv(env_var)
+        if env_value and env_value.strip():
+            return env_value.strip().lower()
+    return "development"
+
+
+def _default_base_url() -> str:
+    return DEFAULT_PROD_BASE_URL if _runtime_environment() in {"production", "prod"} else DEFAULT_LOCAL_BASE_URL
 
 
 def _base_url() -> str:
-    return os.getenv("SCHEDULER_API_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    return os.getenv("SCHEDULER_API_BASE_URL", _default_base_url()).rstrip("/")
 
 
 def _verify_ssl() -> bool:

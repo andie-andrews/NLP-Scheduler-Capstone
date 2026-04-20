@@ -3,7 +3,21 @@ import streamlit as st
 import os
 import urllib3
 
-BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net").rstrip("/")
+def _runtime_environment() -> str:
+    for env_var in ("SCHEDULER_RUNTIME_ENV", "APP_ENV", "ASPNETCORE_ENVIRONMENT", "ENVIRONMENT"):
+        env_value = os.getenv(env_var)
+        if env_value and env_value.strip():
+            return env_value.strip().lower()
+    return "development"
+
+
+def _default_base_url() -> str:
+    if _runtime_environment() in {"production", "prod"}:
+        return "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
+    return "http://localhost/schedulerapi"
+
+
+BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", _default_base_url()).rstrip("/")
 VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("SCHEDULER_API_TIMEOUT_SECONDS", "20"))
 

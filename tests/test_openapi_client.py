@@ -133,3 +133,54 @@ def test_call_api_uses_current_env_base_url_at_call_time():
 
     called_url = mock_get.call_args.args[0]
     assert called_url == "https://localhost:7259/api/employees"
+
+
+def test_call_api_defaults_to_local_iis_url_in_non_production_env():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "method": "GET",
+        "path": "/api/employees",
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict("os.environ", {"ASPNETCORE_ENVIRONMENT": "Development"}, clear=True),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert called_url == "http://localhost/schedulerapi/api/employees"
+
+
+def test_call_api_defaults_to_production_url_in_production_env():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "method": "GET",
+        "path": "/api/employees",
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict("os.environ", {"ASPNETCORE_ENVIRONMENT": "Production"}, clear=True),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert (
+        called_url
+        == "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net/api/employees"
+    )
