@@ -56,3 +56,23 @@ def test_load_openapi_spec_raises_for_missing_manifest_file(monkeypatch, tmp_pat
 
     with pytest.raises(FileNotFoundError):
         load_openapi_spec()
+
+
+def test_load_openapi_spec_supports_directory_entries(monkeypatch, tmp_path):
+    spec_dir = tmp_path / "specs"
+    spec_dir.mkdir()
+
+    (spec_dir / "auth.api.json").write_text(
+        json.dumps({"openapi": "3.0.0", "info": {"title": "auth"}, "paths": {}})
+    )
+    (spec_dir / "employee.json").write_text(
+        json.dumps({"openapi": "3.0.0", "info": {"title": "employee"}, "paths": {}})
+    )
+
+    monkeypatch.setenv(OPENAPI_MANIFEST_ENV_VAR, f"all={spec_dir}")
+
+    loaded_specs = load_openapi_spec()
+
+    assert set(loaded_specs.keys()) == {"auth", "employee"}
+    assert loaded_specs["auth"]["info"]["title"] == "auth"
+    assert loaded_specs["employee"]["info"]["title"] == "employee"

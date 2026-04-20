@@ -49,11 +49,29 @@ def _resolve_spec_manifest() -> dict[str, Path]:
     return parse_openapi_manifest(manifest)
 
 
-def load_openapi_spec() -> dict[str, dict]:
-    specs = {}
+def _derive_api_name_from_file(spec_file: Path) -> str:
+    file_name = spec_file.name
+    if file_name.endswith(".api.json"):
+        return file_name[: -len(".api.json")]
+    return spec_file.stem
 
-    for api_name, spec_path in _resolve_spec_manifest().items():
+
+def load_openapi_spec() -> dict[str, dict]:
+    specs: dict[str, dict] = {}
+
+    for configured_api_name, spec_path in _resolve_spec_manifest().items():
+        if spec_path.is_dir():
+            spec_files = sorted(spec_path.glob("*.json"))
+            if not spec_files:
+                raise FileNotFoundError(f"No .json spec files found in directory: {spec_path}")
+
+            for spec_file in spec_files:
+                api_name = _derive_api_name_from_file(spec_file)
+                with open(spec_file, "r") as f:
+                    specs[api_name] = jsonref.loads(f.read())
+            continue
+
         with open(spec_path, "r") as f:
-            specs[api_name] = jsonref.loads(f.read())
+            specs[configured_api_name] = jsonref.loads(f.read())
 
     return specs
