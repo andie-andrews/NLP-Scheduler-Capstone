@@ -119,6 +119,24 @@ Keep responses concise and helpful.
 """
 
 
+def _resolve_operation_for_tool_call(tool_name: str, operations: dict):
+    if tool_name in operations:
+        operation = operations[tool_name] or {}
+        return tool_name, operation.get("operationId", tool_name)
+
+    for operation_key, operation in operations.items():
+        if (operation or {}).get("callable_id") == tool_name:
+            return operation_key, operation.get("operationId", operation_key)
+
+    if "__" in tool_name:
+        fallback_key = tool_name.split("__", 1)[1]
+        if fallback_key in operations:
+            operation = operations[fallback_key] or {}
+            return fallback_key, operation.get("operationId", fallback_key)
+
+    return tool_name, tool_name
+
+
 def _build_create_shift_question(state):
     if not state.get("employeeId"):
         return "Sure — who should I schedule?"
@@ -1208,11 +1226,12 @@ def run_orchestrator(message: str, token: str, session: dict):
     # Tool calls are normalized by the adapter to:
     # {"id": "...", "function": {"name": "...", "arguments": "{...json...}"}}
     # This mirrors the OpenAI shape and minimizes downstream refactor surface.
-    op_id = tool_call["function"]["name"]
+    tool_name = tool_call["function"]["name"]
+    op_key, op_id = _resolve_operation_for_tool_call(tool_name, OPERATIONS)
     args = json.loads(tool_call["function"]["arguments"] or "{}")
 
     print("----- TOOL CALL -----")
-    print(op_id)
+    print(tool_name)
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
@@ -1257,7 +1276,11 @@ def run_orchestrator(message: str, token: str, session: dict):
             return "I need a valid schedule. Please tell me the schedule name exactly, or provide its numeric scheduleId."
         args["scheduleId"] = normalized_schedule_id
 
-    result = call_api(token, OPERATIONS[op_id], args)
+    operation = OPERATIONS.get(op_key)
+    if operation is None:
+        return f"I couldn't map the requested operation `{tool_name}`. Please try again."
+
+    result = call_api(token, operation, args)
 
     print("----- API RESULT -----")
     print(result)
