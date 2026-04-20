@@ -15,6 +15,10 @@ def _runtime_environment() -> str:
 
 
 def _base_url(operation: dict) -> str:
+    explicit_base_url = os.getenv("SCHEDULER_API_BASE_URL")
+    if explicit_base_url and explicit_base_url.strip():
+        return explicit_base_url.strip().rstrip("/")
+
     requested_environment = "production" if _runtime_environment() in {"production", "prod"} else "development"
     servers = operation.get("servers") or []
 
