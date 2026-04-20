@@ -111,7 +111,35 @@ def test_call_api_employee_query_filters_locally_and_avoids_non_empty_query():
     assert result == [{"id": 5, "firstName": "Lori", "lastName": "Martin"}]
 
 
-def test_call_api_uses_current_env_base_url_at_call_time():
+def test_call_api_uses_development_server_from_operation_spec():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "method": "GET",
+        "path": "/api/employees",
+        "servers": [
+            {"url": "http://localhost/schedulerapi", "x-environment-name": "development"},
+            {"url": "https://prod.example.com", "x-environment-name": "production"},
+        ],
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict("os.environ", {"ASPNETCORE_ENVIRONMENT": "Development"}),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert called_url == "http://localhost/schedulerapi/api/employees"
+
+
+def test_call_api_defaults_to_local_iis_url_in_non_production_env():
     if "requests" not in sys.modules:
         sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
     elif not hasattr(sys.modules["requests"], "get"):
@@ -126,10 +154,101 @@ def test_call_api_uses_current_env_base_url_at_call_time():
     }
 
     with (
-        patch.dict("os.environ", {"SCHEDULER_API_BASE_URL": "https://localhost:7259"}),
+        patch.dict("os.environ", {"ASPNETCORE_ENVIRONMENT": "Development"}, clear=True),
         patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
     ):
         call_api("token", operation, {})
 
     called_url = mock_get.call_args.args[0]
-    assert called_url == "https://localhost:7259/api/employees"
+    assert called_url == "http://localhost/schedulerapi/api/employees"
+
+
+def test_call_api_defaults_to_production_url_in_production_env():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "method": "GET",
+        "path": "/api/employees",
+        "servers": [
+            {"url": "http://localhost/schedulerapi", "x-environment-name": "development"},
+            {"url": "https://prod.example.com", "x-environment-name": "production"},
+        ],
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict("os.environ", {"ASPNETCORE_ENVIRONMENT": "Production"}, clear=True),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert called_url == "https://prod.example.com/api/employees"
+
+
+def test_call_api_uses_scheduler_runtime_env_to_select_server():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "method": "GET",
+        "path": "/api/employees",
+        "servers": [
+            {"url": "http://localhost/schedulerapi", "x-environment-name": "development"},
+            {"url": "https://prod.example.com", "x-environment-name": "production"},
+        ],
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict("os.environ", {"SCHEDULER_RUNTIME_ENV": "production"}, clear=True),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert called_url == "https://prod.example.com/api/employees"
+
+
+def test_call_api_prefers_explicit_base_url_override():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "method": "GET",
+        "path": "/api/employees",
+        "servers": [
+            {"url": "http://localhost/schedulerapi", "x-environment-name": "development"},
+            {"url": "https://prod.example.com", "x-environment-name": "production"},
+        ],
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "SCHEDULER_RUNTIME_ENV": "production",
+                "SCHEDULER_API_BASE_URL": "https://staging.example.com/custom-base/",
+            },
+            clear=True,
+        ),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert called_url == "https://staging.example.com/custom-base/api/employees"

@@ -3,6 +3,10 @@
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
+    "iis": {
+      "applicationUrl": "http://localhost/schedulerapi",
+      "sslPort": 0
+    },
     "iisExpress": {
       "applicationUrl": "http://localhost:41160",
       "sslPort": 44387
@@ -34,6 +38,16 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "IIS": {
+      "commandName": "IIS",
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost/schedulerapi",
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_PATHBASE": "/schedulerapi",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }

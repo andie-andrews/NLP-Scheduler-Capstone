@@ -154,9 +154,30 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+var configuredPathBase = builder.Configuration["ASPNETCORE_PATHBASE"] ?? builder.Configuration["PathBase"];
+if (!string.IsNullOrWhiteSpace(configuredPathBase))
+{
+  if (!configuredPathBase.StartsWith('/'))
+  {
+    configuredPathBase = $"/{configuredPathBase}";
+  }
+
+  app.UsePathBase(configuredPathBase);
+}
+
 HealthEndpoint.Map(app);
 
-app.UseSwagger();
+app.UseSwagger(options =>
+{
+  options.PreSerializeFilters.Add((swaggerDocument, httpRequest) =>
+  {
+    var serverBasePath = httpRequest.PathBase.HasValue ? httpRequest.PathBase.Value : string.Empty;
+    swaggerDocument.Servers =
+    [
+      new OpenApiServer { Url = $"{httpRequest.Scheme}://{httpRequest.Host.Value}{serverBasePath}" }
+    ];
+  });
+});
 app.UseSwaggerUI();
 
 
