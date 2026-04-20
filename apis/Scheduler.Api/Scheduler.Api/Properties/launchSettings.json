@@ -4,7 +4,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:41160",
+      "applicationUrl": "http://localhost/schedulerapi",
       "sslPort": 44387
     }
   },
@@ -32,8 +32,9 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "swagger",
+      "launchUrl": "schedulerapi/swagger",
       "environmentVariables": {
+        "ASPNETCORE_PATHBASE": "/schedulerapi",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
