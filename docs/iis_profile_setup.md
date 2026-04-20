@@ -44,3 +44,17 @@ This makes local debugging honor the virtual directory base path.
 If configured correctly, Swagger should open under:
 
 - `http://localhost/schedulerapi/swagger`
+
+## Troubleshooting
+
+If Visual Studio shows:
+
+- `The IIS settings are missing the App Url property.`
+
+Set these values in `Scheduler.Api.csproj.user`:
+
+- `<UseIIS>True</UseIIS>`
+- `<UseIISExpress>False</UseIISExpress>`
+- `<IISUrl>http://localhost/schedulerapi</IISUrl>`
+
+Then restart Visual Studio and pick the `IIS` profile again.
