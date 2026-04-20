@@ -6,7 +6,7 @@ from pathlib import Path
 import jwt
 from dotenv import load_dotenv
 
-from llm.openapi_loader import load_openapi_spec
+from llm.openapi_loader import DEFAULT_API_NAME, load_openapi_spec
 from llm.openapi_parser import parse_operations
 from llm.openapi_client import call_api
 from llm.orchestration.intents import (
@@ -107,7 +107,8 @@ load_dotenv(ROOT_DIR / ".env")
 # - Reduces duplicated completion/tool-call code paths in `run_orchestrator`.
 llm_client = OrchestrationLLM(model="gpt-4o")
 
-spec = load_openapi_spec()
+specs = load_openapi_spec()
+spec = specs[DEFAULT_API_NAME]
 OPERATIONS = parse_operations(spec)
 GENERAL_CONVERSATION_SYSTEM_PROMPT = """
 You are a friendly assistant in a workforce scheduling app.
