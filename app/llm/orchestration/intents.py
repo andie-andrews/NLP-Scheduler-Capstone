@@ -63,7 +63,7 @@ def is_delete_shift_intent(message: str):
 
 def is_update_shift_intent(message: str):
     text = message.lower()
-    has_update_action = any(action in text for action in ["update", "edit", "change", "move", "reschedule"])
+    has_update_action = any(action in text for action in ["update", "edit", "change", "move", "reschedule", "reassign"])
     return has_update_action and "shift" in text
 
 

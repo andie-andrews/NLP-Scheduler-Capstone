@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 
 
 def handle_update_shift_flow(
@@ -25,6 +26,24 @@ def handle_update_shift_flow(
     build_employee_disambiguation_prompt,
     **_unused,
 ):
+    def _find_reassignment_name(message_text: str, employees: list):
+        message_lower = (message_text or "").lower()
+        match = re.search(r"\b(?:to|with)\s+([a-z]+(?:\s+[a-z]+)?)\b", message_lower)
+        if not match:
+            return None
+        candidate = match.group(1).strip()
+        filler_terms = {"hour", "hours", "am", "pm", "tomorrow", "today", "tonight"}
+        if candidate in filler_terms:
+            return None
+        for employee in employees:
+            if not isinstance(employee, dict):
+                continue
+            full_name = f"{(employee.get('firstName') or '').strip()} {(employee.get('lastName') or '').strip()}".strip().lower()
+            first_name = (employee.get("firstName") or "").strip().lower()
+            if candidate == full_name or candidate == first_name:
+                return candidate
+        return None
+
     if pending_update_shift:
         if not pending_update_shift.get("targetDate"):
             target_date = extract_weekday_date(message)
@@ -88,24 +107,48 @@ def handle_update_shift_flow(
                 ).isoformat()
 
         update_duration = extract_duration_hours(message)
-        if not update_start and not update_duration:
+        update_employee_id = None
+        if session.get("role") != "Employee":
+            employees = call_api(token, operations["searchEmployees"], {"query": ""}) or []
+            # Use the original message if available to extract reassignment target
+            message_to_search = pending_update_shift.get("originalMessage") or message
+            reassignment_name = _find_reassignment_name(message_to_search, employees)
+            if reassignment_name:
+                resolution = resolve_employee_id(token, reassignment_name, operations, call_api)
+                if not resolution or resolution.get("type") == "not_found":
+                    return f"I couldn't find an employee matching '{reassignment_name}'."
+                if resolution.get("type") == "disambiguation":
+                    set_pending_employee_disambiguation_state(
+                        session,
+                        {
+                            "name": reassignment_name,
+                            "options": resolution["raw"],
+                            "original_message": message,
+                        },
+                    )
+                    return build_employee_disambiguation_prompt(reassignment_name, resolution["raw"])
+                update_employee_id = resolution["employeeId"]
+
+        if not update_start and not update_duration and not update_employee_id:
             set_pending_update_shift_state(session, pending_update_shift)
-            return "What should I update for this shift? Please provide a new time, duration in hours, or both."
+            return "What should I update for this shift? Please provide a new time, duration in hours, reassignment target, or any combination."
 
         payload = {"shiftId": pending_update_shift["shiftId"]}
         if update_start:
             payload["start"] = update_start
         if update_duration:
             payload["durationHours"] = update_duration
+        if update_employee_id:
+            payload["employeeId"] = update_employee_id
 
         update_operation = {
-            "method": "PUT",
+            "method": "PATCH",
             "path": "/api/shifts/{shiftId}",
             "parameters": [
                 {"name": "shiftId", "in": "path", "required": True, "schema": {"type": "integer"}},
             ],
             "requestBody": None,
-            "summary": "Update shift",
+            "summary": "Patch shift",
         }
         update_result = call_api(token, update_operation, payload)
         clear_pending_update_shift_state(session)
@@ -121,7 +164,9 @@ def handle_update_shift_flow(
     name = None
     if not explicit_employee_id and session.get("role") != "Employee":
         employees = call_api(token, operations["searchEmployees"], {"query": ""})
-        name = find_name_in_message(message, employees) if employees else None
+        # Strip out the reassignment part (after "to") to find the original employee
+        message_for_name_search = re.split(r'\b(?:to|with)\s+', message, maxsplit=1)[0]
+        name = find_name_in_message(message_for_name_search, employees) if employees else None
         if name:
             resolution = resolve_employee_id(token, name, operations, call_api)
             if not resolution or resolution.get("type") == "not_found":
@@ -150,8 +195,32 @@ def handle_update_shift_flow(
         "shiftId": None,
         "selectedShift": None,
         "options": [],
+        "originalMessage": message,
     }
     set_pending_update_shift_state(session, update_state)
     if not target_date:
         return "What day is the shift you want to update?"
-    return None
+    
+    # Continue processing in the same flow instead of returning None
+    return handle_update_shift_flow(
+        message=message,
+        token=token,
+        session=session,
+        pending_update_shift=update_state,
+        explicit_employee_id=explicit_employee_id,
+        operations=operations,
+        call_api=call_api,
+        extract_weekday_date=extract_weekday_date,
+        week_range_from_date=week_range_from_date,
+        format_shift_option_line=format_shift_option_line,
+        resolve_shift_number_reply=resolve_shift_number_reply,
+        extract_time_of_day=extract_time_of_day,
+        extract_duration_hours=extract_duration_hours,
+        clear_pending_update_shift_state=clear_pending_update_shift_state,
+        set_pending_update_shift_state=set_pending_update_shift_state,
+        is_update_shift_intent=is_update_shift_intent,
+        find_name_in_message=find_name_in_message,
+        resolve_employee_id=resolve_employee_id,
+        set_pending_employee_disambiguation_state=set_pending_employee_disambiguation_state,
+        build_employee_disambiguation_prompt=build_employee_disambiguation_prompt,
+    )

@@ -140,6 +140,23 @@ List all of my shifts for next week.
 
 ---
 
+### 6) Reassign shift from one employee to another
+
+**Goal:** Show reassign works for employees on the same schedule.
+
+Assuming the following:
+- you have a shift assigned to Lance Dall on a Tuesday
+- you want to reassign the shift to Andie Andrews
+- and they are both on the same schedule
+then:
+
+```text
+reassign Lance Dall's tuesday shift to Andie Andrews
+```
+
+should result in the shift being reassigned to Andie.
+---
+
 ## Suggested end-to-end demo order
 
 1. Run seed script.
