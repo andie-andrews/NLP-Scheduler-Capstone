@@ -8,11 +8,13 @@
   "servers": [
     {
       "url": "http://localhost/schedulerapi",
-      "description": "Development (local IIS virtual directory)"
+      "description": "Development (local IIS virtual directory)",
+      "x-environment-name": "development"
     },
     {
       "url": "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net",
-      "description": "Production"
+      "description": "Production",
+      "x-environment-name": "production"
     }
   ],
   "paths": {

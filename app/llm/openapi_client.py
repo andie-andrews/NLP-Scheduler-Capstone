@@ -14,12 +14,20 @@ def _runtime_environment() -> str:
     return "development"
 
 
-def _default_base_url() -> str:
-    return DEFAULT_PROD_BASE_URL if _runtime_environment() in {"production", "prod"} else DEFAULT_LOCAL_BASE_URL
+def _base_url(operation: dict) -> str:
+    requested_environment = "production" if _runtime_environment() in {"production", "prod"} else "development"
+    servers = operation.get("servers") or []
 
+    for server in servers:
+        environment_name = (server.get("x-environment-name") or "").strip().lower()
+        if environment_name == requested_environment and server.get("url"):
+            return str(server["url"]).rstrip("/")
 
-def _base_url() -> str:
-    return os.getenv("SCHEDULER_API_BASE_URL", _default_base_url()).rstrip("/")
+    for server in servers:
+        if server.get("url"):
+            return str(server["url"]).rstrip("/")
+
+    return DEFAULT_PROD_BASE_URL if requested_environment == "production" else DEFAULT_LOCAL_BASE_URL
 
 
 def _verify_ssl() -> bool:
@@ -53,7 +61,7 @@ def call_api(token, operation, args):
     request_args = dict(args or {})
     verify_ssl = _verify_ssl()
     request_timeout_seconds = _request_timeout_seconds()
-    url = _base_url() + operation["path"]
+    url = _base_url(operation) + operation["path"]
     request_body_schema = (
         (operation.get("requestBody") or {})
         .get("content", {})
