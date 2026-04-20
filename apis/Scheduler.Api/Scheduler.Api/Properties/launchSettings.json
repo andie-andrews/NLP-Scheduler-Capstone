@@ -40,7 +40,8 @@
     "IIS": {
       "commandName": "IIS",
       "launchBrowser": true,
-      "launchUrl": "schedulerapi/swagger",
+      "applicationUrl": "http://localhost/schedulerapi",
+      "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_PATHBASE": "/schedulerapi",
         "ASPNETCORE_ENVIRONMENT": "Development"

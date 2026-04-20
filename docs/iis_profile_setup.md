@@ -29,7 +29,8 @@ Then restart if prompted.
 The API project now includes an `IIS` profile:
 
 - `commandName: "IIS"`
-- `launchUrl: "schedulerapi/swagger"`
+- `applicationUrl: "http://localhost/schedulerapi"`
+- `launchUrl: "swagger"`
 - `ASPNETCORE_PATHBASE=/schedulerapi`
 
 This makes local debugging honor the virtual directory base path.
