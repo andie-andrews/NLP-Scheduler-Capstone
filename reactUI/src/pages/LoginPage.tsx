@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Alert, Button, Paper, PasswordInput, Stack, TextInput, Title } from '@mantine/core'
 import { useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
@@ -18,14 +19,28 @@ export function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <form onSubmit={onSubmit} style={{ width: 360, border: '1px solid #ddd', borderRadius: 8, padding: 20, display: 'grid', gap: 12 }}>
-        <h1>Welcome to Scheduler Pro</h1>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder='Username' />
-        <input type='password' value={password} onChange={(e) => setPassword(e.target.value)} placeholder='Password' />
-        {error && <p style={{ color: 'crimson' }}>{error}</p>}
-        <button type='submit'>Login</button>
-      </form>
-    </div>
+    <Stack mih='100vh' justify='center' align='center' p='md'>
+      <Paper component='form' onSubmit={onSubmit} withBorder radius='md' p='xl' w='100%' maw={420}>
+        <Stack>
+          <Title order={2}>Welcome to Scheduler Pro</Title>
+          <TextInput
+            label='Username'
+            value={username}
+            onChange={(e) => setUsername(e.currentTarget.value)}
+            placeholder='Username'
+            required
+          />
+          <PasswordInput
+            label='Password'
+            value={password}
+            onChange={(e) => setPassword(e.currentTarget.value)}
+            placeholder='Password'
+            required
+          />
+          {error && <Alert color='red'>{error}</Alert>}
+          <Button type='submit'>Login</Button>
+        </Stack>
+      </Paper>
+    </Stack>
   )
 }

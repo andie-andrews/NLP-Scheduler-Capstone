@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Button, Card, Group, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core'
 import { api } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import type { Employee, Schedule, Shift } from '../types'
@@ -39,31 +40,82 @@ export function ManageSchedulesPage() {
   useEffect(() => { load().catch(() => undefined) }, [user, selectedScheduleId, weekOffset])
 
   const selectedSchedule = schedules.find((s) => s.id === selectedScheduleId)
+  const scheduleSelectData = [
+    { value: 'all', label: 'All Schedules' },
+    ...schedules.map((s) => ({ value: String(s.id), label: s.name })),
+  ]
 
   return (
-    <section>
-      <h2>Manage Schedules</h2>
-      <button onClick={() => setWeekOffset((w) => w - 1)}>◀ Previous</button>
-      <strong style={{ margin: '0 12px' }}>Week of {formatWeekLabel(weekStart)}</strong>
-      <button onClick={() => setWeekOffset((w) => w + 1)}>Next ▶</button>
-      <div>
-        <select value={String(selectedScheduleId)} onChange={(e) => setSelectedScheduleId(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
-          <option value='all'>All Schedules</option>
-          {schedules.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <input placeholder='Schedule name' value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
-        <button onClick={async () => user && api.createSchedule(user.token, nameDraft).then(load)}>Create</button>
-        <button onClick={async () => selectedSchedule && user && api.updateSchedule(user.token, selectedSchedule.id, nameDraft).then(load)} disabled={!selectedSchedule}>Rename</button>
-        <button onClick={async () => selectedSchedule && user && api.deleteSchedule(user.token, selectedSchedule.id).then(() => setSelectedScheduleId('all')).then(load)} disabled={!selectedSchedule}>Delete</button>
-      </div>
-      <p>Employees: {employees.length} | Shifts this week: {shifts.length}</p>
-      <table><thead><tr><th>Employee</th><th>Shifts</th><th>Total Hours</th></tr></thead><tbody>
-        {employees.map((employee) => {
-          const employeeShifts = shifts.filter((s) => s.employeeId === employee.id)
-          const totalHours = employeeShifts.reduce((acc, s) => acc + s.durationHours, 0)
-          return <tr key={employee.id}><td>{employee.firstName} {employee.lastName}</td><td>{employeeShifts.length}</td><td>{totalHours}</td></tr>
-        })}
-      </tbody></table>
-    </section>
+    <Stack>
+      <Title order={2}>Manage Schedules</Title>
+
+      <Group>
+        <Button variant='light' onClick={() => setWeekOffset((w) => w - 1)}>Previous</Button>
+        <Text fw={600}>Week of {formatWeekLabel(weekStart)}</Text>
+        <Button variant='light' onClick={() => setWeekOffset((w) => w + 1)}>Next</Button>
+      </Group>
+
+      <Group align='end'>
+        <Select
+          label='Schedule'
+          data={scheduleSelectData}
+          value={String(selectedScheduleId)}
+          onChange={(value) => setSelectedScheduleId(value === 'all' ? 'all' : Number(value))}
+          allowDeselect={false}
+          style={{ minWidth: 220 }}
+        />
+        <TextInput
+          label='Schedule name'
+          placeholder='Schedule name'
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.currentTarget.value)}
+        />
+        <Button onClick={async () => user && api.createSchedule(user.token, nameDraft).then(load)}>
+          Create
+        </Button>
+        <Button
+          variant='light'
+          onClick={async () => selectedSchedule && user && api.updateSchedule(user.token, selectedSchedule.id, nameDraft).then(load)}
+          disabled={!selectedSchedule}
+        >
+          Rename
+        </Button>
+        <Button
+          color='red'
+          variant='light'
+          onClick={async () => selectedSchedule && user && api.deleteSchedule(user.token, selectedSchedule.id).then(() => setSelectedScheduleId('all')).then(load)}
+          disabled={!selectedSchedule}
+        >
+          Delete
+        </Button>
+      </Group>
+
+      <Card withBorder>
+        <Text>Employees: {employees.length} | Shifts this week: {shifts.length}</Text>
+      </Card>
+
+      <Table striped highlightOnHover withTableBorder withColumnBorders>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Employee</Table.Th>
+            <Table.Th>Shifts</Table.Th>
+            <Table.Th>Total Hours</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {employees.map((employee) => {
+            const employeeShifts = shifts.filter((s) => s.employeeId === employee.id)
+            const totalHours = employeeShifts.reduce((acc, s) => acc + s.durationHours, 0)
+            return (
+              <Table.Tr key={employee.id}>
+                <Table.Td>{employee.firstName} {employee.lastName}</Table.Td>
+                <Table.Td>{employeeShifts.length}</Table.Td>
+                <Table.Td>{totalHours}</Table.Td>
+              </Table.Tr>
+            )
+          })}
+        </Table.Tbody>
+      </Table>
+    </Stack>
   )
 }
