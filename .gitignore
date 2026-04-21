@@ -216,3 +216,6 @@ __marimo__/
 /apis/Employee.Api/.vs/Employee.Api
 /apis/Employee.Api/Employee.Api/.vs/ProjectEvaluation
 /apis/Employee.Api/Employee.Api/bin/Debug/net8.0
+/apis/Employee.Api/.vs/ProjectEvaluation
+/apis/Employee.Api/Employee.Api/obj
+/reactUI/.vite/deps

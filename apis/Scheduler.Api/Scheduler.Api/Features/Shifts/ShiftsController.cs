@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Scheduler.Api.Features.Schedules.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
 using Scheduler.Api.Features.Shifts.Models;
 using Scheduler.Api.Features.Shifts.Services;
