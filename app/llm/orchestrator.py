@@ -572,6 +572,14 @@ def _extract_schedule_name_for_create(message: str):
     if quoted:
         return quoted.group(1).strip()
 
+    invalid_names = {
+        "group",
+        "schedule",
+        "schedule group",
+        "manager",
+        "manager group",
+    }
+
     patterns = [
         r"(?:create|new|make|add)\s+(?:a\s+)?schedule(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
         r"(?:create|new|make|add)\s+(?:a\s+)?(?:schedule|manager)\s+group(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
@@ -582,7 +590,8 @@ def _extract_schedule_name_for_create(message: str):
         match = re.search(pattern, text, flags=re.IGNORECASE)
         if match:
             candidate = match.group(1).strip(" .,!?:;\"'")
-            if candidate:
+            normalized = re.sub(r"\s+", " ", candidate.lower()).strip()
+            if candidate and normalized not in invalid_names:
                 return candidate
     return None
 
