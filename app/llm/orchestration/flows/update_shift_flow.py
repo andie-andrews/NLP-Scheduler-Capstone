@@ -110,9 +110,11 @@ def handle_update_shift_flow(
         update_employee_id = None
         if session.get("role") != "Employee":
             employees = call_api(token, operations["searchEmployees"], {"query": ""}) or []
-            # Use the original message if available to extract reassignment target
-            message_to_search = pending_update_shift.get("originalMessage") or message
-            reassignment_name = _find_reassignment_name(message_to_search, employees)
+            reassignment_name = _find_reassignment_name(message, employees)
+            if not reassignment_name:
+                original = pending_update_shift.get("originalMessage")
+                if original and original != message:
+                    reassignment_name = _find_reassignment_name(original, employees)
             if reassignment_name:
                 resolution = resolve_employee_id(token, reassignment_name, operations, call_api)
                 if not resolution or resolution.get("type") == "not_found":
