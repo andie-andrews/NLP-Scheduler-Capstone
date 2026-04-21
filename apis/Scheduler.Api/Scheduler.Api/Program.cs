@@ -2,13 +2,13 @@
 using Microsoft.OpenApi.Models;
 using Scheduler.Api.Features.Auth.Handlers;
 using Scheduler.Api.Features.Employee.Handlers;
-using Scheduler.Api.Features.Schedules.Handlers;
+using Scheduler.Api.Features.ScheduleGroups.Handlers;
 using Scheduler.Api.Infrastructure.Domain.Services;
 using System.Text;
 using Scheduler.Api.Features.Health;
 using Scheduler.Api.Features.Shifts.Handlers;
 using Scheduler.Api.Features.Shifts.Services;
-using Scheduler.Api.Features.Schedules.Services;
+using Scheduler.Api.Features.ScheduleGroups.Services;
 using Scheduler.Api.Features.Employee.Services;
 using Scheduler.Api.Features.Auth.Services;
 using Scheduler.Api.Infrastructure.Data;
@@ -117,32 +117,23 @@ builder.Services.AddScoped<IDbConnectionFactory, SqlConnectionFactory>();
 
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<HealthHandler>();
-builder.Services.AddScoped<GetEmployeeByNameHandler>();
 builder.Services.AddScoped<AuthHandler>();
 builder.Services.AddScoped<AuthDomainService>();
 
 
-builder.Services.AddScoped<GetSchedulesHandler>();
-builder.Services.AddScoped<GetScheduleEmployeesHandler>();
-builder.Services.AddScoped<GetEmployeeSchedulesHandler>();
-builder.Services.AddScoped<GetManagerSchedulesHandler>();
+builder.Services.AddScoped<GetScheduleGroupsHandler>();
+builder.Services.AddScoped<GetScheduleGroupEmployeesHandler>();
+builder.Services.AddScoped<GetEmployeeScheduleGroupsHandler>();
+builder.Services.AddScoped<GetManagerScheduleGroupsHandler>();
 builder.Services.AddScoped<GetScheduleShiftsHandler>();
 builder.Services.AddScoped<CreateShiftHandler>();
 builder.Services.AddScoped<ValidateShiftOverlapHandler>();
-builder.Services.AddScoped<CreateScheduleHandler>();
-builder.Services.AddScoped<UpdateScheduleHandler>();
-builder.Services.AddScoped<DeleteScheduleHandler>();
-builder.Services.AddScoped<ScheduleDomainService>();
-builder.Services.AddScoped<AddEmployeeToScheduleHandler>();
-builder.Services.AddScoped<DeleteEmployeeToScheduleHandler>();
-builder.Services.AddScoped<GetEmployeeByIdHandler>();
-builder.Services.AddScoped<GetAllEmployeesHandler>();
-builder.Services.AddScoped<GetEmployeeByNameHandler>();
-builder.Services.AddScoped<GetEmployeeShiftsHandler>();
-builder.Services.AddScoped<CreateEmployeeHandler>();
-builder.Services.AddScoped<UpdateEmployeeHandler>();
-builder.Services.AddScoped<DeleteEmployeeHandler>();
-builder.Services.AddScoped<EmployeeDomainService>();
+builder.Services.AddScoped<CreateScheduleGroupHandler>();
+builder.Services.AddScoped<UpdateScheduleGroupHandler>();
+builder.Services.AddScoped<DeleteScheduleGroupHandler>();
+builder.Services.AddScoped<ScheduleGroupDomainService>();
+builder.Services.AddScoped<AddEmployeeToScheduleGroupHandler>();
+builder.Services.AddScoped<DeleteEmployeeFromScheduleGroupHandler>();
 builder.Services.AddScoped<DeleteShiftHandler>();
 builder.Services.AddScoped<UpdateShiftHandler>();
 builder.Services.AddScoped<ShiftDomainService>();
@@ -154,9 +145,30 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+var configuredPathBase = builder.Configuration["ASPNETCORE_PATHBASE"] ?? builder.Configuration["PathBase"];
+if (!string.IsNullOrWhiteSpace(configuredPathBase))
+{
+  if (!configuredPathBase.StartsWith('/'))
+  {
+    configuredPathBase = $"/{configuredPathBase}";
+  }
+
+  app.UsePathBase(configuredPathBase);
+}
+
 HealthEndpoint.Map(app);
 
-app.UseSwagger();
+app.UseSwagger(options =>
+{
+  options.PreSerializeFilters.Add((swaggerDocument, httpRequest) =>
+  {
+    var serverBasePath = httpRequest.PathBase.HasValue ? httpRequest.PathBase.Value : string.Empty;
+    swaggerDocument.Servers =
+    [
+      new OpenApiServer { Url = $"{httpRequest.Scheme}://{httpRequest.Host.Value}{serverBasePath}" }
+    ];
+  });
+});
 app.UseSwaggerUI();
 
 

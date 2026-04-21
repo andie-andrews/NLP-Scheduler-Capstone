@@ -19,7 +19,7 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 
 ---
 
-# 1) Problem Statement + Accessibility Solution
+# 1) Problem Statement 
 
 ## Scheduling is urgent, complex, and not always desk-friendly
 
@@ -28,6 +28,7 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 - Traditional workflows require multiple screens or direct API knowledge
 - Employees and supervisors often need schedule info while on the go
 - Users may benefit from voice-first, low-friction task support
+
 
 ## Solution impact (especially for voice-reliant workflows)
 
@@ -59,7 +60,7 @@ OpenAPI Operation Registry (tool schemas)
 Scheduler REST API (.NET controllers)
         |
         v
-Employees / Schedules / Shifts data
+Employees / ScheduleGroups / Shifts data
 ```
 
 - OpenAPI spec drives discoverable operations and tool mapping
@@ -80,7 +81,7 @@ This is intentionally API-first. Instead of hard-coding every behavior in the ch
 - **Streamlit UI**: login, navigation, schedule management, AI Assistant tab
 - **LLM orchestrator**: intent detection, entity resolution, pending-state workflows
 - **OpenAPI loader/parser**: turns API routes into callable tool definitions
-- **.NET API**: Auth, Employees, Schedules, Shifts endpoints
+- **.NET API**: Auth, Employees, ScheduleGroups, Shifts endpoints
 
 **Design principle:** conversation coordinates actions; API enforces business operations.
 

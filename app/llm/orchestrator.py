@@ -6,13 +6,14 @@ from pathlib import Path
 import jwt
 from dotenv import load_dotenv
 
-from llm.openapi_loader import DEFAULT_API_NAME, load_openapi_spec
-from llm.openapi_parser import parse_operations
+from llm.openapi_loader import load_openapi_spec
+from llm.openapi_parser import parse_operations_by_api
 from llm.openapi_client import call_api
 from llm.orchestration.intents import (
     is_add_schedule_member_intent,
     is_create_employee_intent,
     is_create_schedule_intent,
+    is_get_manager_schedule_groups_intent,
     is_schedule_domain_message,
     is_create_shift_intent,
     is_delete_employee_intent,
@@ -70,7 +71,11 @@ from llm.orchestration.state_store import (
     set_pending_delete_schedule_state,
     set_pending_employee_operation_state,
 )
-from llm.orchestration.summary import summarize_shifts
+from llm.orchestration.summary import (
+    summarize_manager_schedule_groups,
+    summarize_schedule_groups,
+    summarize_shifts,
+)
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
 from llm.orchestration.context_resolution import (
     is_follow_up_employee_query,
@@ -108,8 +113,17 @@ load_dotenv(ROOT_DIR / ".env")
 llm_client = OrchestrationLLM(model="gpt-4o")
 
 specs = load_openapi_spec()
-spec = specs[DEFAULT_API_NAME]
-OPERATIONS = parse_operations(spec)
+operations_by_callable = parse_operations_by_api(specs)
+OPERATIONS = {key: value for key, value in operations_by_callable.items()}
+
+# Backward compatibility: expose un-namespaced operation IDs when unique.
+for operation in operations_by_callable.values():
+    operation_id = operation.get("operationId")
+    if not operation_id:
+        continue
+
+    if operation_id not in OPERATIONS:
+        OPERATIONS[operation_id] = operation
 GENERAL_CONVERSATION_SYSTEM_PROMPT = """
 You are a friendly assistant in a workforce scheduling app.
 
@@ -119,10 +133,28 @@ Keep responses concise and helpful.
 """
 
 
+def _resolve_operation_for_tool_call(tool_name: str, operations: dict):
+    if tool_name in operations:
+        operation = operations[tool_name] or {}
+        return tool_name, operation.get("operationId", tool_name)
+
+    for operation_key, operation in operations.items():
+        if (operation or {}).get("callable_id") == tool_name:
+            return operation_key, operation.get("operationId", operation_key)
+
+    if "__" in tool_name:
+        fallback_key = tool_name.split("__", 1)[1]
+        if fallback_key in operations:
+            operation = operations[fallback_key] or {}
+            return fallback_key, operation.get("operationId", fallback_key)
+
+    return tool_name, tool_name
+
+
 def _build_create_shift_question(state):
     if not state.get("employeeId"):
         return "Sure — who should I schedule?"
-    if not state.get("scheduleId"):
+    if not state.get("scheduleGroupId"):
         employee_schedule_options = state.get("employee_schedule_options") or []
         if employee_schedule_options:
             return (
@@ -131,7 +163,7 @@ def _build_create_shift_question(state):
             )
         return (
             "I can't create a shift yet because this employee is not on any schedule. "
-            "Please add the employee to a schedule in the Manage Schedules UI, then try again."
+            "Please add the employee to a schedule in the Manage Schedule Groups UI, then try again."
         )
     if not state.get("start"):
         if state.get("multiShiftDates"):
@@ -148,7 +180,7 @@ def _build_create_shift_question(state):
 def _next_missing_shift_field(state):
     if not state.get("employeeId"):
         return "employee"
-    if not state.get("scheduleId"):
+    if not state.get("scheduleGroupId"):
         return "schedule"
     if not state.get("start"):
         return "start"
@@ -176,7 +208,7 @@ def _refresh_employee_schedule_state(token, state):
         state["available_schedule_options"] = []
         return
 
-    get_employee_schedules_op = OPERATIONS.get("getEmployeeSchedules")
+    get_employee_schedules_op = OPERATIONS.get("getEmployeeScheduleGroups")
     employee_schedules = []
     if get_employee_schedules_op:
         fetched_employee_schedules = call_api(token, get_employee_schedules_op, {"employeeId": employee_id}) or []
@@ -189,7 +221,7 @@ def _refresh_employee_schedule_state(token, state):
         state["available_schedule_options"] = employee_schedules
         return
 
-    get_schedules_op = OPERATIONS.get("getSchedules")
+    get_schedules_op = OPERATIONS.get("getScheduleGroups")
     all_schedules = call_api(token, get_schedules_op, {}) if get_schedules_op else []
     state["available_schedule_options"] = all_schedules if isinstance(all_schedules, list) else []
 
@@ -226,7 +258,8 @@ def _attempt_fill_shift_state_from_message(message, token, state):
                 "options": resolution["options"],
             }
 
-    duration = extract_duration_hours(message)
+    # We want duration questions to just allow us to type "8", rather than "8 hours"
+    duration = extract_duration_hours(message, bare_number=state.get("awaiting") == "duration")
     if duration and not state.get("durationHours"):
         state["durationHours"] = duration
 
@@ -286,16 +319,16 @@ def _attempt_fill_shift_state_from_message(message, token, state):
         _refresh_employee_schedule_state(token, state)
 
     employee_schedule_options = state.get("employee_schedule_options") or []
-    if not state.get("scheduleId") and len(employee_schedule_options) == 1:
-        state["scheduleId"] = employee_schedule_options[0]["id"]
+    if not state.get("scheduleGroupId") and len(employee_schedule_options) == 1:
+        state["scheduleGroupId"] = employee_schedule_options[0]["id"]
         state["awaiting"] = None
 
-    if not state.get("scheduleId"):
+    if not state.get("scheduleGroupId"):
         raw_message = message.strip()
         if raw_message.isdigit() and employee_schedule_options:
             choice = int(raw_message)
             if 1 <= choice <= len(employee_schedule_options):
-                state["scheduleId"] = employee_schedule_options[choice - 1]["id"]
+                state["scheduleGroupId"] = employee_schedule_options[choice - 1]["id"]
                 state["awaiting"] = None
                 return None
             matching_schedule = next(
@@ -303,7 +336,7 @@ def _attempt_fill_shift_state_from_message(message, token, state):
                 None,
             )
             if matching_schedule:
-                state["scheduleId"] = matching_schedule["id"]
+                state["scheduleGroupId"] = matching_schedule["id"]
                 state["awaiting"] = None
                 return None
 
@@ -314,13 +347,13 @@ def _attempt_fill_shift_state_from_message(message, token, state):
         if schedule_name:
             schedule_resolution = resolve_schedule_id(token, schedule_name, OPERATIONS, call_api)
             if schedule_resolution and schedule_resolution.get("type") == "resolved":
-                resolved_schedule_id = schedule_resolution["scheduleId"]
+                resolved_schedule_id = schedule_resolution["scheduleGroupId"]
                 if employee_schedule_options and resolved_schedule_id not in {
                     s.get("id") for s in employee_schedule_options
                 }:
                     state["awaiting"] = "schedule"
                 else:
-                    state["scheduleId"] = resolved_schedule_id
+                    state["scheduleGroupId"] = resolved_schedule_id
                     state["awaiting"] = None
             elif schedule_resolution and schedule_resolution.get("type") == "disambiguation":
                 scoped_options = schedule_resolution["raw"]
@@ -370,7 +403,7 @@ def _resolve_disambiguation_reply(message, state):
     if awaiting == "schedule_disambiguation":
         options = state.get("schedule_options", [])
         if 1 <= choice <= len(options):
-            state["scheduleId"] = options[choice - 1]["id"]
+            state["scheduleGroupId"] = options[choice - 1]["id"]
             state["awaiting"] = None
             return True
 
@@ -541,7 +574,9 @@ def _extract_schedule_name_for_create(message: str):
 
     patterns = [
         r"(?:create|new|make|add)\s+(?:a\s+)?schedule(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
+        r"(?:create|new|make|add)\s+(?:a\s+)?(?:schedule|manager)\s+group(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
         r"schedule(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
+        r"(?:schedule|manager)\s+group(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -600,7 +635,7 @@ def _extract_member_role_target(message: str):
 
 
 def _get_schedule_member_operation(action: str):
-    return OPERATIONS.get("addEmployeeToSchedule") if action == "add" else OPERATIONS.get("removeEmployeeFromSchedule")
+    return OPERATIONS.get("addEmployeeToScheduleGroup") if action == "add" else OPERATIONS.get("removeEmployeeFromScheduleGroup")
 
 
 def _is_affirmative(message: str):
@@ -641,12 +676,19 @@ def _build_schedule_member_schedule_question(state: dict):
 def _lookup_schedule_name_by_id(token: str, schedule_id: int | None):
     if not schedule_id:
         return None
-    get_schedules_op = OPERATIONS.get("getSchedules")
+    get_schedules_op = OPERATIONS.get("getScheduleGroups")
     if not get_schedules_op:
         return None
     schedules = call_api(token, get_schedules_op, {}) or []
     match = next((s for s in schedules if s.get("id") == schedule_id), None)
     return (match or {}).get("name")
+
+
+def _extract_manager_id_from_message(message: str):
+    match = re.search(r"manager\s*id\s*[:=]?\s*(\d+)", message or "", flags=re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return None
 
 
 def _resolve_delete_shift_number_reply(message: str, state):
@@ -785,7 +827,7 @@ def run_orchestrator(message: str, token: str, session: dict):
     if pending_schedule_member_change and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
         clear_pending_schedule_member_change_state(session)
         pending_schedule_member_change = None
-        return "Okay — I cancelled the schedule member update flow."
+        return "Okay — I cancelled the schedule-group member update flow."
 
     if pending_create_schedule and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
         clear_pending_create_schedule_state(session)
@@ -817,6 +859,7 @@ def run_orchestrator(message: str, token: str, session: dict):
         clear_pending_create_schedule_state=clear_pending_create_schedule_state,
         clear_pending_delete_schedule_state=clear_pending_delete_schedule_state,
         extract_schedule_name_or_id_from_message=_extract_schedule_name_or_id_from_message,
+        extract_schedule_name_for_create=_extract_schedule_name_for_create,
         normalize_schedule_id_arg=normalize_schedule_id_arg,
         lookup_schedule_name_by_id=_lookup_schedule_name_by_id,
         extract_employee_name_parts=_extract_employee_name_parts,
@@ -835,7 +878,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             pending_schedule_member_change["suggestedScheduleName"] = None
             set_pending_schedule_member_change_state(session, pending_schedule_member_change)
             return (
-                "I can't create schedules from chat. Please create the schedule in the Manage Schedules UI, "
+                "I can't create schedule groups from chat. Please create the schedule group in the Manage Schedule Groups UI, "
                 "then tell me the schedule name."
             )
 
@@ -877,7 +920,7 @@ def run_orchestrator(message: str, token: str, session: dict):
                         f"{(matched.get('firstName') or '').strip()} {(matched.get('lastName') or '').strip()}".strip()
                     )
 
-        if not pending_schedule_member_change.get("scheduleId"):
+        if not pending_schedule_member_change.get("scheduleGroupId"):
             schedule_target = _extract_schedule_name_or_id_from_message(message)
             resolved_schedule_id = normalize_schedule_id_arg(token, schedule_target, OPERATIONS, call_api)
             if resolved_schedule_id is None:
@@ -885,10 +928,10 @@ def run_orchestrator(message: str, token: str, session: dict):
                 if isinstance(schedule_target, str):
                     return (
                         f"I couldn't find schedule '{schedule_target}'. "
-                        "Please create it in the Manage Schedules UI or choose an existing schedule."
+                        "Please create it in the Manage Schedule Groups UI or choose an existing schedule group."
                     )
                 return _build_schedule_member_schedule_question(pending_schedule_member_change)
-            pending_schedule_member_change["scheduleId"] = resolved_schedule_id
+            pending_schedule_member_change["scheduleGroupId"] = resolved_schedule_id
             if isinstance(schedule_target, str):
                 pending_schedule_member_change["scheduleName"] = schedule_target
 
@@ -900,7 +943,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             token,
             operation,
             {
-                "scheduleId": pending_schedule_member_change["scheduleId"],
+                "scheduleGroupId": pending_schedule_member_change["scheduleGroupId"],
                 "employeeId": pending_schedule_member_change["employeeId"],
             },
         )
@@ -909,15 +952,48 @@ def run_orchestrator(message: str, token: str, session: dict):
         employee_display = pending_schedule_member_change.get("employeeName") or f"{role_word} {pending_schedule_member_change['employeeId']}"
         schedule_display = (
             pending_schedule_member_change.get("scheduleName")
-            or _lookup_schedule_name_by_id(token, pending_schedule_member_change.get("scheduleId"))
-            or f"schedule {pending_schedule_member_change['scheduleId']}"
+            or _lookup_schedule_name_by_id(token, pending_schedule_member_change.get("scheduleGroupId"))
+            or f"schedule group {pending_schedule_member_change['scheduleGroupId']}"
         )
         clear_pending_schedule_member_change_state(session)
         return f"Done — {employee_display} was {action_word} {schedule_display}."
 
     if is_create_schedule_intent(message):
+        create_operation = OPERATIONS.get("createScheduleGroup")
+        if not create_operation:
+            clear_pending_create_schedule_state(session)
+            return "Schedule-group creation is not available because the API spec is missing createScheduleGroup."
+
+        schedule_name = _extract_schedule_name_for_create(raw_message) or _extract_schedule_name_for_create(message)
+        if not schedule_name:
+            set_pending_create_schedule_state(session, {"intent": "create_schedule", "awaiting": "name"})
+            return "What should I name the new schedule group?"
+
+        created = call_api(token, create_operation, {"name": schedule_name}) or {}
         clear_pending_create_schedule_state(session)
-        return "Schedule creation is only available in the Manage Schedules UI."
+        created_id = created.get("id") if isinstance(created, dict) else None
+        return (
+            f"Done — created schedule group {schedule_name} (ID: {created_id})."
+            if created_id is not None
+            else f"Done — created schedule group {schedule_name}."
+        )
+
+    if is_get_manager_schedule_groups_intent(message):
+        operation = OPERATIONS.get("getManagerScheduleGroups")
+        if not operation:
+            return "Manager-group lookup is not available because the API spec is missing getManagerScheduleGroups."
+        manager_id = _extract_manager_id_from_message(message) or _extract_employee_id_from_token(token)
+        if manager_id is None:
+            return "I need a managerId to retrieve manager groups."
+        groups = call_api(token, operation, {"managerId": manager_id}) or []
+        if not groups:
+            return "No manager groups found."
+        lines = []
+        for idx, group in enumerate(groups, start=1):
+            group_id = group.get("id")
+            name = group.get("name") or f"Schedule Group {group_id}"
+            lines.append(f"{idx}. {name} (ID: {group_id})")
+        return "Here are the manager groups:\n" + "\n".join(lines)
 
     if is_delete_schedule_intent(message):
         schedule_target = _extract_schedule_name_or_id_from_message(message)
@@ -928,12 +1004,12 @@ def run_orchestrator(message: str, token: str, session: dict):
         if resolved_schedule_id is None:
             set_pending_delete_schedule_state(session, {"intent": "delete_schedule"})
             return "I couldn't find that schedule. Which schedule do you want me to delete?"
-        delete_operation = OPERATIONS.get("deleteSchedule")
+        delete_operation = OPERATIONS.get("deleteScheduleGroup")
         if not delete_operation:
-            return "Deleting schedules is not available because the API spec is missing deleteSchedule."
-        call_api(token, delete_operation, {"scheduleId": resolved_schedule_id})
+            return "Deleting schedule groups is not available because the API spec is missing deleteScheduleGroup."
+        call_api(token, delete_operation, {"scheduleGroupId": resolved_schedule_id})
         schedule_name = schedule_target if isinstance(schedule_target, str) else _lookup_schedule_name_by_id(token, resolved_schedule_id)
-        return f"Done — deleted schedule {schedule_name or resolved_schedule_id}."
+        return f"Done — deleted schedule group {schedule_name or resolved_schedule_id}."
 
     if is_create_employee_intent(message):
         first_name, last_name = _extract_employee_name_parts(message)
@@ -997,7 +1073,7 @@ def run_orchestrator(message: str, token: str, session: dict):
             "roleTarget": role_target,
             "employeeId": None,
             "employeeName": None,
-            "scheduleId": None,
+            "scheduleGroupId": None,
             "scheduleName": None,
             "employeeOptions": [],
             "awaitingCreateSchedule": False,
@@ -1025,31 +1101,31 @@ def run_orchestrator(message: str, token: str, session: dict):
 
         raw_schedule_target = _extract_schedule_name_or_id_from_message(message)
         if raw_schedule_target:
-            state["scheduleId"] = normalize_schedule_id_arg(token, raw_schedule_target, OPERATIONS, call_api)
+            state["scheduleGroupId"] = normalize_schedule_id_arg(token, raw_schedule_target, OPERATIONS, call_api)
             if isinstance(raw_schedule_target, str):
                 state["scheduleName"] = raw_schedule_target
 
-        if state["employeeId"] is None or state["scheduleId"] is None:
+        if state["employeeId"] is None or state["scheduleGroupId"] is None:
             set_pending_schedule_member_change_state(session, state)
             if state["employeeId"] is None:
                 return "Who should I update on the schedule?"
             if isinstance(raw_schedule_target, str):
                 return (
                     f"I couldn't find schedule '{raw_schedule_target}'. "
-                    "Please create it in the Manage Schedules UI or choose an existing schedule."
+                    "Please create it in the Manage Schedule Groups UI or choose an existing schedule group."
                 )
             return _build_schedule_member_schedule_question(state)
 
         operation = _get_schedule_member_operation(action)
         if not operation:
             return "Schedule member update is not available because the API spec is missing that operation."
-        call_api(token, operation, {"scheduleId": state["scheduleId"], "employeeId": state["employeeId"]})
+        call_api(token, operation, {"scheduleGroupId": state["scheduleGroupId"], "employeeId": state["employeeId"]})
         action_word = "added to" if action == "add" else "removed from"
         employee_display = state.get("employeeName") or f"{role_target} {state['employeeId']}"
         schedule_display = (
             state.get("scheduleName")
-            or _lookup_schedule_name_by_id(token, state.get("scheduleId"))
-            or f"schedule {state['scheduleId']}"
+            or _lookup_schedule_name_by_id(token, state.get("scheduleGroupId"))
+            or f"schedule group {state['scheduleGroupId']}"
         )
         return f"Done — {employee_display} was {action_word} {schedule_display}."
 
@@ -1208,11 +1284,12 @@ def run_orchestrator(message: str, token: str, session: dict):
     # Tool calls are normalized by the adapter to:
     # {"id": "...", "function": {"name": "...", "arguments": "{...json...}"}}
     # This mirrors the OpenAI shape and minimizes downstream refactor surface.
-    op_id = tool_call["function"]["name"]
+    tool_name = tool_call["function"]["name"]
+    op_key, op_id = _resolve_operation_for_tool_call(tool_name, OPERATIONS)
     args = json.loads(tool_call["function"]["arguments"] or "{}")
 
     print("----- TOOL CALL -----")
-    print(op_id)
+    print(tool_name)
     print(args)
 
     if op_id in {"getEmployeeShifts", "getScheduleShifts"}:
@@ -1252,15 +1329,29 @@ def run_orchestrator(message: str, token: str, session: dict):
         elif "startDate" not in args and "endDate" not in args:
             return "What date range should I use? I can use this week, next week, or this month."
     if op_id == "createShift":
-        normalized_schedule_id = normalize_schedule_id_arg(token, args.get("scheduleId"), OPERATIONS, call_api)
+        normalized_schedule_id = normalize_schedule_id_arg(token, args.get("scheduleGroupId"), OPERATIONS, call_api)
         if normalized_schedule_id is None:
-            return "I need a valid schedule. Please tell me the schedule name exactly, or provide its numeric scheduleId."
-        args["scheduleId"] = normalized_schedule_id
+            return "I need a valid schedule group. Please tell me the schedule group name exactly, or provide its numeric scheduleGroupId."
+        args["scheduleGroupId"] = normalized_schedule_id
 
-    result = call_api(token, OPERATIONS[op_id], args)
+    operation = OPERATIONS.get(op_key)
+    if operation is None:
+        return f"I couldn't map the requested operation `{tool_name}`. Please try again."
+
+    result = call_api(token, operation, args)
 
     print("----- API RESULT -----")
     print(result)
+
+    if isinstance(result, dict):
+        status_code = result.get("__httpStatus") or result.get("statusCode")
+        if isinstance(status_code, int) and status_code >= 400:
+            raw_text = str(result.get("rawText") or result.get("error") or "").strip()
+            first_line = raw_text.splitlines()[0] if raw_text else ""
+            return (
+                f"I couldn't complete `{op_id}` because the `{operation.get('api_name', 'api')}` API returned {status_code}. "
+                f"{first_line}".strip()
+            )
 
     if op_id in {"createEmployee", "updateEmployee", "deleteEmployee"} and memory is not None:
         if hasattr(memory, "save_employee_directory"):
@@ -1315,6 +1406,32 @@ def run_orchestrator(message: str, token: str, session: dict):
         return {
             "summary": summary_data.get("summary", "No shifts found."),
             "data": response_data
+        }
+
+    if op_id == "getEmployeeScheduleGroups":
+        employee_full_name = None
+        target_employee_id = args.get("employeeId")
+        if target_employee_id is not None and isinstance(employees, list):
+            matched_employee = next(
+                (emp for emp in employees if emp.get("id") == target_employee_id),
+                None,
+            )
+            if matched_employee:
+                first_name = (matched_employee.get("firstName") or "").strip()
+                last_name = (matched_employee.get("lastName") or "").strip()
+                employee_full_name = f"{first_name} {last_name}".strip() or None
+
+        summary_data = summarize_schedule_groups(result, employee_full_name=employee_full_name)
+        return {
+            "summary": summary_data.get("summary", "No schedule groups found."),
+            "data": summary_data,
+        }
+
+    if op_id == "getManagerScheduleGroups":
+        summary_data = summarize_manager_schedule_groups(result)
+        return {
+            "summary": summary_data.get("summary", "No schedule groups found."),
+            "data": summary_data,
         }
 
     return result

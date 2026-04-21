@@ -35,7 +35,7 @@ def test_to_openai_tool_calls_converts_langchain_shape():
 
 
 def test_invoke_with_tools_uses_openai_fallback_when_langchain_unavailable():
-    message = SimpleNamespace(content="", tool_calls=[_FakeToolCall("getSchedules", "{}")])
+    message = SimpleNamespace(content="", tool_calls=[_FakeToolCall("getScheduleGroups", "{}")])
     client = _FakeOpenAIClient(message)
 
     llm = OrchestrationLLM(model="gpt-4o", client=client)
@@ -43,7 +43,7 @@ def test_invoke_with_tools_uses_openai_fallback_when_langchain_unavailable():
 
     response = llm.invoke_with_tools("system", "user", tools=[])
 
-    assert response.tool_calls[0]["function"]["name"] == "getSchedules"
+    assert response.tool_calls[0]["function"]["name"] == "getScheduleGroups"
     assert response.tool_calls[0]["function"]["arguments"] == "{}"
 
 

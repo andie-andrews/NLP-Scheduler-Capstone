@@ -1,6 +1,6 @@
 using Dapper;
 using Microsoft.AspNetCore.Http;
-using Scheduler.Api.Features.Schedules.Models;
+using Scheduler.Api.Features.ScheduleGroups.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
 using Scheduler.Api.Features.Shifts.Models;
 using Scheduler.Api.Infrastructure.Data;
@@ -27,7 +27,7 @@ public class ShiftDomainService
     _updateShiftHandler = updateShiftHandler;
   }
 
-  public async Task CreateShift(int scheduleId, CreateShiftRequest request, int currentUserEmployeeId)
+  public async Task CreateShift(int scheduleGroupId, CreateShiftRequest request, int currentUserEmployeeId)
   {
     using var connection = _db.CreateConnection();
     if (connection.State != ConnectionState.Open)
@@ -36,10 +36,10 @@ public class ShiftDomainService
 
     var isManager = await connection.ExecuteScalarAsync<int?>(@"
       SELECT 1
-      FROM ScheduleManagers
-      WHERE ScheduleId = @scheduleId
+      FROM ScheduleGroupManagers
+      WHERE ScheduleGroupId = @scheduleGroupId
         AND ManagerId = @managerId
-    ", new { scheduleId, managerId = currentUserEmployeeId }, transaction: transaction);
+    ", new { scheduleGroupId, managerId = currentUserEmployeeId }, transaction: transaction);
 
     if (isManager is null)
       throw new ShiftValidationException(
@@ -49,10 +49,10 @@ public class ShiftDomainService
 
     var isAssigned = await connection.ExecuteScalarAsync<int?>(@"
       SELECT 1
-      FROM ScheduleEmployees
-      WHERE ScheduleId = @scheduleId
+      FROM ScheduleGroupEmployees
+      WHERE ScheduleGroupId = @scheduleGroupId
         AND EmployeeId = @employeeId
-    ", new { scheduleId, employeeId = request.EmployeeId }, transaction: transaction);
+    ", new { scheduleGroupId, employeeId = request.EmployeeId }, transaction: transaction);
 
     if (isAssigned is null)
       throw new ShiftValidationException(
@@ -67,7 +67,7 @@ public class ShiftDomainService
       transaction: transaction);
 
     await _createShiftHandler.Handle(
-      scheduleId,
+      scheduleGroupId,
       request.EmployeeId,
       request.Start,
       request.DurationHours,
@@ -79,13 +79,30 @@ public class ShiftDomainService
 
   public async Task<bool> UpdateShift(int shiftId, UpdateShiftRequest request, int currentUserEmployeeId)
   {
+    var patchRequest = new PatchShiftRequest
+    {
+      EmployeeId = null,
+      Start = request.Start,
+      DurationHours = request.DurationHours,
+    };
+    return await PatchShift(shiftId, patchRequest, currentUserEmployeeId);
+  }
+
+  public async Task<bool> PatchShift(int shiftId, PatchShiftRequest request, int currentUserEmployeeId)
+  {
+    if (request.EmployeeId is null && request.Start is null && request.DurationHours is null)
+      throw new ShiftValidationException(
+        "Provide at least one field to patch.",
+        "empty_patch_request",
+        StatusCodes.Status400BadRequest);
+
     using var connection = _db.CreateConnection();
     if (connection.State != ConnectionState.Open)
       connection.Open();
     using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
 
-    var shift = await connection.QuerySingleOrDefaultAsync<(int Id, int ScheduleId, int EmployeeId)>(@"
-      SELECT Id, ScheduleId, EmployeeId
+    var shift = await connection.QuerySingleOrDefaultAsync<(int Id, int ScheduleGroupId, int EmployeeId, DateTime Start, int DurationHours)>(@"
+      SELECT Id, ScheduleGroupId, EmployeeId, Start, DurationHours
       FROM Shifts
       WHERE Id = @shiftId
     ", new { shiftId }, transaction: transaction);
@@ -98,12 +115,12 @@ public class ShiftDomainService
 
     var isManager = await connection.ExecuteScalarAsync<int?>(@"
       SELECT 1
-      FROM ScheduleManagers
-      WHERE ScheduleId = @scheduleId
+      FROM ScheduleGroupManagers
+      WHERE ScheduleGroupId = @scheduleGroupId
         AND ManagerId = @managerId
     ", new
     {
-      scheduleId = shift.ScheduleId,
+      scheduleGroupId = shift.ScheduleGroupId,
       managerId = currentUserEmployeeId,
     }, transaction: transaction);
 
@@ -113,18 +130,35 @@ public class ShiftDomainService
         "not_authorized_for_schedule",
         StatusCodes.Status403Forbidden);
 
+    var employeeId = request.EmployeeId ?? shift.EmployeeId;
+    var start = request.Start ?? shift.Start;
+    var durationHours = request.DurationHours ?? shift.DurationHours;
+
+    var isAssigned = await connection.ExecuteScalarAsync<int?>(@"
+      SELECT 1
+      FROM ScheduleGroupEmployees
+      WHERE ScheduleGroupId = @scheduleGroupId
+        AND EmployeeId = @employeeId
+    ", new { scheduleGroupId = shift.ScheduleGroupId, employeeId }, transaction: transaction);
+
+    if (isAssigned is null)
+      throw new ShiftValidationException(
+        "Employee is not assigned to this schedule.",
+        "employee_not_assigned_to_schedule");
+
     await _validateShiftOverlap.EnsureNoOverlap(
-      shift.EmployeeId,
-      request.Start,
-      request.DurationHours,
+      employeeId,
+      start,
+      durationHours,
       shiftId,
       connection,
       transaction);
 
     var wasUpdated = await _updateShiftHandler.Handle(
       shiftId,
-      request.Start,
-      request.DurationHours,
+      employeeId,
+      start,
+      durationHours,
       connection,
       transaction);
 

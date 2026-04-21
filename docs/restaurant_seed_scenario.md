@@ -2,7 +2,7 @@
 
 ## Seed script location
 
-`apis\Scheduler.Api\Scheduler.Database/Seed.RestaurantScenario.sql`
+`apis/Scheduler.Api/Scheduler.Database/Seed.RestaurantScenario.sql`
 
 ---
 
@@ -21,10 +21,24 @@ Steps:
 
 ### Option 2: sqlcmd
 ```bash
-sqlcmd -S .\\SQLSERVER -d SchedulerDb -E -i apis/Scheduler.Api/Scheduler.Api/Database/Seed.RestaurantScenario.sql
+sqlcmd -S .\\SQLSERVER -d SchedulerDb -E -i apis/Scheduler.Api/Scheduler.Database/Seed.RestaurantScenario.sql
 ```
 
 If your SQL Server instance name is different, replace `.\\SQLSERVER` with your instance.
+
+### Seeded demo users
+
+Each seeded user uses `firstName` as both username and password:
+
+- `boss` / `boss` (Supervisor)
+- `olivia` / `olivia`
+- `emma` / `emma`
+- `mia` / `mia`
+- `noah` / `noah`
+- `kai` / `kai`
+- `luca` / `luca`
+
+Additionally, the seed creates a `Manager` schedule group and assigns Boss Man (`boss`) to it.
 
 ---
 
@@ -57,10 +71,12 @@ Schedule Emma Welcome for Hostesses on Tuesday 4 PM to 10 PM.
 Example prompt:
 
 ```text
-Create shifts Monday through Friday for this week and next week for Olivia Tray, 11:00 AM to 7:00 PM on Servers.
+Create shifts Monday through Friday for next week for Olivia Tray, 11:00 AM to 7:00 PM on Servers.
 ```
 
 Alternative prompt with multiple employees:
+
+TODO: THIS IS NOT SUPPORTED YET
 
 ```text
 Schedule Mia Prep, Noah Saute, and Kai Grill on Kitchen for Monday-Friday this week and next week, 8 AM to 4 PM.
@@ -136,6 +152,23 @@ List all of my shifts for this week.
 List all of my shifts for next week.
 ```
 
+---
+
+### 6) Reassign shift from one employee to another
+
+**Goal:** Show reassign works for employees on the same schedule.
+
+Assuming the following:
+- you have a shift assigned to Lance Dall on a Tuesday
+- you want to reassign the shift to Andie Andrews
+- and they are both on the same schedule
+then:
+
+```text
+reassign Lance Dall's tuesday shift to Andie Andrews
+```
+
+should result in the shift being reassigned to Andie.
 ---
 
 ## Suggested end-to-end demo order

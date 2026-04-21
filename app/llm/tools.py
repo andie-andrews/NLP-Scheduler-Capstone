@@ -2,7 +2,21 @@ import requests
 from datetime import datetime, timedelta
 import os
 
-BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net").rstrip("/") + "/api"
+def _runtime_environment() -> str:
+    for env_var in ("SCHEDULER_RUNTIME_ENV", "APP_ENV", "ASPNETCORE_ENVIRONMENT", "ENVIRONMENT"):
+        env_value = os.getenv(env_var)
+        if env_value and env_value.strip():
+            return env_value.strip().lower()
+    return "development"
+
+
+def _default_base_url() -> str:
+    if _runtime_environment() in {"production", "prod"}:
+        return "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
+    return "http://localhost/schedulerapi"
+
+
+BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", _default_base_url()).rstrip("/") + "/api"
 VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
 
 
@@ -127,8 +141,8 @@ def get_employee_shifts(token, employee_id, week_offset=0):
 # -------------------------------
 # CREATE SHIFT
 # -------------------------------
-def create_shift(token, schedule_id, employee_id, date, time, duration_hours):
-    url = f"{BASE_URL}/schedules/{schedule_id}/shifts"
+def create_shift(token, schedule_group_id, employee_id, date, time, duration_hours):
+    url = f"{BASE_URL}/schedule-groups/{schedule_group_id}/shifts"
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -140,7 +154,7 @@ def create_shift(token, schedule_id, employee_id, date, time, duration_hours):
 
     payload = {
          # 🔥 REQUIRED WRAPPER
-            "scheduleId": schedule_id,
+            "scheduleGroupId": schedule_group_id,
             "employeeId": employee_id,
             "start": dt.isoformat(),  
             "durationHours": duration_hours

@@ -137,7 +137,7 @@ def handle_create_shift_flow(
     state = pending_shift or {
         "intent": "create_shift",
         "employeeId": None,
-        "scheduleId": None,
+        "scheduleGroupId": None,
         "start": None,
         "pendingStartDate": None,
         "durationHours": None,
@@ -164,7 +164,7 @@ def handle_create_shift_flow(
     if question:
         if recent_assignment:
             employee_name = recent_assignment.get("employeeName") or "the employee"
-            schedule_name = recent_assignment.get("scheduleName") or f"schedule {recent_assignment.get('scheduleId')}"
+            schedule_name = recent_assignment.get("scheduleName") or f"schedule {recent_assignment.get('scheduleGroupId')}"
             question = f"Done — I added {employee_name} to {schedule_name}.\n\n{question}"
         print("[create_shift] Missing field, asking follow-up:", {"awaiting": next_missing_shift_field(state), "question": question})
         state["awaiting"] = next_missing_shift_field(state)
@@ -172,18 +172,18 @@ def handle_create_shift_flow(
         return question
 
     args = {
-        "scheduleId": state["scheduleId"],
+        "scheduleGroupId": state["scheduleGroupId"],
         "employeeId": state["employeeId"],
         "start": state["start"],
         "durationHours": state["durationHours"],
     }
-    normalized_schedule_id = normalize_schedule_id_arg(token, args.get("scheduleId"), operations, call_api)
+    normalized_schedule_id = normalize_schedule_id_arg(token, args.get("scheduleGroupId"), operations, call_api)
     if normalized_schedule_id is None:
         print("[create_shift] Schedule resolution failed for args:", args)
-        state["scheduleId"] = None
+        state["scheduleGroupId"] = None
         set_pending_shift_state(session, state)
         return "I couldn't match that schedule name. Which schedule should I use?"
-    args["scheduleId"] = normalized_schedule_id
+    args["scheduleGroupId"] = normalized_schedule_id
 
     recurring_dates = state.get("multiShiftDates") or []
     shifts_to_create = []
@@ -209,7 +209,7 @@ def handle_create_shift_flow(
             token,
             get_schedule_shifts,
             {
-                "scheduleId": args["scheduleId"],
+                "scheduleGroupId": args["scheduleGroupId"],
                 "startDate": week_start_date.isoformat(),
                 "endDate": week_end_date.isoformat(),
             },
@@ -272,7 +272,7 @@ def handle_create_shift_flow(
         print(
             "[create_shift] Verifying created shift in schedule week:",
             {
-                "scheduleId": args["scheduleId"],
+                "scheduleGroupId": args["scheduleGroupId"],
                 "startDate": week_start_date.isoformat(),
                 "endDate": week_end_date.isoformat(),
             },
@@ -281,7 +281,7 @@ def handle_create_shift_flow(
             token,
             get_schedule_shifts,
             {
-                "scheduleId": args["scheduleId"],
+                "scheduleGroupId": args["scheduleGroupId"],
                 "startDate": week_start_date.isoformat(),
                 "endDate": week_end_date.isoformat(),
             },

@@ -10,18 +10,25 @@ from app.llm.openapi_loader import (
 )
 
 
-def test_load_openapi_spec_falls_back_to_default_when_manifest_missing(monkeypatch, tmp_path):
-    spec = {"openapi": "3.0.0", "info": {"title": "scheduler", "version": "1.0"}, "paths": {}}
-    spec_path = tmp_path / "scheduler.api.json"
-    spec_path.write_text(json.dumps(spec))
+def test_load_openapi_spec_falls_back_to_default_directory_when_manifest_missing(monkeypatch, tmp_path):
+    spec_dir = tmp_path / ".openapi"
+    spec_dir.mkdir()
+
+    scheduler_spec = {"openapi": "3.0.0", "info": {"title": "scheduler", "version": "1.0"}, "paths": {}}
+    employee_spec = {"openapi": "3.0.0", "info": {"title": "employee", "version": "1.0"}, "paths": {}}
+
+    (spec_dir / "scheduler.api.json").write_text(json.dumps(scheduler_spec))
+    (spec_dir / "employee.api.json").write_text(json.dumps(employee_spec))
 
     monkeypatch.delenv(OPENAPI_MANIFEST_ENV_VAR, raising=False)
-    monkeypatch.setattr("app.llm.openapi_loader.DEFAULT_SPEC_PATH", spec_path)
+    monkeypatch.setattr("app.llm.openapi_loader.DEFAULT_SPEC_DIRECTORY", spec_dir)
+    monkeypatch.setattr("app.llm.openapi_loader.DEFAULT_SPEC_PATH", spec_dir / "scheduler.api.json")
 
     loaded_specs = load_openapi_spec()
 
-    assert list(loaded_specs.keys()) == [DEFAULT_API_NAME]
-    assert loaded_specs[DEFAULT_API_NAME]["info"]["title"] == "scheduler"
+    assert set(loaded_specs.keys()) == {"scheduler", "employee"}
+    assert loaded_specs["scheduler"]["info"]["title"] == "scheduler"
+    assert loaded_specs["employee"]["info"]["title"] == "employee"
 
 
 def test_parse_and_load_openapi_multi_spec_manifest(monkeypatch, tmp_path):

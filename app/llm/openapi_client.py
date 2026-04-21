@@ -1,12 +1,52 @@
-import requests
 import os
+
+import requests
 import urllib3
 
-DEFAULT_BASE_URL = "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
+DEFAULT_LOCAL_BASE_URL = "http://localhost/schedulerapi"
+DEFAULT_PROD_BASE_URL = "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
 
 
-def _base_url() -> str:
-    return os.getenv("SCHEDULER_API_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+def _runtime_environment() -> str:
+    for env_var in ("SCHEDULER_RUNTIME_ENV", "APP_ENV", "ASPNETCORE_ENVIRONMENT", "ENVIRONMENT"):
+        env_value = os.getenv(env_var)
+        if env_value and env_value.strip():
+            return env_value.strip().lower()
+    return "development"
+
+
+def _api_specific_base_url_override(operation: dict) -> str | None:
+    api_name = (operation.get("api_name") or "").strip().upper()
+    if api_name:
+        api_specific_override = os.getenv(f"{api_name}_API_BASE_URL")
+        if api_specific_override and api_specific_override.strip():
+            return api_specific_override.strip().rstrip("/")
+
+    explicit_base_url = os.getenv("SCHEDULER_API_BASE_URL")
+    if explicit_base_url and explicit_base_url.strip():
+        return explicit_base_url.strip().rstrip("/")
+
+    return None
+
+
+def _base_url(operation: dict) -> str:
+    explicit_override = _api_specific_base_url_override(operation)
+    if explicit_override:
+        return explicit_override
+
+    requested_environment = "production" if _runtime_environment() in {"production", "prod"} else "development"
+    servers = operation.get("servers") or []
+
+    for server in servers:
+        environment_name = (server.get("x-environment-name") or "").strip().lower()
+        if environment_name == requested_environment and server.get("url"):
+            return str(server["url"]).rstrip("/")
+
+    for server in servers:
+        if server.get("url"):
+            return str(server["url"]).rstrip("/")
+
+    return DEFAULT_PROD_BASE_URL if requested_environment == "production" else DEFAULT_LOCAL_BASE_URL
 
 
 def _verify_ssl() -> bool:
@@ -35,12 +75,13 @@ def _normalize_employee_search_result(operation, result):
 
     return result
 
+
 def call_api(token, operation, args):
     # Avoid mutating caller-owned args (some flows reuse args after API calls).
     request_args = dict(args or {})
     verify_ssl = _verify_ssl()
     request_timeout_seconds = _request_timeout_seconds()
-    url = _base_url() + operation["path"]
+    url = _base_url(operation) + operation["path"]
     request_body_schema = (
         (operation.get("requestBody") or {})
         .get("content", {})
@@ -99,6 +140,14 @@ def call_api(token, operation, args):
             )
         elif method == "PUT":
             res = requests.put(
+                url,
+                json=request_args,
+                headers=headers,
+                verify=verify_ssl,
+                timeout=request_timeout_seconds,
+            )
+        elif method == "PATCH":
+            res = requests.patch(
                 url,
                 json=request_args,
                 headers=headers,

@@ -57,7 +57,7 @@ def render_main_view(active_view: str):
         render_my_schedule()
     elif active_view == "Manage Employees":
         render_manage_employees()
-    elif active_view == "Manage Schedules":
+    elif active_view == "Manage Schedule Groups":
         render_manage_schedules()
     elif active_view == "AI Assistant":
         render_ai_assistant()

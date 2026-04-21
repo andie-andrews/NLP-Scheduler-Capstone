@@ -32,7 +32,7 @@ def build_tools(operations):
             "type": "function",
             "function": {
                 "name": op_id,
-                "description": op["summary"] or op_id,
+                "description": op["summary"] or op.get("operationId", op_id),
                 "parameters": {
                     "type": "object",
                     "properties": properties,

@@ -14,7 +14,7 @@ public class GetScheduleShiftsHandler
   }
 
   public async Task<IEnumerable<Shift>> Handle(
-    int scheduleId, 
+    int scheduleGroupId, 
     DateTime? startDate,
     DateTime? endDate,
     int? employeeId)
@@ -44,9 +44,9 @@ public class GetScheduleShiftsHandler
     var queryEndExclusive = effectiveEndDate!.Value.AddDays(1);
 
     var sql = @"
-            SELECT Id, ScheduleId, EmployeeId, Start, DurationHours
+            SELECT Id, ScheduleGroupId, EmployeeId, Start, DurationHours
             FROM Shifts
-            WHERE ScheduleId = @scheduleId
+            WHERE ScheduleGroupId = @scheduleGroupId
               AND Start >= @queryStart
               AND Start < @queryEndExclusive
         ";
@@ -60,7 +60,7 @@ public class GetScheduleShiftsHandler
 
     return await connection.QueryAsync<Shift>(sql, new
     {
-      scheduleId,
+      scheduleGroupId,
       queryStart,
       queryEndExclusive,
       employeeId

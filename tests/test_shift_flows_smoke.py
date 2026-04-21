@@ -76,6 +76,56 @@ class ShiftFlowSmokeTests(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+    def test_update_shift_flow_patches_duration_and_employee_reassignment(self):
+        api_calls = []
+
+        def fake_call_api(_token, operation, args):
+            api_calls.append((operation, args))
+            if operation == "search-op":
+                return [
+                    {"id": 10, "firstName": "John", "lastName": "Doe"},
+                    {"id": 11, "firstName": "Jane", "lastName": "Doe"},
+                ]
+            return {"ok": True}
+
+        result = handle_update_shift_flow(
+            message="reassign shift to jane and set duration to 8 hours",
+            token="t",
+            session={"role": "Supervisor"},
+            pending_update_shift={
+                "intent": "update_shift",
+                "employeeId": 10,
+                "employeeName": "john",
+                "targetDate": "2026-04-20",
+                "shiftId": 5,
+                "selectedShift": {"id": 5, "start": "2026-04-20T09:00:00"},
+                "options": [],
+            },
+            explicit_employee_id=None,
+            operations={"searchEmployees": "search-op"},
+            call_api=fake_call_api,
+            extract_weekday_date=lambda *_: None,
+            week_range_from_date=lambda *_: (None, None),
+            format_shift_option_line=lambda *_: "",
+            resolve_shift_number_reply=lambda *_: None,
+            extract_time_of_day=lambda *_: None,
+            extract_duration_hours=lambda *_: 8,
+            clear_pending_update_shift_state=lambda *_: None,
+            set_pending_update_shift_state=lambda *_: None,
+            is_update_shift_intent=lambda *_: True,
+            find_name_in_message=lambda *_: None,
+            resolve_employee_id=lambda *_args, **_kwargs: {"employeeId": 11},
+            set_pending_employee_disambiguation_state=lambda *_: None,
+            build_employee_disambiguation_prompt=lambda *_: "",
+        )
+
+        self.assertEqual(result["summary"], "Shift 5 updated.")
+        update_operation, payload = api_calls[-1]
+        self.assertEqual(update_operation["method"], "PATCH")
+        self.assertEqual(payload["shiftId"], 5)
+        self.assertEqual(payload["durationHours"], 8)
+        self.assertEqual(payload["employeeId"], 11)
+
     def test_create_shift_flow_creates_multiple_shifts_when_dates_are_present(self):
         calls = []
         responses = [{"id": 1}, {"id": 2}]
@@ -94,7 +144,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -141,7 +191,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -190,7 +240,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -233,7 +283,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -288,7 +338,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -332,7 +382,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -367,7 +417,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": None,
+                "scheduleGroupId": None,
                 "start": None,
                 "pendingStartDate": None,
                 "durationHours": None,
@@ -408,7 +458,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
                 "intent": "create_shift",
                 "employeeId": 10,
                 "employeeName": "Sophia",
-                "scheduleId": 4,
+                "scheduleGroupId": 4,
                 "start": "2026-04-15T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": None,
@@ -419,7 +469,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
                 "recent_schedule_assignment": {
                     "employeeName": "Sophia",
                     "scheduleName": "Hostesses",
-                    "scheduleId": 4,
+                    "scheduleGroupId": 4,
                 },
             },
             operations={"createShift": "create-shift-op"},
@@ -462,7 +512,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -508,7 +558,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,

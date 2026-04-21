@@ -40,7 +40,8 @@ Use `.env` locally (loaded by `app/main.py`) and host environment variables in p
 
 **Local development (`app/.env`)**
 
-- `SCHEDULER_API_BASE_URL=https://localhost:7259`
+- `SCHEDULER_API_BASE_URL=http://localhost/schedulerapi`
+- `EMPLOYEE_API_BASE_URL=http://localhost/employeeapi`
 - `SCHEDULER_API_VERIFY_SSL=false`
 
 You can copy from `app/.env.example` and adjust as needed.

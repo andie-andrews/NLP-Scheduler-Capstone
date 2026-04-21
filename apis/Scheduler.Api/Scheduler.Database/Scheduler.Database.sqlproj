@@ -59,14 +59,15 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="Employees.sql" />
-    <Build Include="Schedules.sql" />
+    <Build Include="ScheduleGroups.sql" />
     <Build Include="Shifts.sql" />
-    <Build Include="ScheduleEmployees.sql" />
-    <Build Include="ScheduleManagers.sql" />
+    <Build Include="ScheduleGroupEmployees.sql" />
+    <Build Include="ScheduleGroupManagers.sql" />
     <PostDeploy Include="PostDeployment.sql" />
     <Build Include="Roles.sql" />
     <Build Include="User.sql" />
     <None Include="Seed.RestaurantScenario.sql" />
+    <None Include="IisAppPoolSqlAccess.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Scheduler.Database.publish.xml" />
