@@ -1,4 +1,7 @@
 using Employee.Api.Features.Employees.Models;
+using EmployeeModel = Employee.Api.Features.Employees.Models.Employee;
+using ScheduleModel = Employee.Api.Features.Employees.Models.Schedule;
+using ShiftModel = Employee.Api.Features.Employees.Models.Shift;
 using Employee.Api.Features.Employees.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +21,7 @@ public class EmployeesController : ControllerBase
   }
 
   [HttpGet("{employeeId:int}")]
-  [ProducesResponseType(typeof(Employee), 200)]
+  [ProducesResponseType(typeof(EmployeeModel), 200)]
   [ProducesResponseType(403)]
   [ProducesResponseType(404)]
   public async Task<IActionResult> GetEmployee([FromRoute] int employeeId)
@@ -39,7 +42,7 @@ public class EmployeesController : ControllerBase
 
   [Authorize(Roles = "Supervisor")]
   [HttpGet]
-  [ProducesResponseType(typeof(IEnumerable<Employee>), 200)]
+  [ProducesResponseType(typeof(IEnumerable<EmployeeModel>), 200)]
   public async Task<IActionResult> GetEmployees([FromQuery] string? query)
   {
     var result = await _employeeService.GetEmployees(query);
@@ -86,7 +89,7 @@ public class EmployeesController : ControllerBase
   }
 
   [HttpGet("{employeeId:int}/shifts")]
-  [ProducesResponseType(typeof(IEnumerable<Shift>), 200)]
+  [ProducesResponseType(typeof(IEnumerable<ShiftModel>), 200)]
   [ProducesResponseType(403)]
   public async Task<IActionResult> GetEmployeeShifts(
     [FromRoute] int employeeId,
@@ -103,7 +106,7 @@ public class EmployeesController : ControllerBase
   }
 
   [HttpGet("{employeeId:int}/employeeSchedules")]
-  [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
+  [ProducesResponseType(typeof(IEnumerable<ScheduleModel>), 200)]
   [ProducesResponseType(403)]
   public async Task<IActionResult> GetEmployeeSchedules([FromRoute] int employeeId)
   {
