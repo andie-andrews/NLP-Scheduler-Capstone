@@ -28,7 +28,7 @@ uvicorn assistant_api:app --reload --port 8000
 > `assistant_api.py` and the orchestrator now load `.env` automatically (`app/.env` first, then repo-root `.env`), so `OPENAI_API_KEY` is picked up even if the process is started from a different working directory.
 
 - `OPENAI_API_KEY` (in `app/.env`)
-- `SCHEDULER_API_BASE_URL` / `SCHEDULER_API_VERIFY_SSL`
+- `SCHEDULER_API_BASE_URL` / `EMPLOYEE_API_BASE_URL` / `SCHEDULER_API_VERIFY_SSL`
 
 ## Optional environment
 
