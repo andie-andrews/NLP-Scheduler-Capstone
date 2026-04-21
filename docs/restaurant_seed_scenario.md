@@ -39,17 +39,21 @@ Use the prompts below during demos to illustrate core scheduling workflows.
 Example prompt:
 
 ```text
-Create a schedule group for dish washers
+create schedule group
+```
+
+```text
+Trainer
+```
+
+```text
+show me the schedule groups I manage
 ```
 
 Alternative prompt:
 
 ```text
-Delete  a schedule group for dish washers
-```
-
-```text
-what scheduler group is Olivia in?
+show me what schedule groups Emma is in
 ```
 
 ---
