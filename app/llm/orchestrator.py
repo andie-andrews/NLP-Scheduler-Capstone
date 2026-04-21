@@ -1294,6 +1294,16 @@ def run_orchestrator(message: str, token: str, session: dict):
     print("----- API RESULT -----")
     print(result)
 
+    if isinstance(result, dict):
+        status_code = result.get("__httpStatus") or result.get("statusCode")
+        if isinstance(status_code, int) and status_code >= 400:
+            raw_text = str(result.get("rawText") or result.get("error") or "").strip()
+            first_line = raw_text.splitlines()[0] if raw_text else ""
+            return (
+                f"I couldn't complete `{op_id}` because the `{operation.get('api_name', 'api')}` API returned {status_code}. "
+                f"{first_line}".strip()
+            )
+
     if op_id in {"createEmployee", "updateEmployee", "deleteEmployee"} and memory is not None:
         if hasattr(memory, "save_employee_directory"):
             memory.save_employee_directory(None)

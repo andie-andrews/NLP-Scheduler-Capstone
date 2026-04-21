@@ -12,6 +12,8 @@ def resolve_employee_id(token, name, operations, api_caller):
     # some API deployments hang on non-empty query values. Pull the directory
     # once and resolve in-process instead.
     directory = api_caller(token, search_op, {"query": ""}) or []
+    if not isinstance(directory, list):
+        return {"type": "not_found", "name": name}
 
     exact_full = []
     exact_first = []
