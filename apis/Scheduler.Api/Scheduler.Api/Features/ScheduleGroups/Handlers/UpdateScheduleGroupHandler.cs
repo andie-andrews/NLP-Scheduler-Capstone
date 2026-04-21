@@ -1,13 +1,13 @@
 ﻿using Dapper;
 using Scheduler.Api.Infrastructure.Data;
 
-namespace Scheduler.Api.Features.Schedules.Handlers
+namespace Scheduler.Api.Features.ScheduleGroups.Handlers
 {
-  public class UpdateScheduleHandler
+  public class UpdateScheduleGroupHandler
   {
     private readonly IDbConnectionFactory _db;
 
-    public UpdateScheduleHandler(IDbConnectionFactory db)
+    public UpdateScheduleGroupHandler(IDbConnectionFactory db)
     {
       _db = db;
     }
@@ -17,7 +17,7 @@ namespace Scheduler.Api.Features.Schedules.Handlers
       using var connection = _db.CreateConnection();
 
       var sql = @"
-            UPDATE Schedules
+            UPDATE ScheduleGroups
             SET Name = @name
             WHERE Id = @id
         ";

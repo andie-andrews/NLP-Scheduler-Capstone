@@ -13,7 +13,7 @@ def test_pending_create_schedule_redirects_to_ui_and_clears_state():
         session={},
         pending_create_schedule={"intent": "create_schedule", "awaiting": "name"},
         pending_delete_schedule=None,
-        operations={"createSchedule": "create-schedule-op"},
+        operations={"createScheduleGroup": "create-schedule-op"},
         call_api=lambda *_: (_ for _ in ()).throw(AssertionError("call_api should not be called")),
         clear_pending_create_schedule_state=clear_pending,
         clear_pending_delete_schedule_state=lambda *_: None,
@@ -23,4 +23,4 @@ def test_pending_create_schedule_redirects_to_ui_and_clears_state():
     )
 
     assert cleared["value"] is True
-    assert result == "Schedule creation is only available in the Manage Schedules UI."
+    assert result == "Schedule-group creation is only available in the Manage Schedule Groups UI."

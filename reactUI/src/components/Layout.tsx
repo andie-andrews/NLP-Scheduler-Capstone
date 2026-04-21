@@ -53,7 +53,7 @@ export function Layout({ activeView, onChangeView, children }: { activeView: Vie
               radius={15}
               onClick={() => onChangeView('schedules')}
             >
-              Manage Schedules
+              Manage Schedule Groups
             </Button>
           )}
         </Stack>

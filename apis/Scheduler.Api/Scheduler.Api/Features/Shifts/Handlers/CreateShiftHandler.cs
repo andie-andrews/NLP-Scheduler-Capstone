@@ -15,7 +15,7 @@ public class CreateShiftHandler
   }
 
   public async Task Handle(
-    int scheduleId,
+    int scheduleGroupId,
     int employeeId,
     DateTime start,
     int duration,
@@ -28,8 +28,8 @@ public class CreateShiftHandler
     try
     {
       var rows = await connection.ExecuteAsync(@"
-        INSERT INTO Shifts (ScheduleId, EmployeeId, Start, DurationHours)
-        SELECT @scheduleId, @employeeId, @start, @duration
+        INSERT INTO Shifts (ScheduleGroupId, EmployeeId, Start, DurationHours)
+        SELECT @scheduleGroupId, @employeeId, @start, @duration
         WHERE NOT EXISTS (
           SELECT 1
           FROM Shifts WITH (UPDLOCK, HOLDLOCK)
@@ -39,7 +39,7 @@ public class CreateShiftHandler
         )
       ", new
       {
-        scheduleId,
+        scheduleGroupId,
         employeeId,
         start,
         duration,

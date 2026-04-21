@@ -12,7 +12,7 @@ public class Employee
   public string FullName => $"{FirstName} {LastName}";
 }
 
-public class Schedule
+public class ScheduleGroup
 {
   public int Id { get; set; }
   public string Name { get; set; } = string.Empty;
@@ -21,7 +21,7 @@ public class Schedule
 public class Shift
 {
   public int Id { get; set; }
-  public int ScheduleId { get; set; }
+  public int ScheduleGroupId { get; set; }
   public int EmployeeId { get; set; }
   public DateTime Start { get; set; }
   public int DurationHours { get; set; }

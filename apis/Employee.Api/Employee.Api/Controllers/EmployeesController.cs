@@ -1,6 +1,6 @@
 using Employee.Api.Features.Employees.Models;
 using EmployeeModel = Employee.Api.Features.Employees.Models.Employee;
-using ScheduleModel = Employee.Api.Features.Employees.Models.Schedule;
+using ScheduleGroupModel = Employee.Api.Features.Employees.Models.ScheduleGroup;
 using ShiftModel = Employee.Api.Features.Employees.Models.Shift;
 using Employee.Api.Features.Employees.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -105,17 +105,17 @@ public class EmployeesController : ControllerBase
     return Ok(result);
   }
 
-  [HttpGet("{employeeId:int}/employeeSchedules")]
-  [ProducesResponseType(typeof(IEnumerable<ScheduleModel>), 200)]
+  [HttpGet("{employeeId:int}/employeeScheduleGroups")]
+  [ProducesResponseType(typeof(IEnumerable<ScheduleGroupModel>), 200)]
   [ProducesResponseType(403)]
-  public async Task<IActionResult> GetEmployeeSchedules([FromRoute] int employeeId)
+  public async Task<IActionResult> GetEmployeeScheduleGroups([FromRoute] int employeeId)
   {
     if (!User.IsInRole("Supervisor") && !IsCurrentUser(employeeId))
     {
       return Forbid();
     }
 
-    var result = await _employeeService.GetEmployeeSchedules(employeeId);
+    var result = await _employeeService.GetEmployeeScheduleGroups(employeeId);
     return Ok(result);
   }
 

@@ -27,8 +27,8 @@ public class ValidateShiftOverlapHandler
 
     try
     {
-      var overlapping = await connection.QuerySingleOrDefaultAsync<(int Id, int ScheduleId, DateTime Start, int DurationHours)>(@"
-        SELECT TOP 1 Id, ScheduleId, Start, DurationHours
+      var overlapping = await connection.QuerySingleOrDefaultAsync<(int Id, int ScheduleGroupId, DateTime Start, int DurationHours)>(@"
+        SELECT TOP 1 Id, ScheduleGroupId, Start, DurationHours
         FROM Shifts WITH (UPDLOCK, HOLDLOCK)
         WHERE EmployeeId = @employeeId
           AND (@excludeShiftId IS NULL OR Id <> @excludeShiftId)
@@ -48,7 +48,7 @@ public class ValidateShiftOverlapHandler
 
       var existingEnd = overlapping.Start.AddHours(overlapping.DurationHours);
       var message =
-        $"Shift overlaps existing shift (ShiftId {overlapping.Id}) in schedule {overlapping.ScheduleId}: " +
+        $"Shift overlaps existing shift (ShiftId {overlapping.Id}) in schedule {overlapping.ScheduleGroupId}: " +
         $"{overlapping.Start:yyyy-MM-dd HH:mm} - {existingEnd:yyyy-MM-dd HH:mm}.";
 
       throw new ShiftValidationException(message, "overlapping_shift");

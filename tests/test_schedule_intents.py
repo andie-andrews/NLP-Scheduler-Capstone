@@ -11,7 +11,11 @@ def test_is_create_schedule_intent_false_when_message_is_about_shift_creation():
 
 
 def test_is_create_schedule_intent_true_for_actual_schedule_creation():
-    assert is_create_schedule_intent("Create a new Kitchen schedule") is True
+    assert is_create_schedule_intent("Create schedule group Kitchen") is True
+
+
+def test_is_create_schedule_intent_false_without_explicit_schedule_group_phrase():
+    assert is_create_schedule_intent("Create a new Kitchen schedule") is False
 
 
 def test_is_schedule_domain_message_true_for_shift_question():

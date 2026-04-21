@@ -7,7 +7,7 @@ This folder contains a React + TypeScript recreation of the Python Streamlit UI.
 - Role-aware navigation
 - My Schedule weekly view
 - Manage Employees (search/create/edit/delete)
-- Manage Schedules overview with weekly totals and schedule CRUD
+- Manage ScheduleGroups overview with weekly totals and schedule CRUD
 - AI Assistant chat shell backed by the Python orchestrator API
 
 ## Run React UI
