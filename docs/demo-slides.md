@@ -60,7 +60,7 @@ OpenAPI Operation Registry (tool schemas)
 Scheduler REST API (.NET controllers)
         |
         v
-Employees / Schedules / Shifts data
+Employees / ScheduleGroups / Shifts data
 ```
 
 - OpenAPI spec drives discoverable operations and tool mapping
@@ -81,7 +81,7 @@ This is intentionally API-first. Instead of hard-coding every behavior in the ch
 - **Streamlit UI**: login, navigation, schedule management, AI Assistant tab
 - **LLM orchestrator**: intent detection, entity resolution, pending-state workflows
 - **OpenAPI loader/parser**: turns API routes into callable tool definitions
-- **.NET API**: Auth, Employees, Schedules, Shifts endpoints
+- **.NET API**: Auth, Employees, ScheduleGroups, Shifts endpoints
 
 **Design principle:** conversation coordinates actions; API enforces business operations.
 

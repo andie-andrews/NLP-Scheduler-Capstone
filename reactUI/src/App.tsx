@@ -3,13 +3,13 @@ import { Layout, type ViewKey } from './components/Layout'
 import { useAuth } from './context/AuthContext'
 import { LoginPage } from './pages/LoginPage'
 import { ManageEmployeesPage } from './pages/ManageEmployeesPage'
-import { ManageSchedulesPage } from './pages/ManageSchedulesPage'
+import { ManageScheduleGroupsPage } from './pages/ManageScheduleGroupsPage'
 import { MySchedulePage } from './pages/MySchedulePage'
 
 function renderView(view: ViewKey) {
   if (view === 'my-schedule') return <MySchedulePage />
   if (view === 'employees') return <ManageEmployeesPage />
-  return <ManageSchedulesPage />
+  return <ManageScheduleGroupsPage />
 }
 
 export default function App() {

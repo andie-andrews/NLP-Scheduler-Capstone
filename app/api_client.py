@@ -85,24 +85,24 @@ def get_my_schedule(employee_id, params=None):
 
 
 def get_schedules():
-    return get("/api/schedules")
+    return get("/api/schedule-groups")
 
 
 def get_schedule_employees(schedule_id):
-    return get(f"/api/schedules/{schedule_id}/scheduleEmployees")
+    return get(f"/api/schedule-groups/{schedule_id}/scheduleGroupEmployees")
 
 
 def get_schedule_shifts(schedule_id, params=None):
-    return get(f"/api/schedules/{schedule_id}/shifts", params=params)
+    return get(f"/api/schedule-groups/{schedule_id}/shifts", params=params)
 
 
 def get_employee_schedules(employee_id):
-    return _get_employee_api(f"/api/employees/{employee_id}/employeeSchedules")
+    return _get_employee_api(f"/api/employees/{employee_id}/employeeScheduleGroups")
 
 
 def create_shift(schedule_id, employee_id, start, duration):
     return post(
-        f"/api/schedules/{schedule_id}/shifts",
+        f"/api/schedule-groups/{schedule_id}/shifts",
         {
             "employeeId": employee_id,
             "start": start,
@@ -132,7 +132,7 @@ def delete_shift(shift_id):
 
 def create_schedule(name):
     return post(
-        "/api/schedules",
+        "/api/schedule-groups",
         {
             "name": name
         }
@@ -140,11 +140,11 @@ def create_schedule(name):
 
 
 def update_schedule(schedule_id, name):
-    return _request("PUT", SCHEDULER_BASE_URL, f"/api/schedules/{schedule_id}", data={"name": name})
+    return _request("PUT", SCHEDULER_BASE_URL, f"/api/schedule-groups/{schedule_id}", data={"name": name})
 
 
 def delete_schedule(schedule_id):
-    return _request("DELETE", SCHEDULER_BASE_URL, f"/api/schedules/{schedule_id}")
+    return _request("DELETE", SCHEDULER_BASE_URL, f"/api/schedule-groups/{schedule_id}")
 
 
 # -------------------------------
@@ -153,12 +153,12 @@ def delete_schedule(schedule_id):
 
 def add_employee_to_schedule(schedule_id, employee_id):
     return post(
-        f"/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}"
+        f"/api/schedule-groups/{schedule_id}/scheduleGroupEmployees/{employee_id}"
     )
 
 
 def remove_employee_from_schedule(schedule_id, employee_id):
-    return _request("DELETE", SCHEDULER_BASE_URL, f"/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}")
+    return _request("DELETE", SCHEDULER_BASE_URL, f"/api/schedule-groups/{schedule_id}/scheduleGroupEmployees/{employee_id}")
 
 
 # -------------------------------

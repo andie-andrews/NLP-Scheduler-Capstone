@@ -1,4 +1,4 @@
-﻿namespace Scheduler.Api.Features.Schedules.Models
+﻿namespace Scheduler.Api.Features.ScheduleGroups.Models
 {
   public class CreateShiftRequest
   {
