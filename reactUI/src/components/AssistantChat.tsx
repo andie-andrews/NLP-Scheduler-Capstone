@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Button, Card, Group, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -22,7 +23,7 @@ interface AssistantResponse {
       }
       updatedShift?: {
         id?: number
-        start: string
+        start?: string
         durationHours?: number
       }
       createdShift?: {
@@ -42,6 +43,13 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
   const { user } = useAuth()
   const dispatch = useAppDispatch()
   const { messages, input, loading, conversationId } = useAppSelector((state) => state.assistant)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages])
 
   const resetConversation = async () => {
     if (!assistantUrl || !conversationId || !user) {
@@ -133,7 +141,7 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
         'updatedShift' in data.response.data &&
         typeof (data.response.data as { updatedShift: unknown }).updatedShift === 'object' &&
         (data.response.data as { updatedShift: unknown }).updatedShift !== null
-          ? (data.response.data as { updatedShift: { id?: number; start: string; durationHours?: number } }).updatedShift
+          ? (data.response.data as { updatedShift: { id?: number; start?: string; durationHours?: number } }).updatedShift
           : null
 
       const extractedCreatedShift =
@@ -179,7 +187,7 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
         </Button>
       </Group>
 
-      <Card withBorder radius='md' p='md' style={{ height: 'calc(100vh - 260px)', minHeight: 360, overflowY: 'auto' }}>
+      <Card withBorder radius='md' p='md' ref={scrollRef} style={{ height: 'calc(100vh - 260px)', minHeight: 360, overflowY: 'auto' }}>
         <Stack gap='sm'>
           {messages.map((m, i) => (
             <Stack key={i} gap='sm'>
@@ -206,10 +214,10 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
                 <Card withBorder radius='md' p='md' bg='yellow.0'>
                   <Stack gap='xs'>
                     <Text fw={700}>🛠️ Updated Shift</Text>
-                    <Text size='sm'>
+                    {m.updatedShiftData.start && <Text size='sm'>
                       {new Date(m.updatedShiftData.start).toLocaleString()}
-                    </Text>
-                    {m.updatedShiftData.durationHours && <Text size='sm' c='dimmed'>
+                    </Text>}
+                    {m.updatedShiftData.durationHours && <Text size='sm'>
                       Duration: {m.updatedShiftData.durationHours} hour{m.updatedShiftData.durationHours === 1 ? '' : 's'}
                     </Text>}
                   </Stack>

@@ -38,7 +38,7 @@ export interface ChatMessage {
   }
   updatedShiftData?: {
     id?: number
-    start: string
+    start?: string
     durationHours?: number
   }
   createdShiftData?: {
