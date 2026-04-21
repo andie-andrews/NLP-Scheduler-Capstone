@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scheduler.Api", "Scheduler.
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "Scheduler.Database", "Scheduler.Database\Scheduler.Database.sqlproj", "{FC1D8C31-D725-4288-A466-C788274F7F18}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Employee.Api", "..\Employee.Api\Employee.Api\Employee.Api.csproj", "{A1C276A7-4C6D-4F73-85EA-DCC016A7FB8A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{FC1D8C31-D725-4288-A466-C788274F7F18}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FC1D8C31-D725-4288-A466-C788274F7F18}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FC1D8C31-D725-4288-A466-C788274F7F18}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{A1C276A7-4C6D-4F73-85EA-DCC016A7FB8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1C276A7-4C6D-4F73-85EA-DCC016A7FB8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1C276A7-4C6D-4F73-85EA-DCC016A7FB8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1C276A7-4C6D-4F73-85EA-DCC016A7FB8A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

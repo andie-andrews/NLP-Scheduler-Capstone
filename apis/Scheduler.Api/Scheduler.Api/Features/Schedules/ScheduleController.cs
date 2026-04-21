@@ -79,25 +79,6 @@ public class ScheduleController : ControllerBase
     return Ok(result);
   }
 
-  [HttpGet("/api/employees/{employeeId}/employeeSchedules")]
-  [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
-  [ProducesResponseType(403)]
-  public async Task<IActionResult> GetEmployeeSchedules([FromRoute] int employeeId)
-  {
-    if (!User.IsInRole("Supervisor"))
-    {
-      var employeeIdClaim = User.FindFirst("employeeId")?.Value;
-      if (!int.TryParse(employeeIdClaim, out var userEmployeeId))
-        return Forbid();
-
-      if (userEmployeeId != employeeId)
-        return Forbid();
-    }
-
-    var result = await _scheduleDomainService.GetEmployeeSchedules(employeeId);
-    return Ok(result);
-  }
-
   [Authorize(Roles = "Supervisor")]
   [HttpGet("/api/managers/{managerId}/managerSchedules")]
   [ProducesResponseType(typeof(IEnumerable<Schedule>), 200)]
