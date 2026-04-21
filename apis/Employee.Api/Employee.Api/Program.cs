@@ -13,6 +13,8 @@ var jwtKey = builder.Configuration["Jwt:Key"]
 _ = builder.Configuration.GetConnectionString("Default")
   ?? throw new InvalidOperationException("Missing required configuration value: ConnectionStrings:Default");
 
+var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -63,6 +65,25 @@ builder.Services.AddAuthentication("Bearer")
   });
 
 builder.Services.AddAuthorization();
+builder.Services.AddCors(options =>
+{
+  options.AddPolicy("EmployeeFrontend", policy =>
+  {
+    if (builder.Environment.IsDevelopment() || corsAllowedOrigins.Length == 0)
+    {
+      policy
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+      return;
+    }
+
+    policy
+      .WithOrigins(corsAllowedOrigins)
+      .AllowAnyHeader()
+      .AllowAnyMethod();
+  });
+});
 builder.Services.AddScoped<IDbConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddControllers();
@@ -94,6 +115,7 @@ app.UseSwagger(options =>
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+app.UseCors("EmployeeFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
