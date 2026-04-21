@@ -573,7 +573,9 @@ def _extract_schedule_name_for_create(message: str):
 
     patterns = [
         r"(?:create|new|make|add)\s+(?:a\s+)?schedule(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
+        r"(?:create|new|make|add)\s+(?:a\s+)?(?:schedule|manager)\s+group(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
         r"schedule(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
+        r"(?:schedule|manager)\s+group(?:\s+(?:called|named))?\s+([a-zA-Z0-9 _'’-]+)$",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -856,6 +858,7 @@ def run_orchestrator(message: str, token: str, session: dict):
         clear_pending_create_schedule_state=clear_pending_create_schedule_state,
         clear_pending_delete_schedule_state=clear_pending_delete_schedule_state,
         extract_schedule_name_or_id_from_message=_extract_schedule_name_or_id_from_message,
+        extract_schedule_name_for_create=_extract_schedule_name_for_create,
         normalize_schedule_id_arg=normalize_schedule_id_arg,
         lookup_schedule_name_by_id=_lookup_schedule_name_by_id,
         extract_employee_name_parts=_extract_employee_name_parts,
@@ -955,8 +958,24 @@ def run_orchestrator(message: str, token: str, session: dict):
         return f"Done — {employee_display} was {action_word} {schedule_display}."
 
     if is_create_schedule_intent(message):
+        create_operation = OPERATIONS.get("createScheduleGroup")
+        if not create_operation:
+            clear_pending_create_schedule_state(session)
+            return "Schedule-group creation is not available because the API spec is missing createScheduleGroup."
+
+        schedule_name = _extract_schedule_name_for_create(raw_message) or _extract_schedule_name_for_create(message)
+        if not schedule_name:
+            set_pending_create_schedule_state(session, {"intent": "create_schedule", "awaiting": "name"})
+            return "What should I name the new schedule group?"
+
+        created = call_api(token, create_operation, {"name": schedule_name}) or {}
         clear_pending_create_schedule_state(session)
-        return "Schedule-group creation is only available in the Manage Schedule Groups UI."
+        created_id = created.get("id") if isinstance(created, dict) else None
+        return (
+            f"Done — created schedule group {schedule_name} (ID: {created_id})."
+            if created_id is not None
+            else f"Done — created schedule group {schedule_name}."
+        )
 
     if is_get_manager_schedule_groups_intent(message):
         operation = OPERATIONS.get("getManagerScheduleGroups")
