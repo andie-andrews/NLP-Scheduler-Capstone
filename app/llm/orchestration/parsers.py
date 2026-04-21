@@ -60,13 +60,24 @@ def extract_duration_hours(message: str):
 
 def extract_time_of_day(message: str):
     text = normalize_temporal_text(message)
-    time_match = re.search(r"(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", text)
+    # Require either an explicit "at" prefix OR an am/pm suffix so that bare
+    # numbers inside dates (e.g. "4/24/2026") are not mistaken for times.
+    time_match = re.search(
+        r"(?:\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?|(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b)",
+        text,
+    )
     if not time_match:
         return None
 
-    hour = int(time_match.group(1))
-    minute = int(time_match.group(2) or 0)
-    meridian = (time_match.group(3) or "").lower()
+    # Group layout: (at-hour, at-min, at-meridian, ampm-hour, ampm-min, ampm-meridian)
+    if time_match.group(1) is not None:
+        raw_hour, raw_min, meridian = time_match.group(1), time_match.group(2), time_match.group(3)
+    else:
+        raw_hour, raw_min, meridian = time_match.group(4), time_match.group(5), time_match.group(6)
+
+    hour = int(raw_hour)
+    minute = int(raw_min or 0)
+    meridian = (meridian or "").lower()
 
     if meridian == "pm" and hour != 12:
         hour += 12
@@ -236,6 +247,90 @@ def _extract_relative_date(text: str, now: datetime):
     return None
 
 
+_MONTH_NAMES = {
+    "january": 1, "jan": 1,
+    "february": 2, "feb": 2,
+    "march": 3, "mar": 3,
+    "april": 4, "apr": 4,
+    "may": 5,
+    "june": 6, "jun": 6,
+    "july": 7, "jul": 7,
+    "august": 8, "aug": 8,
+    "september": 9, "sep": 9, "sept": 9,
+    "october": 10, "oct": 10,
+    "november": 11, "nov": 11,
+    "december": 12, "dec": 12,
+}
+
+
+def _extract_explicit_date(text: str, now: datetime):
+    """Parse explicit calendar dates like 5/16/2026, 05-16-2026, May 16, 2026, May 16.
+
+    Returns (date, text_without_date) or None.
+    """
+    normalized = normalize_temporal_text(text)
+
+    # MM/DD/YYYY or MM-DD-YYYY (2- or 4-digit year)
+    numeric_match = re.search(
+        r"\b(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})\b", normalized
+    )
+    if numeric_match:
+        month, day, year = int(numeric_match.group(1)), int(numeric_match.group(2)), int(numeric_match.group(3))
+        if year < 100:
+            year += 2000
+        try:
+            from datetime import date as _date
+            cleaned = normalized[:numeric_match.start()] + normalized[numeric_match.end():]
+            return _date(year, month, day), cleaned
+        except ValueError:
+            pass
+
+    # MM/DD (no year)
+    short_numeric_match = re.search(r"\b(\d{1,2})[/\-](\d{1,2})\b", normalized)
+    if short_numeric_match:
+        month, day = int(short_numeric_match.group(1)), int(short_numeric_match.group(2))
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            from datetime import date as _date
+            try:
+                candidate = _date(now.year, month, day)
+            except ValueError:
+                candidate = None
+            if candidate is not None:
+                if candidate < now.date():
+                    try:
+                        candidate = _date(now.year + 1, month, day)
+                    except ValueError:
+                        pass
+                cleaned = normalized[:short_numeric_match.start()] + normalized[short_numeric_match.end():]
+                return candidate, cleaned
+
+    # Month DD, YYYY  or  Month DD
+    month_name_pattern = "|".join(_MONTH_NAMES.keys())
+    named_match = re.search(
+        rf"\b({month_name_pattern})\.?\s+(\d{{1,2}})(?:\s*,?\s*(\d{{4}}))?\b",
+        normalized,
+    )
+    if named_match:
+        month = _MONTH_NAMES[named_match.group(1)]
+        day = int(named_match.group(2))
+        year = int(named_match.group(3)) if named_match.group(3) else now.year
+        from datetime import date as _date
+        try:
+            candidate = _date(year, month, day)
+        except ValueError:
+            candidate = None
+        if candidate is not None:
+            if not named_match.group(3) and candidate < now.date():
+                try:
+                    candidate = _date(now.year + 1, month, day)
+                except ValueError:
+                    pass
+            cleaned = normalized[:named_match.start()] + normalized[named_match.end():]
+            return candidate, cleaned
+
+    return None
+
+
 def extract_weekday_datetime(message: str, now: datetime | None = None):
     weekdays = {
         "monday": 0,
@@ -254,6 +349,18 @@ def extract_weekday_datetime(message: str, now: datetime | None = None):
             break
 
     now = now or datetime.now()
+
+    explicit_date = _extract_explicit_date(text, now)
+    if explicit_date is not None:
+        date_obj, cleaned_text = explicit_date
+        parsed_time = extract_time_of_day(cleaned_text)
+        if not parsed_time:
+            print("[create_shift][datetime] Explicit date found but no explicit time in message.")
+            return None
+        hour, minute = parsed_time
+        start = datetime.combine(date_obj, datetime.min.time()).replace(hour=hour, minute=minute)
+        return start.isoformat()
+
     relative_date = _extract_relative_date(text, now)
     if relative_date is not None:
         parsed_time = extract_time_of_day(text)
@@ -265,7 +372,7 @@ def extract_weekday_datetime(message: str, now: datetime | None = None):
         return start.isoformat()
 
     if target_day is None:
-        print("[create_shift][datetime] No weekday found in message.")
+        print("[create_shift][datetime] No weekday or date found in message.")
         return None
 
     if re.search(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", text):
@@ -363,13 +470,18 @@ def extract_weekday_date(message: str, now: datetime | None = None):
         "sunday": 6,
     }
     text = normalize_temporal_text(message)
+    now = now or datetime.now()
+
+    explicit_date = _extract_explicit_date(text, now)
+    if explicit_date is not None:
+        return explicit_date[0]
+
     target_day = None
     for name, idx in weekdays.items():
         if name in text:
             target_day = idx
             break
 
-    now = now or datetime.now()
     relative_date = _extract_relative_date(text, now)
     if target_day is None:
         return relative_date.date() if relative_date is not None else None
