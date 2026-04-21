@@ -26,6 +26,18 @@ sqlcmd -S .\\SQLSERVER -d SchedulerDb -E -i apis/Scheduler.Api/Scheduler.Databas
 
 If your SQL Server instance name is different, replace `.\\SQLSERVER` with your instance.
 
+### Seeded demo users
+
+All seeded users have password `password`:
+
+- `boss1` (Supervisor)
+- `olivia.tray`
+- `emma.welcome`
+- `mia.prep`
+- `noah.saute`
+- `kai.grill`
+- `luca.shaker`
+
 ---
 
 ## AI Assistant Demo Workflow
