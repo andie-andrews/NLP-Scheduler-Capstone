@@ -129,14 +129,8 @@ Show next week's shifts for each Luca Shaker.
 
 **Goal:** Show reassign works for employees on the same schedule.
 
-Assuming the following:
-- you have a shift assigned to Lance Dall on a Tuesday
-- you want to reassign the shift to Andie Andrews
-- and they are both on the same schedule
-then:
-
 ```text
-Reassign Oliva's shift tomorrow to Emma
+Reassign Olivia's shift tomorrow to Emma
 ```
 
 should result in the shift being reassigned to Andie.
