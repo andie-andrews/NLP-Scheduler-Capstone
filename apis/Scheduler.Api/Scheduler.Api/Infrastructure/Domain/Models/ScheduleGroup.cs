@@ -1,6 +1,6 @@
 ﻿namespace Scheduler.Api.Infrastructure.Domain.Models;
 
-public class Schedule
+public class ScheduleGroup
 {
   public int Id { get; set; }
 

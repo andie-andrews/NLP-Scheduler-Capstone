@@ -112,7 +112,7 @@ def render():
     disable_schedule_delete = toolbar_selection == all_schedules_option
 
     # 🔥 HEADER
-    render_page_header("Manage Schedules", "Coordinate weekly staffing, shifts, and schedule assignments with clarity.")
+    render_page_header("Manage Schedule Groups", "Coordinate weekly staffing, shifts, and schedule assignments with clarity.")
 
     header_col1, header_col2 = st.columns([6, 2])
 
@@ -178,9 +178,9 @@ def render():
         st.session_state["manage_schedules_last_selected_schedule"] = selected_value
 
     selected_schedule_option = st.selectbox(
-        "Select Schedule",
+        "Select Schedule Group",
         schedule_options,
-        format_func=lambda option: "All Schedules"
+        format_func=lambda option: "All Schedule Groups"
         if option == all_schedules_option
         else schedule_name_by_id.get(option, f"Schedule {option}"),
         key="manage_schedules_selected_schedule",
@@ -200,7 +200,7 @@ def render():
 
     viewing_all_schedules = selected_schedule_option == all_schedules_option
     schedule_id = None if viewing_all_schedules else selected_schedule_option
-    selected_name = "All Schedules" if viewing_all_schedules else schedule_name_by_id.get(schedule_id, "")
+    selected_name = "All Schedule Groups" if viewing_all_schedules else schedule_name_by_id.get(schedule_id, "")
 
     if viewing_all_schedules:
         st.session_state["show_delete_schedule"] = False
@@ -276,7 +276,7 @@ def render():
             schedule_shifts = shift_res.json() or []
             for shift in schedule_shifts:
                 shift["scheduleName"] = sched["name"]
-                shift["scheduleId"] = sched["id"]
+                shift["scheduleGroupId"] = sched["id"]
             shifts.extend(schedule_shifts)
     else:
         shift_res = get_schedule_shifts(
@@ -289,7 +289,7 @@ def render():
         shifts = shift_res.json() if shift_res.status_code == 200 else []
         for shift in shifts:
             shift["scheduleName"] = schedule_name_by_id.get(schedule_id)
-            shift["scheduleId"] = schedule_id
+            shift["scheduleGroupId"] = schedule_id
 
     shift_lookup = defaultdict(list)
 
@@ -390,7 +390,7 @@ def render():
                             if st.button("Edit shift", key=f"edit_shift_{shift_id}", use_container_width=True):
                                 st.session_state["editing_shift"] = {
                                     "id": shift_id,
-                                    "schedule_id": shift.get("scheduleId"),
+                                    "schedule_id": shift.get("scheduleGroupId"),
                                     "employee_id": emp["id"],
                                     "employee_name": full_name,
                                     "start": shift["start"],
@@ -445,7 +445,7 @@ def render():
 
     if st.session_state.get("show_create_schedule"):
 
-        @st.dialog("Create Schedule")
+        @st.dialog("Create Schedule Group")
         def create_dialog():
             name = st.text_input("Name")
             if st.button("Create"):
@@ -460,7 +460,7 @@ def render():
 
     if not viewing_all_schedules and st.session_state.get("show_edit_schedule"):
 
-        @st.dialog("Edit Schedule")
+        @st.dialog("Edit Schedule Group")
         def edit_dialog():
             name = st.text_input("Name", value=selected_name)
             if st.button("Save"):
@@ -475,7 +475,7 @@ def render():
 
     if not viewing_all_schedules and st.session_state.get("show_delete_schedule"):
 
-        @st.dialog("Delete Schedule")
+        @st.dialog("Delete Schedule Group")
         def delete_dialog():
             st.warning(f"Delete '{selected_name}'?")
             if st.button("Confirm"):

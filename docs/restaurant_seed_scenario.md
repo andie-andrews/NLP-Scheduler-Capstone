@@ -2,7 +2,7 @@
 
 ## Seed script location
 
-`apis\Scheduler.Api\Scheduler.Database/Seed.RestaurantScenario.sql`
+`apis/Scheduler.Api/Scheduler.Database/Seed.RestaurantScenario.sql`
 
 ---
 
@@ -21,10 +21,24 @@ Steps:
 
 ### Option 2: sqlcmd
 ```bash
-sqlcmd -S .\\SQLSERVER -d SchedulerDb -E -i apis/Scheduler.Api/Scheduler.Api/Database/Seed.RestaurantScenario.sql
+sqlcmd -S .\\SQLSERVER -d SchedulerDb -E -i apis/Scheduler.Api/Scheduler.Database/Seed.RestaurantScenario.sql
 ```
 
 If your SQL Server instance name is different, replace `.\\SQLSERVER` with your instance.
+
+### Seeded demo users
+
+Each seeded user uses `firstName` as both username and password:
+
+- `boss` / `boss` (Supervisor)
+- `olivia` / `olivia`
+- `emma` / `emma`
+- `mia` / `mia`
+- `noah` / `noah`
+- `kai` / `kai`
+- `luca` / `luca`
+
+Additionally, the seed creates a `Manager` schedule group and assigns Boss Man (`boss`) to it.
 
 ---
 

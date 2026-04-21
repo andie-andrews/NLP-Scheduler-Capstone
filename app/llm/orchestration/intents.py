@@ -67,41 +67,65 @@ def is_update_shift_intent(message: str):
     return has_update_action and "shift" in text
 
 
+def _mentions_schedule_group(text: str) -> bool:
+    return (
+        "schedule group" in text
+        or "schedule groups" in text
+        or "manager group" in text
+        or "manager groups" in text
+    )
+
+
 def is_create_schedule_intent(message: str):
     text = (message or "").lower()
-    if "schedule" not in text:
+    if not _mentions_schedule_group(text):
         return False
     if "shift" in text:
-        return False
-    if any(member_word in text for member_word in ["employee", "manager", "supervisor"]):
         return False
     return any(action in text for action in ["create", "new", "make"])
 
 
 def is_add_schedule_member_intent(message: str):
     text = (message or "").lower()
+    if not _mentions_schedule_group(text):
+        return False
     add_words = any(word in text for word in ["add", "assign", "include", "put"])
     member_words = any(word in text for word in ["employee", "manager", "supervisor"])
-    explicit_member_phrase = bool(re.search(r"\b(add|assign|include|put)\b.+\bto\b.+\bschedule\b", text))
-    return "schedule" in text and add_words and (explicit_member_phrase or ("employee" in text and member_words))
+    explicit_member_phrase = bool(re.search(r"\b(add|assign|include|put)\b.+\bto\b.+\bschedule group", text))
+    return add_words and (explicit_member_phrase or member_words)
 
 
 def is_remove_schedule_member_intent(message: str):
     text = (message or "").lower()
+    if not _mentions_schedule_group(text):
+        return False
     remove_words = any(word in text for word in ["remove", "unassign", "delete", "take off"])
-    explicit_member_phrase = bool(re.search(r"\b(remove|unassign|delete|take off)\b.+\b(from|off)\b.+\bschedule\b", text))
+    explicit_member_phrase = bool(re.search(r"\b(remove|unassign|delete|take off)\b.+\b(from|off)\b.+\bschedule group", text))
     member_words = any(word in text for word in ["employee", "staff member", "teammate"])
-    return "schedule" in text and remove_words and (explicit_member_phrase or member_words)
+    return remove_words and (explicit_member_phrase or member_words)
 
 
 def is_delete_schedule_intent(message: str):
     text = (message or "").lower()
     has_delete_action = any(action in text for action in ["delete", "remove", "cancel"])
-    if not has_delete_action or "schedule" not in text:
+    if not has_delete_action or not _mentions_schedule_group(text):
         return False
     if "shift" in text:
         return False
     return not is_remove_schedule_member_intent(message)
+
+
+def is_get_manager_schedule_groups_intent(message: str):
+    text = (message or "").lower()
+    has_lookup = any(word in text for word in ["show", "list", "get", "view", "which", "what"])
+    if not has_lookup:
+        return False
+    return (
+        "manager groups" in text
+        or "manager group" in text
+        or "manageable schedule groups" in text
+        or "groups i can manage" in text
+    )
 
 
 def is_create_employee_intent(message: str):
@@ -140,6 +164,7 @@ def is_schedule_domain_message(message: str):
             is_add_schedule_member_intent,
             is_remove_schedule_member_intent,
             is_delete_schedule_intent,
+            is_get_manager_schedule_groups_intent,
             is_create_employee_intent,
             is_update_employee_intent,
             is_delete_employee_intent,

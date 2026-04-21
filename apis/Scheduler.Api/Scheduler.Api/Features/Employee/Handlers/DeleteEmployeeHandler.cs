@@ -28,12 +28,12 @@ public class DeleteEmployeeHandler
 
       // Delete schedule associations for this employee
       await connection.ExecuteAsync(
-        "DELETE FROM ScheduleEmployees WHERE EmployeeId = @Id",
+        "DELETE FROM ScheduleGroupEmployees WHERE EmployeeId = @Id",
         param, transaction);
 
       // Delete schedule associations for this employee
       await connection.ExecuteAsync(
-        "DELETE FROM ScheduleManagers WHERE ManagerId = @Id",
+        "DELETE FROM ScheduleGroupManagers WHERE ManagerId = @Id",
         param, transaction);
 
 

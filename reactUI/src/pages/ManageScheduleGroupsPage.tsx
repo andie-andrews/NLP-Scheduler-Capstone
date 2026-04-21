@@ -3,14 +3,14 @@ import { Button, Card, Group, Select, Stack, Table, Text, TextInput, Title } fro
 import { api } from '../api/client'
 import { PageWithAssistant } from '../components/PageWithAssistant'
 import { useAuth } from '../context/AuthContext'
-import type { Employee, Schedule, Shift } from '../types'
+import type { Employee, ScheduleGroup, Shift } from '../types'
 import { addDays, formatWeekLabel, startOfWeekSunday, toIsoDate } from '../utils/date'
 
-export function ManageSchedulesPage() {
+export function ManageScheduleGroupsPage() {
   const { user } = useAuth()
   const [weekOffset, setWeekOffset] = useState(0)
-  const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [selectedScheduleId, setSelectedScheduleId] = useState<number | 'all'>('all')
+  const [scheduleGroups, setScheduleGroups] = useState<ScheduleGroup[]>([])
+  const [selectedScheduleGroupId, setSelectedScheduleGroupId] = useState<number | 'all'>('all')
   const [employees, setEmployees] = useState<Employee[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const [nameDraft, setNameDraft] = useState('')
@@ -20,36 +20,36 @@ export function ManageSchedulesPage() {
 
   const load = async () => {
     if (!user) return
-    const sc = await api.getSchedules(user.token)
-    setSchedules(sc)
+    const groups = await api.getScheduleGroups(user.token)
+    setScheduleGroups(groups)
     const allEmployees = await api.getEmployees(user.token)
 
-    if (selectedScheduleId === 'all') {
+    if (selectedScheduleGroupId === 'all') {
       setEmployees(allEmployees)
-      const allShifts = await Promise.all(sc.map(async (s) => {
-        const list = await api.getScheduleShifts(user.token, s.id, toIsoDate(weekStart), toIsoDate(weekEnd))
-        return list.map((shift) => ({ ...shift, scheduleId: s.id, scheduleName: s.name }))
+      const allShifts = await Promise.all(groups.map(async (group) => {
+        const list = await api.getScheduleShifts(user.token, group.id, toIsoDate(weekStart), toIsoDate(weekEnd))
+        return list.map((shift) => ({ ...shift, scheduleGroupId: group.id, scheduleName: group.name }))
       }))
       setShifts(allShifts.flat())
       return
     }
 
-    setEmployees(await api.getScheduleEmployees(user.token, selectedScheduleId))
-    setShifts(await api.getScheduleShifts(user.token, selectedScheduleId, toIsoDate(weekStart), toIsoDate(weekEnd)))
+    setEmployees(await api.getScheduleGroupEmployees(user.token, selectedScheduleGroupId))
+    setShifts(await api.getScheduleShifts(user.token, selectedScheduleGroupId, toIsoDate(weekStart), toIsoDate(weekEnd)))
   }
 
-  useEffect(() => { load().catch(() => undefined) }, [user, selectedScheduleId, weekOffset])
+  useEffect(() => { load().catch(() => undefined) }, [user, selectedScheduleGroupId, weekOffset])
 
-  const selectedSchedule = schedules.find((s) => s.id === selectedScheduleId)
+  const selectedScheduleGroup = scheduleGroups.find((s) => s.id === selectedScheduleGroupId)
   const scheduleSelectData = [
-    { value: 'all', label: 'All Schedules' },
-    ...schedules.map((s) => ({ value: String(s.id), label: s.name })),
+    { value: 'all', label: 'All Schedule Groups' },
+    ...scheduleGroups.map((s) => ({ value: String(s.id), label: s.name })),
   ]
 
   return (
     <PageWithAssistant>
       <Stack>
-        <Title order={2}>Manage Schedules</Title>
+        <Title order={2}>Manage Schedule Groups</Title>
 
         <Group>
           <Button variant='light' onClick={() => setWeekOffset((w) => w - 1)}>Previous</Button>
@@ -59,34 +59,34 @@ export function ManageSchedulesPage() {
 
         <Group align='end'>
           <Select
-            label='Schedule'
+            label='Schedule Group'
             data={scheduleSelectData}
-            value={String(selectedScheduleId)}
-            onChange={(value) => setSelectedScheduleId(value === 'all' ? 'all' : Number(value))}
+            value={String(selectedScheduleGroupId)}
+            onChange={(value) => setSelectedScheduleGroupId(value === 'all' ? 'all' : Number(value))}
             allowDeselect={false}
             style={{ minWidth: 220 }}
           />
           <TextInput
-            label='Schedule name'
-            placeholder='Schedule name'
+            label='Schedule group name'
+            placeholder='Schedule group name'
             value={nameDraft}
             onChange={(e) => setNameDraft(e.currentTarget.value)}
           />
-          <Button onClick={async () => user && api.createSchedule(user.token, nameDraft).then(load)}>
+          <Button onClick={async () => user && api.createScheduleGroup(user.token, nameDraft).then(load)}>
             Create
           </Button>
           <Button
             variant='light'
-            onClick={async () => selectedSchedule && user && api.updateSchedule(user.token, selectedSchedule.id, nameDraft).then(load)}
-            disabled={!selectedSchedule}
+            onClick={async () => selectedScheduleGroup && user && api.updateScheduleGroup(user.token, selectedScheduleGroup.id, nameDraft).then(load)}
+            disabled={!selectedScheduleGroup}
           >
             Rename
           </Button>
           <Button
             color='red'
             variant='light'
-            onClick={async () => selectedSchedule && user && api.deleteSchedule(user.token, selectedSchedule.id).then(() => setSelectedScheduleId('all')).then(load)}
-            disabled={!selectedSchedule}
+            onClick={async () => selectedScheduleGroup && user && api.deleteScheduleGroup(user.token, selectedScheduleGroup.id).then(() => setSelectedScheduleGroupId('all')).then(load)}
+            disabled={!selectedScheduleGroup}
           >
             Delete
           </Button>

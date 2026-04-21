@@ -1,27 +1,27 @@
 ﻿using Dapper;
 using Scheduler.Api.Infrastructure.Data;
 
-namespace Scheduler.Api.Features.Schedules.Handlers
+namespace Scheduler.Api.Features.ScheduleGroups.Handlers
 {
-  public class DeleteEmployeeToScheduleHandler
+  public class DeleteEmployeeFromScheduleGroupHandler
   {
     private readonly IDbConnectionFactory _db;
 
-    public DeleteEmployeeToScheduleHandler(IDbConnectionFactory db)
+    public DeleteEmployeeFromScheduleGroupHandler(IDbConnectionFactory db)
     {
       _db = db;
     }
 
-    public async Task Handle(int scheduleId, int employeeId)
+    public async Task Handle(int scheduleGroupId, int employeeId)
     {
       using var connection = _db.CreateConnection();
 
 
       var exists = await connection.ExecuteScalarAsync<int?>(@"
-            SELECT 1 FROM ScheduleEmployees
-            WHERE ScheduleId = @scheduleId
+            SELECT 1 FROM ScheduleGroupEmployees
+            WHERE ScheduleGroupId = @scheduleGroupId
               AND EmployeeId = @employeeId
-        ", new { scheduleId, employeeId });
+        ", new { scheduleGroupId, employeeId });
 
       if (exists == null)
         return;
@@ -32,13 +32,13 @@ namespace Scheduler.Api.Features.Schedules.Handlers
       {
         await connection.ExecuteAsync(@"
             DELETE FROM Shifts
-            WHERE ScheduleId = @scheduleId
+            WHERE ScheduleGroupId = @scheduleGroupId
               AND EmployeeId = @employeeId;
 
-            DELETE FROM ScheduleEmployees
-            WHERE ScheduleId = @scheduleId
+            DELETE FROM ScheduleGroupEmployees
+            WHERE ScheduleGroupId = @scheduleGroupId
               AND EmployeeId = @employeeId;
-        ", new { scheduleId, employeeId }, transaction);
+        ", new { scheduleGroupId, employeeId }, transaction);
         transaction.Commit();
       }
       catch

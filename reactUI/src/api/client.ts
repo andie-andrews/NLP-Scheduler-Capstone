@@ -1,4 +1,4 @@
-import type { Employee, Schedule, Shift } from '../types'
+import type { Employee, ScheduleGroup, Shift } from '../types'
 
 const schedulerBaseUrl = (import.meta.env.VITE_SCHEDULER_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
   ?? 'https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net'
@@ -49,21 +49,21 @@ export const api = {
   updateEmployee: (token: string, id: number, payload: Pick<Employee, 'firstName'|'lastName'|'email'|'roleId'>) =>
     requestEmployee<void>(`/api/employees/${id}`, token, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteEmployee: (token: string, id: number) => requestEmployee<void>(`/api/employees/${id}`, token, { method: 'DELETE' }),
-  getSchedules: (token: string) => requestScheduler<Schedule[]>('/api/schedules', token),
-  createSchedule: (token: string, name: string) =>
-    requestScheduler<Schedule>('/api/schedules', token, { method: 'POST', body: JSON.stringify({ name }) }),
-  updateSchedule: (token: string, id: number, name: string) =>
-    requestScheduler<void>(`/api/schedules/${id}`, token, { method: 'PUT', body: JSON.stringify({ name }) }),
-  deleteSchedule: (token: string, id: number) => requestScheduler<void>(`/api/schedules/${id}`, token, { method: 'DELETE' }),
-  getScheduleEmployees: (token: string, scheduleId: number) => requestScheduler<Employee[]>(`/api/schedules/${scheduleId}/scheduleEmployees`, token),
-  addEmployeeToSchedule: (token: string, scheduleId: number, employeeId: number) =>
-    requestScheduler<void>(`/api/schedules/${scheduleId}/scheduleEmployees/${employeeId}`, token, { method: 'POST' }),
-  removeEmployeeFromSchedule: (token: string, scheduleId: number, employeeId: number) =>
-    requestScheduler<void>(`/api/schedules/${scheduleId}/scheduleEmployees/${employeeId}`, token, { method: 'DELETE' }),
-  getScheduleShifts: (token: string, scheduleId: number, startDate: string, endDate: string) =>
-    requestScheduler<Shift[]>(`/api/schedules/${scheduleId}/shifts?startDate=${startDate}&endDate=${endDate}`, token),
-  createShift: (token: string, scheduleId: number, employeeId: number, start: string, durationHours: number) =>
-    requestScheduler<Shift>(`/api/schedules/${scheduleId}/shifts`, token, { method: 'POST', body: JSON.stringify({ employeeId, start, durationHours }) }),
+  getScheduleGroups: (token: string) => requestScheduler<ScheduleGroup[]>('/api/schedule-groups', token),
+  createScheduleGroup: (token: string, name: string) =>
+    requestScheduler<ScheduleGroup>('/api/schedule-groups', token, { method: 'POST', body: JSON.stringify({ name }) }),
+  updateScheduleGroup: (token: string, id: number, name: string) =>
+    requestScheduler<void>(`/api/schedule-groups/${id}`, token, { method: 'PUT', body: JSON.stringify({ name }) }),
+  deleteScheduleGroup: (token: string, id: number) => requestScheduler<void>(`/api/schedule-groups/${id}`, token, { method: 'DELETE' }),
+  getScheduleGroupEmployees: (token: string, scheduleGroupId: number) => requestScheduler<Employee[]>(`/api/schedule-groups/${scheduleGroupId}/scheduleGroupEmployees`, token),
+  addEmployeeToScheduleGroup: (token: string, scheduleGroupId: number, employeeId: number) =>
+    requestScheduler<void>(`/api/schedule-groups/${scheduleGroupId}/scheduleGroupEmployees/${employeeId}`, token, { method: 'POST' }),
+  removeEmployeeFromScheduleGroup: (token: string, scheduleGroupId: number, employeeId: number) =>
+    requestScheduler<void>(`/api/schedule-groups/${scheduleGroupId}/scheduleGroupEmployees/${employeeId}`, token, { method: 'DELETE' }),
+  getScheduleShifts: (token: string, scheduleGroupId: number, startDate: string, endDate: string) =>
+    requestScheduler<Shift[]>(`/api/schedule-groups/${scheduleGroupId}/shifts?startDate=${startDate}&endDate=${endDate}`, token),
+  createShift: (token: string, scheduleGroupId: number, employeeId: number, start: string, durationHours: number) =>
+    requestScheduler<Shift>(`/api/schedule-groups/${scheduleGroupId}/shifts`, token, { method: 'POST', body: JSON.stringify({ employeeId, start, durationHours }) }),
   updateShift: (token: string, shiftId: number, start: string, durationHours: number) =>
     requestScheduler<void>(`/api/shifts/${shiftId}`, token, { method: 'PUT', body: JSON.stringify({ start, durationHours }) }),
   deleteShift: (token: string, shiftId: number) => requestScheduler<void>(`/api/shifts/${shiftId}`, token, { method: 'DELETE' }),

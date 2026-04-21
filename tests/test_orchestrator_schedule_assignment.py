@@ -9,7 +9,7 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
         state = {
             "intent": "create_shift",
             "employeeId": 101,
-            "scheduleId": None,
+            "scheduleGroupId": None,
             "start": None,
             "pendingStartDate": None,
             "durationHours": None,
@@ -31,20 +31,20 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
                 return {"__httpStatus": 200}
             return []
 
-        with patch.object(orchestrator, "OPERATIONS", {"addEmployeeToSchedule": "add-op"}), patch.object(
+        with patch.object(orchestrator, "OPERATIONS", {"addEmployeeToScheduleGroup": "add-op"}), patch.object(
             orchestrator, "call_api", side_effect=fake_call_api
         ):
             result = orchestrator._attempt_fill_shift_state_from_message("Kitchen", "token", state)
 
         self.assertIsNone(result)
-        self.assertIsNone(state["scheduleId"])
+        self.assertIsNone(state["scheduleGroupId"])
         self.assertFalse(any(op == "add-op" for op, _ in calls))
 
     def test_numeric_schedule_not_assigned_without_membership_or_add_flow(self):
         state = {
             "intent": "create_shift",
             "employeeId": 101,
-            "scheduleId": None,
+            "scheduleGroupId": None,
             "start": None,
             "pendingStartDate": None,
             "durationHours": None,
@@ -60,13 +60,13 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
             result = orchestrator._attempt_fill_shift_state_from_message("4", "token", state)
 
         self.assertIsNone(result)
-        self.assertIsNone(state["scheduleId"])
+        self.assertIsNone(state["scheduleGroupId"])
 
     def test_single_employee_schedule_is_auto_selected(self):
         state = {
             "intent": "create_shift",
             "employeeId": 101,
-            "scheduleId": None,
+            "scheduleGroupId": None,
             "start": None,
             "pendingStartDate": None,
             "durationHours": None,
@@ -82,7 +82,7 @@ class OrchestratorScheduleAssignmentTests(unittest.TestCase):
             result = orchestrator._attempt_fill_shift_state_from_message("1", "token", state)
 
         self.assertIsNone(result)
-        self.assertEqual(state["scheduleId"], 8)
+        self.assertEqual(state["scheduleGroupId"], 8)
 
 
 if __name__ == "__main__":

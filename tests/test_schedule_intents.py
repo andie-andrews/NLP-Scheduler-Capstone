@@ -1,5 +1,6 @@
 from app.llm.orchestration.intents import (
     is_create_schedule_intent,
+    is_get_manager_schedule_groups_intent,
     is_schedule_domain_message,
     is_update_shift_intent,
 )
@@ -11,7 +12,11 @@ def test_is_create_schedule_intent_false_when_message_is_about_shift_creation():
 
 
 def test_is_create_schedule_intent_true_for_actual_schedule_creation():
-    assert is_create_schedule_intent("Create a new Kitchen schedule") is True
+    assert is_create_schedule_intent("Create schedule group Kitchen") is True
+
+
+def test_is_create_schedule_intent_false_without_explicit_schedule_group_phrase():
+    assert is_create_schedule_intent("Create a new Kitchen schedule") is False
 
 
 def test_is_schedule_domain_message_true_for_shift_question():
@@ -24,3 +29,11 @@ def test_is_schedule_domain_message_false_for_general_chat():
 
 def test_is_update_shift_intent_true_for_reassign_shift_message():
     assert is_update_shift_intent("reassign shift on monday for john to jane") is True
+
+
+def test_is_get_manager_schedule_groups_intent_true_for_manager_group_lookup():
+    assert is_get_manager_schedule_groups_intent("Show me my manager groups") is True
+
+
+def test_is_create_schedule_intent_true_for_manager_group_creation_phrase():
+    assert is_create_schedule_intent("Create manager group Kitchen Leads") is True

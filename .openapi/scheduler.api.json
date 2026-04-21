@@ -57,12 +57,12 @@
         }
       }
     },
-    "/api/schedules": {
+    "/api/schedule-groups": {
       "get": {
         "tags": [
           "Schedule"
         ],
-        "operationId": "getSchedules",
+        "operationId": "getScheduleGroups",
         "x-operation-type": "query",
         "x-intent": [
           "list schedules",
@@ -92,13 +92,13 @@
         ],
         "responses": {
           "200": {
-            "description": "Schedules",
+            "description": "ScheduleGroups",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Schedule"
+                    "$ref": "#/components/schemas/ScheduleGroup"
                   }
                 }
               }
@@ -110,18 +110,20 @@
         "tags": [
           "Schedule"
         ],
-        "operationId": "createSchedule",
+        "operationId": "createScheduleGroup",
         "x-operation-type": "mutation",
         "x-intent": [
-          "create schedule",
-          "add schedule",
-          "new schedule"
+          "create schedule group",
+          "add schedule group",
+          "new schedule group",
+          "create manager group",
+          "add manager group"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateScheduleRequest"
+                "$ref": "#/components/schemas/CreateScheduleGroupRequest"
               }
             }
           }
@@ -149,25 +151,25 @@
             "description": "Missing or invalid employeeId claim in JWT."
           }
         },
-        "summary": "Create schedule and assign creator as manager",
-        "description": "Creates a new schedule and automatically assigns the authenticated user (employeeId claim) as a manager in ScheduleManagers."
+        "summary": "Create schedule group and assign creator as manager",
+        "description": "Creates a new schedule group and automatically assigns the authenticated user (employeeId claim) as a manager in ScheduleGroupManagers."
       }
     },
-    "/api/schedules/{scheduleId}/employees": {
+    "/api/schedule-groups/{scheduleGroupId}/employees": {
       "get": {
         "tags": [
           "Schedule"
         ],
-        "operationId": "getScheduleEmployees",
+        "operationId": "getScheduleGroupEmployees",
         "x-operation-type": "query",
         "x-intent": [
-          "get schedule employees",
-          "who is assigned to schedule",
-          "list employees in schedule"
+          "get employees for schedule group",
+          "who is assigned to schedule group",
+          "list employees in schedule group"
         ],
         "parameters": [
           {
-            "name": "scheduleId",
+            "name": "scheduleGroupId",
             "in": "path",
             "required": true,
             "schema": {
@@ -192,7 +194,7 @@
         }
       }
     },
-    "/api/schedules/{scheduleId}/shifts": {
+    "/api/schedule-groups/{scheduleGroupId}/shifts": {
       "get": {
         "tags": [
           "Shifts"
@@ -200,13 +202,13 @@
         "operationId": "getScheduleShifts",
         "x-operation-type": "query",
         "x-intent": [
-          "get schedule shifts",
-          "view schedule shifts",
-          "show shifts for schedule"
+          "get shifts for schedule group",
+          "view schedule group shifts",
+          "show shifts for schedule group"
         ],
         "parameters": [
           {
-            "name": "scheduleId",
+            "name": "scheduleGroupId",
             "in": "path",
             "required": true,
             "schema": {
@@ -260,8 +262,8 @@
           "create shift"
         ],
         "x-dependencies": {
-          "scheduleId": {
-            "resolvedBy": "getSchedules"
+          "scheduleGroupId": {
+            "resolvedBy": "getScheduleGroups"
           }
         },
         "requestBody": {
@@ -334,21 +336,22 @@
         }
       }
     },
-    "/api/schedules/{scheduleId}/scheduleEmployees/{employeeId}": {
+    "/api/schedule-groups/{scheduleGroupId}/scheduleGroupEmployees/{employeeId}": {
       "post": {
         "tags": [
           "Schedule"
         ],
-        "operationId": "addEmployeeToSchedule",
+        "operationId": "addEmployeeToScheduleGroup",
         "x-operation-type": "mutation",
         "x-intent": [
-          "add employee to schedule",
-          "assign employee to schedule",
-          "add manager to schedule"
+          "add employee to schedule group",
+          "assign employee to schedule group",
+          "add manager to schedule group",
+          "add manager to manager group"
         ],
         "parameters": [
           {
-            "name": "scheduleId",
+            "name": "scheduleGroupId",
             "in": "path",
             "required": true,
             "schema": {
@@ -374,16 +377,17 @@
         "tags": [
           "Schedule"
         ],
-        "operationId": "removeEmployeeFromSchedule",
+        "operationId": "removeEmployeeFromScheduleGroup",
         "x-operation-type": "mutation",
         "x-intent": [
-          "remove employee from schedule",
-          "unassign employee from schedule",
-          "remove manager from schedule"
+          "remove employee from schedule group",
+          "unassign employee from schedule group",
+          "remove manager from schedule group",
+          "remove manager from manager group"
         ],
         "parameters": [
           {
-            "name": "scheduleId",
+            "name": "scheduleGroupId",
             "in": "path",
             "required": true,
             "schema": {
@@ -406,21 +410,23 @@
         }
       }
     },
-    "/api/schedules/{scheduleId}": {
+    "/api/schedule-groups/{scheduleGroupId}": {
       "delete": {
         "tags": [
           "Schedule"
         ],
-        "operationId": "deleteSchedule",
+        "operationId": "deleteScheduleGroup",
         "x-operation-type": "mutation",
         "x-intent": [
-          "delete schedule",
-          "remove schedule",
-          "cancel schedule"
+          "delete schedule group",
+          "remove schedule group",
+          "cancel schedule group",
+          "delete manager group",
+          "remove manager group"
         ],
         "parameters": [
           {
-            "name": "scheduleId",
+            "name": "scheduleGroupId",
             "in": "path",
             "required": true,
             "schema": {
@@ -430,24 +436,26 @@
         ],
         "responses": {
           "200": {
-            "description": "Schedule deleted"
+            "description": "Schedule group deleted"
           }
         }
       }
     },
-    "/api/managers/{managerId}/managerSchedules": {
+    "/api/managers/{managerId}/managerScheduleGroups": {
       "get": {
         "tags": [
           "Schedule"
         ],
-        "operationId": "getManagerSchedules",
-        "summary": "Get manageable resources for manager",
-        "description": "Returns schedules the manager can create shifts for.",
+        "operationId": "getManagerScheduleGroups",
+        "summary": "Get manageable schedule groups for manager",
+        "description": "Returns schedule groups the manager can create shifts for.",
         "x-operation-type": "query",
         "x-intent": [
-          "get schedules a manager can schedule on",
-          "list manageable schedules for manager",
-          "which schedules can this manager create shifts for"
+          "get manager groups",
+          "list manager groups",
+          "show my manager groups",
+          "get schedule groups a manager can schedule on",
+          "list manageable schedule groups for manager"
         ],
         "parameters": [
           {
@@ -461,13 +469,13 @@
         ],
         "responses": {
           "200": {
-            "description": "Schedules",
+            "description": "ScheduleGroups",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Schedule"
+                    "$ref": "#/components/schemas/ScheduleGroup"
                   }
                 }
               }
@@ -530,7 +538,7 @@
           "employeeId": {
             "type": "integer"
           },
-          "scheduleId": {
+          "scheduleGroupId": {
             "type": "integer"
           },
           "employeeName": {
@@ -602,7 +610,7 @@
           }
         }
       },
-      "CreateScheduleRequest": {
+      "CreateScheduleGroupRequest": {
         "type": "object",
         "required": [
           "name"

@@ -2,7 +2,7 @@ using Dapper;
 using Employee.Api.Infrastructure.Data;
 using CreateEmployeeRequestModel = Employee.Api.Features.Employees.Models.CreateEmployeeRequest;
 using EmployeeModel = Employee.Api.Features.Employees.Models.Employee;
-using ScheduleModel = Employee.Api.Features.Employees.Models.Schedule;
+using ScheduleGroupModel = Employee.Api.Features.Employees.Models.ScheduleGroup;
 using ShiftModel = Employee.Api.Features.Employees.Models.Shift;
 using UpdateEmployeeRequestModel = Employee.Api.Features.Employees.Models.UpdateEmployeeRequest;
 
@@ -178,8 +178,8 @@ public class EmployeeService
     try
     {
       await connection.ExecuteAsync("DELETE FROM Shifts WHERE EmployeeId = @Id", param, transaction);
-      await connection.ExecuteAsync("DELETE FROM ScheduleEmployees WHERE EmployeeId = @Id", param, transaction);
-      await connection.ExecuteAsync("DELETE FROM ScheduleManagers WHERE ManagerId = @Id", param, transaction);
+      await connection.ExecuteAsync("DELETE FROM ScheduleGroupEmployees WHERE EmployeeId = @Id", param, transaction);
+      await connection.ExecuteAsync("DELETE FROM ScheduleGroupManagers WHERE ManagerId = @Id", param, transaction);
 
       var rows = await connection.ExecuteAsync("DELETE FROM Employees WHERE Id = @Id", param, transaction);
       transaction.Commit();
@@ -220,7 +220,7 @@ public class EmployeeService
     var queryEndExclusive = effectiveEndDate!.Value.AddDays(1);
 
     var sql = @"
-        SELECT Id, ScheduleId, EmployeeId, Start, DurationHours
+        SELECT Id, ScheduleGroupId, EmployeeId, Start, DurationHours
         FROM Shifts
         WHERE EmployeeId = @employeeId
           AND Start >= @queryStart
@@ -235,18 +235,18 @@ public class EmployeeService
     });
   }
 
-  public async Task<IEnumerable<ScheduleModel>> GetEmployeeSchedules(int employeeId)
+  public async Task<IEnumerable<ScheduleGroupModel>> GetEmployeeScheduleGroups(int employeeId)
   {
     using var connection = _db.CreateConnection();
 
     var sql = @"
       SELECT s.Id, s.Name
-      FROM Schedules s
-      JOIN ScheduleEmployees se ON se.ScheduleId = s.Id
+      FROM ScheduleGroups s
+      JOIN ScheduleGroupEmployees se ON se.ScheduleGroupId = s.Id
       WHERE se.EmployeeId = @employeeId
       ORDER BY s.Name";
 
-    return await connection.QueryAsync<ScheduleModel>(sql, new { employeeId });
+    return await connection.QueryAsync<ScheduleGroupModel>(sql, new { employeeId });
   }
 
   private static async Task<bool> HasEmailColumn(System.Data.IDbConnection connection)

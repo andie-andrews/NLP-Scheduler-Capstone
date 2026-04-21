@@ -51,7 +51,7 @@ def resolve_employee_id(token, name, operations, api_caller):
 
 
 def resolve_schedule_id(token, name, operations, api_caller):
-    schedule_op = operations.get("getSchedules")
+    schedule_op = operations.get("getScheduleGroups")
 
     if not schedule_op:
         return None
@@ -68,11 +68,11 @@ def resolve_schedule_id(token, name, operations, api_caller):
 
     exact = [s for s in schedules if (s.get("name") or "").strip().lower() == target]
     if len(exact) == 1:
-        return {"type": "resolved", "scheduleId": exact[0]["id"], "name": exact[0].get("name")}
+        return {"type": "resolved", "scheduleGroupId": exact[0]["id"], "name": exact[0].get("name")}
 
     partial = [s for s in schedules if target in (s.get("name") or "").strip().lower()]
     if len(partial) == 1:
-        return {"type": "resolved", "scheduleId": partial[0]["id"], "name": partial[0].get("name")}
+        return {"type": "resolved", "scheduleGroupId": partial[0]["id"], "name": partial[0].get("name")}
 
     matches = exact or partial
     if matches:
@@ -93,11 +93,11 @@ def normalize_schedule_id_arg(token, raw_value, operations, api_caller):
     if isinstance(raw_value, str):
         value = raw_value.strip()
         if value.isdigit():
-            print("[create_shift][schedule] scheduleId provided as numeric string:", value)
+            print("[create_shift][schedule] scheduleGroupId provided as numeric string:", value)
             return int(value)
         resolution = resolve_schedule_id(token, value, operations, api_caller)
         if resolution and resolution.get("type") == "resolved":
             print("[create_shift][schedule] Resolved schedule name to ID:", resolution)
-            return resolution["scheduleId"]
+            return resolution["scheduleGroupId"]
         print("[create_shift][schedule] Failed to resolve schedule:", value)
     return None

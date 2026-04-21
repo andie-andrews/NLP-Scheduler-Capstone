@@ -40,7 +40,7 @@ namespace Scheduler.Api.Features.Shifts.Handlers
       var queryEndExclusive = effectiveEndDate!.Value.AddDays(1);
 
       var sql = @"
-              SELECT Id, ScheduleId, EmployeeId, Start, DurationHours
+              SELECT Id, ScheduleGroupId, EmployeeId, Start, DurationHours
               FROM Shifts
               WHERE EmployeeId = @employeeId
                 AND Start >= @queryStart

@@ -154,7 +154,7 @@ def create_shift(token, schedule_id, employee_id, date, time, duration_hours):
 
     payload = {
          # 🔥 REQUIRED WRAPPER
-            "scheduleId": schedule_id,
+            "scheduleGroupId": schedule_id,
             "employeeId": employee_id,
             "start": dt.isoformat(),  
             "durationHours": duration_hours

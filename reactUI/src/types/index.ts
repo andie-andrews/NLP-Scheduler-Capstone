@@ -14,7 +14,7 @@ export interface Employee {
   roleId: number
 }
 
-export interface Schedule {
+export interface ScheduleGroup {
   id: number
   name: string
 }
@@ -24,7 +24,7 @@ export interface Shift {
   employeeId: number
   start: string
   durationHours: number
-  scheduleId?: number
+  scheduleGroupId?: number
   scheduleName?: string
 }
 
