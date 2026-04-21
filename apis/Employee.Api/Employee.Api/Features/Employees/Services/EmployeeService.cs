@@ -1,6 +1,10 @@
 using Dapper;
-using Employee.Api.Features.Employees.Models;
 using Employee.Api.Infrastructure.Data;
+using CreateEmployeeRequestModel = Employee.Api.Features.Employees.Models.CreateEmployeeRequest;
+using EmployeeModel = Employee.Api.Features.Employees.Models.Employee;
+using ScheduleModel = Employee.Api.Features.Employees.Models.Schedule;
+using ShiftModel = Employee.Api.Features.Employees.Models.Shift;
+using UpdateEmployeeRequestModel = Employee.Api.Features.Employees.Models.UpdateEmployeeRequest;
 
 namespace Employee.Api.Features.Employees.Services;
 
@@ -13,7 +17,7 @@ public class EmployeeService
     _db = db;
   }
 
-  public async Task<Employee?> GetEmployeeById(int employeeId)
+  public async Task<EmployeeModel?> GetEmployeeById(int employeeId)
   {
     using var connection = _db.CreateConnection();
     var hasEmail = await HasEmailColumn(connection);
@@ -30,10 +34,10 @@ public class EmployeeService
           WHERE Id = @employeeId
       ";
 
-    return await connection.QueryFirstOrDefaultAsync<Employee>(sql, new { employeeId });
+    return await connection.QueryFirstOrDefaultAsync<EmployeeModel>(sql, new { employeeId });
   }
 
-  public async Task<IEnumerable<Employee>> GetEmployees(string? query)
+  public async Task<IEnumerable<EmployeeModel>> GetEmployees(string? query)
   {
     using var connection = _db.CreateConnection();
     var hasEmail = await HasEmailColumn(connection);
@@ -52,7 +56,7 @@ public class EmployeeService
             ORDER BY FirstName, LastName
         ";
 
-      return await connection.QueryAsync<Employee>(allEmployeesSql);
+      return await connection.QueryAsync<EmployeeModel>(allEmployeesSql);
     }
 
     var parts = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -82,7 +86,7 @@ public class EmployeeService
               AND LastName LIKE @LastName + '%'
         ";
 
-      var fullNameMatches = (await connection.QueryAsync<Employee>(fullNameSql, parameters)).ToList();
+      var fullNameMatches = (await connection.QueryAsync<EmployeeModel>(fullNameSql, parameters)).ToList();
       if (fullNameMatches.Count > 0)
       {
         return fullNameMatches;
@@ -106,10 +110,10 @@ public class EmployeeService
             OR (@LastName IS NOT NULL AND LastName LIKE @LastName + '%')
       ";
 
-    return await connection.QueryAsync<Employee>(fallbackSql, parameters);
+    return await connection.QueryAsync<EmployeeModel>(fallbackSql, parameters);
   }
 
-  public async Task<int> CreateEmployee(CreateEmployeeRequest request)
+  public async Task<int> CreateEmployee(CreateEmployeeRequestModel request)
   {
     using var connection = _db.CreateConnection();
     var hasEmail = await HasEmailColumn(connection);
@@ -129,7 +133,7 @@ public class EmployeeService
     return await connection.ExecuteScalarAsync<int>(sql, request);
   }
 
-  public async Task<bool> UpdateEmployee(int employeeId, UpdateEmployeeRequest request)
+  public async Task<bool> UpdateEmployee(int employeeId, UpdateEmployeeRequestModel request)
   {
     using var connection = _db.CreateConnection();
     var hasEmail = await HasEmailColumn(connection);
@@ -189,7 +193,7 @@ public class EmployeeService
     }
   }
 
-  public async Task<IEnumerable<Shift>> GetEmployeeShifts(int employeeId, DateTime? startDate, DateTime? endDate)
+  public async Task<IEnumerable<ShiftModel>> GetEmployeeShifts(int employeeId, DateTime? startDate, DateTime? endDate)
   {
     using var connection = _db.CreateConnection();
 
@@ -223,7 +227,7 @@ public class EmployeeService
           AND Start < @queryEndExclusive
     ";
 
-    return await connection.QueryAsync<Shift>(sql, new
+    return await connection.QueryAsync<ShiftModel>(sql, new
     {
       employeeId,
       queryStart,
@@ -231,7 +235,7 @@ public class EmployeeService
     });
   }
 
-  public async Task<IEnumerable<Schedule>> GetEmployeeSchedules(int employeeId)
+  public async Task<IEnumerable<ScheduleModel>> GetEmployeeSchedules(int employeeId)
   {
     using var connection = _db.CreateConnection();
 
@@ -242,7 +246,7 @@ public class EmployeeService
       WHERE se.EmployeeId = @employeeId
       ORDER BY s.Name";
 
-    return await connection.QueryAsync<Schedule>(sql, new { employeeId });
+    return await connection.QueryAsync<ScheduleModel>(sql, new { employeeId });
   }
 
   private static async Task<bool> HasEmailColumn(System.Data.IDbConnection connection)
