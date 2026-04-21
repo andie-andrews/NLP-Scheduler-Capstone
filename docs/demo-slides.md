@@ -19,7 +19,7 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 
 ---
 
-# 1) Problem Statement + Accessibility Solution
+# 1) Problem Statement 
 
 ## Scheduling is urgent, complex, and not always desk-friendly
 
@@ -28,6 +28,7 @@ Welcome everyone. This capstone demonstrates how natural language can sit on top
 - Traditional workflows require multiple screens or direct API knowledge
 - Employees and supervisors often need schedule info while on the go
 - Users may benefit from voice-first, low-friction task support
+
 
 ## Solution impact (especially for voice-reliant workflows)
 

@@ -67,6 +67,7 @@
     <Build Include="Roles.sql" />
     <Build Include="User.sql" />
     <None Include="Seed.RestaurantScenario.sql" />
+    <None Include="IisAppPoolSqlAccess.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Scheduler.Database.publish.xml" />
