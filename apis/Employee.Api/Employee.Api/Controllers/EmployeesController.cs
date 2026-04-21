@@ -1,10 +1,7 @@
+using Employee.Api.Features.Employees.Models;
+using Employee.Api.Features.Employees.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Scheduler.Api.Features.Employee.Models;
-using Scheduler.Api.Features.Employee.Services;
-using Scheduler.Api.Features.Schedules.Handlers;
-using Scheduler.Api.Features.Shifts.Handlers;
-using Scheduler.Api.Infrastructure.Domain.Models;
 
 namespace Employee.Api.Controllers;
 
@@ -13,18 +10,11 @@ namespace Employee.Api.Controllers;
 [Route("api/employees")]
 public class EmployeesController : ControllerBase
 {
-  private readonly EmployeeDomainService _employeeDomainService;
-  private readonly GetEmployeeShiftsHandler _employeeShiftsHandler;
-  private readonly GetEmployeeSchedulesHandler _employeeSchedulesHandler;
+  private readonly EmployeeService _employeeService;
 
-  public EmployeesController(
-    EmployeeDomainService employeeDomainService,
-    GetEmployeeShiftsHandler employeeShiftsHandler,
-    GetEmployeeSchedulesHandler employeeSchedulesHandler)
+  public EmployeesController(EmployeeService employeeService)
   {
-    _employeeDomainService = employeeDomainService;
-    _employeeShiftsHandler = employeeShiftsHandler;
-    _employeeSchedulesHandler = employeeSchedulesHandler;
+    _employeeService = employeeService;
   }
 
   [HttpGet("{employeeId:int}")]
@@ -33,17 +23,12 @@ public class EmployeesController : ControllerBase
   [ProducesResponseType(404)]
   public async Task<IActionResult> GetEmployee([FromRoute] int employeeId)
   {
-    if (!User.IsInRole("Supervisor"))
+    if (!User.IsInRole("Supervisor") && !IsCurrentUser(employeeId))
     {
-      var employeeIdClaim = User.FindFirst("employeeId")?.Value;
-      if (!int.TryParse(employeeIdClaim, out var jwtEmployeeId) || jwtEmployeeId != employeeId)
-      {
-        return Forbid();
-      }
+      return Forbid();
     }
 
-    var result = await _employeeDomainService.GetEmployee(employeeId);
-
+    var result = await _employeeService.GetEmployeeById(employeeId);
     if (result == null)
     {
       return NotFound();
@@ -57,7 +42,7 @@ public class EmployeesController : ControllerBase
   [ProducesResponseType(typeof(IEnumerable<Employee>), 200)]
   public async Task<IActionResult> GetEmployees([FromQuery] string? query)
   {
-    var result = await _employeeDomainService.GetEmployees(query);
+    var result = await _employeeService.GetEmployees(query);
     return Ok(result);
   }
 
@@ -66,7 +51,7 @@ public class EmployeesController : ControllerBase
   [ProducesResponseType(201)]
   public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeRequest request)
   {
-    var id = await _employeeDomainService.CreateEmployee(request);
+    var id = await _employeeService.CreateEmployee(request);
     return CreatedAtAction(nameof(GetEmployee), new { employeeId = id }, null);
   }
 
@@ -76,7 +61,7 @@ public class EmployeesController : ControllerBase
   [ProducesResponseType(404)]
   public async Task<IActionResult> PutEmployee([FromRoute] int employeeId, [FromBody] UpdateEmployeeRequest request)
   {
-    var updated = await _employeeDomainService.UpdateEmployee(employeeId, request);
+    var updated = await _employeeService.UpdateEmployee(employeeId, request);
     if (!updated)
     {
       return NotFound();
@@ -91,7 +76,7 @@ public class EmployeesController : ControllerBase
   [ProducesResponseType(404)]
   public async Task<IActionResult> DeleteEmployee([FromRoute] int employeeId)
   {
-    var result = await _employeeDomainService.DeleteEmployee(employeeId);
+    var result = await _employeeService.DeleteEmployee(employeeId);
     if (!result)
     {
       return NotFound();
@@ -108,16 +93,12 @@ public class EmployeesController : ControllerBase
     [FromQuery] DateTime? startDate,
     [FromQuery] DateTime? endDate)
   {
-    if (!User.IsInRole("Supervisor"))
+    if (!User.IsInRole("Supervisor") && !IsCurrentUser(employeeId))
     {
-      var employeeIdClaim = User.FindFirst("employeeId")?.Value;
-      if (!int.TryParse(employeeIdClaim, out var jwtEmployeeId) || jwtEmployeeId != employeeId)
-      {
-        return Forbid();
-      }
+      return Forbid();
     }
 
-    var result = await _employeeShiftsHandler.Handle(employeeId, startDate, endDate);
+    var result = await _employeeService.GetEmployeeShifts(employeeId, startDate, endDate);
     return Ok(result);
   }
 
@@ -126,16 +107,18 @@ public class EmployeesController : ControllerBase
   [ProducesResponseType(403)]
   public async Task<IActionResult> GetEmployeeSchedules([FromRoute] int employeeId)
   {
-    if (!User.IsInRole("Supervisor"))
+    if (!User.IsInRole("Supervisor") && !IsCurrentUser(employeeId))
     {
-      var employeeIdClaim = User.FindFirst("employeeId")?.Value;
-      if (!int.TryParse(employeeIdClaim, out var jwtEmployeeId) || jwtEmployeeId != employeeId)
-      {
-        return Forbid();
-      }
+      return Forbid();
     }
 
-    var result = await _employeeSchedulesHandler.Handle(employeeId);
+    var result = await _employeeService.GetEmployeeSchedules(employeeId);
     return Ok(result);
+  }
+
+  private bool IsCurrentUser(int employeeId)
+  {
+    var employeeIdClaim = User.FindFirst("employeeId")?.Value;
+    return int.TryParse(employeeIdClaim, out var jwtEmployeeId) && jwtEmployeeId == employeeId;
   }
 }

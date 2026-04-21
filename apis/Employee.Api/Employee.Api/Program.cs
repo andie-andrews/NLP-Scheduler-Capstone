@@ -1,10 +1,7 @@
+using Employee.Api.Features.Employees.Services;
+using Employee.Api.Infrastructure.Data;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Scheduler.Api.Features.Employee.Handlers;
-using Scheduler.Api.Features.Employee.Services;
-using Scheduler.Api.Features.Schedules.Handlers;
-using Scheduler.Api.Features.Shifts.Handlers;
-using Scheduler.Api.Infrastructure.Data;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,17 +64,7 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<IDbConnectionFactory, SqlConnectionFactory>();
-
-builder.Services.AddScoped<GetEmployeeByIdHandler>();
-builder.Services.AddScoped<GetAllEmployeesHandler>();
-builder.Services.AddScoped<GetEmployeeByNameHandler>();
-builder.Services.AddScoped<CreateEmployeeHandler>();
-builder.Services.AddScoped<UpdateEmployeeHandler>();
-builder.Services.AddScoped<DeleteEmployeeHandler>();
-builder.Services.AddScoped<EmployeeDomainService>();
-builder.Services.AddScoped<GetEmployeeShiftsHandler>();
-builder.Services.AddScoped<GetEmployeeSchedulesHandler>();
-
+builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();
