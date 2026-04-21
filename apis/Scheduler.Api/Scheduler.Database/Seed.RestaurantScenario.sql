@@ -34,10 +34,14 @@ IF NOT EXISTS (SELECT 1 FROM ScheduleGroups WHERE Name = 'Kitchen')
 IF NOT EXISTS (SELECT 1 FROM ScheduleGroups WHERE Name = 'Bartenders')
   INSERT INTO ScheduleGroups (Name) VALUES ('Bartenders');
 
+IF NOT EXISTS (SELECT 1 FROM ScheduleGroups WHERE Name = 'Manager')
+  INSERT INTO ScheduleGroups (Name) VALUES ('Manager');
+
 DECLARE @ServersGroupId INT = (SELECT TOP 1 Id FROM ScheduleGroups WHERE Name = 'Servers');
 DECLARE @HostessesGroupId INT = (SELECT TOP 1 Id FROM ScheduleGroups WHERE Name = 'Hostesses');
 DECLARE @KitchenGroupId INT = (SELECT TOP 1 Id FROM ScheduleGroups WHERE Name = 'Kitchen');
 DECLARE @BartendersGroupId INT = (SELECT TOP 1 Id FROM ScheduleGroups WHERE Name = 'Bartenders');
+DECLARE @ManagerGroupId INT = (SELECT TOP 1 Id FROM ScheduleGroups WHERE Name = 'Manager');
 
 -- Employees referenced in demo prompts.
 IF NOT EXISTS (SELECT 1 FROM Employees WHERE Email = 'olivia.tray@scheduler.local')
@@ -70,6 +74,9 @@ IF @ManagerId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ScheduleGroupManagers WH
 
 IF @ManagerId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ScheduleGroupManagers WHERE ScheduleGroupId = @BartendersGroupId AND ManagerId = @ManagerId)
   INSERT INTO ScheduleGroupManagers (ScheduleGroupId, ManagerId) VALUES (@BartendersGroupId, @ManagerId);
+
+IF @ManagerId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ScheduleGroupManagers WHERE ScheduleGroupId = @ManagerGroupId AND ManagerId = @ManagerId)
+  INSERT INTO ScheduleGroupManagers (ScheduleGroupId, ManagerId) VALUES (@ManagerGroupId, @ManagerId);
 
 -- Employee -> schedule-group assignments.
 DECLARE @OliviaId INT = (SELECT TOP 1 Id FROM Employees WHERE Email = 'olivia.tray@scheduler.local');
@@ -118,5 +125,8 @@ IF @KaiId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ScheduleGroupEmployees WHERE
 
 IF @LucaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ScheduleGroupEmployees WHERE ScheduleGroupId = @BartendersGroupId AND EmployeeId = @LucaId)
   INSERT INTO ScheduleGroupEmployees (ScheduleGroupId, EmployeeId) VALUES (@BartendersGroupId, @LucaId);
+
+IF @ManagerId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ScheduleGroupEmployees WHERE ScheduleGroupId = @ManagerGroupId AND EmployeeId = @ManagerId)
+  INSERT INTO ScheduleGroupEmployees (ScheduleGroupId, EmployeeId) VALUES (@ManagerGroupId, @ManagerId);
 
 PRINT 'Restaurant scenario seed applied successfully using ScheduleGroup tables.';

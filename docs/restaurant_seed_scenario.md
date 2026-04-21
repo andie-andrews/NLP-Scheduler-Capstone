@@ -38,6 +38,8 @@ Each seeded user uses `firstName` as both username and password:
 - `kai` / `kai`
 - `luca` / `luca`
 
+Additionally, the seed creates a `Manager` schedule group and assigns Boss Man (`boss`) to it.
+
 ---
 
 ## AI Assistant Demo Workflow
