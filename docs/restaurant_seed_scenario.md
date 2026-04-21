@@ -129,6 +129,12 @@ Show next week's shifts for each Luca Shaker.
 
 **Goal:** Show reassign works for employees on the same schedule.
 
+they need to be on the same schedule, so do that with:
+
+```text
+Add Emma to the servers schedule group
+```
+then:
 ```text
 Reassign Olivia's shift tomorrow to Emma
 ```
