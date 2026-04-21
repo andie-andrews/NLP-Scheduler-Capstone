@@ -586,6 +586,52 @@
             "type": "integer"
           }
         }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateScheduleRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateShiftRequest": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "start",
+          "durationHours"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "integer"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationHours": {
+            "type": "integer"
+          }
+        }
       }
     }
   }
