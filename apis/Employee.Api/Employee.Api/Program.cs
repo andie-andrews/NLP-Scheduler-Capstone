@@ -6,10 +6,33 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var jwtIssuer = builder.Configuration["Jwt:Issuer"]
-  ?? throw new InvalidOperationException("Missing required configuration value: Jwt:Issuer");
-var jwtKey = builder.Configuration["Jwt:Key"]
-  ?? throw new InvalidOperationException("Missing required configuration value: Jwt:Key");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtIssuer))
+{
+  if (builder.Environment.IsDevelopment())
+  {
+    jwtIssuer = "scheduler-api";
+  }
+  else
+  {
+    throw new InvalidOperationException("Missing required configuration value: Jwt:Issuer");
+  }
+}
+
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+  if (builder.Environment.IsDevelopment())
+  {
+    jwtKey = "development-only-employee-api-signing-key-change-me-1234567890";
+  }
+  else
+  {
+    throw new InvalidOperationException("Missing required configuration value: Jwt:Key");
+  }
+}
+
 _ = builder.Configuration.GetConnectionString("Default")
   ?? throw new InvalidOperationException("Missing required configuration value: ConnectionStrings:Default");
 
