@@ -32,14 +32,37 @@ If your SQL Server instance name is different, replace `.\\SQLSERVER` with your 
 
 Use the prompts below during demos to illustrate core scheduling workflows.
 
-### 1) Create a single shift (one employee)
+### 1) Create a schedule group
+
+**Goal:** Show creation of schedule group
+
+Example prompt:
+
+```text
+Create a schedule group for dish washers
+```
+
+Alternative prompt:
+
+```text
+Delete  a schedule group for dish washers
+```
+
+```text
+what scheduler group is Olivia in?
+```
+
+---
+
+
+### 2) Create a single shift (one employee)
 
 **Goal:** Show one-off shift creation for one person.
 
 Example prompt:
 
 ```text
-Create a shift for Olivia Tray tomorrow from 9:00 AM to 5:00 PM on the Server schedule.
+Create a shift for Olivia Tray tomorrow from 9:00 AM to 5:00 PM.
 ```
 
 Alternative prompt:
@@ -50,9 +73,9 @@ Schedule Emma Welcome for Hostesses on Tuesday 4 PM to 10 PM.
 
 ---
 
-### 2) Create shifts for this week and next week (Monday–Friday range)
+### 3) Create shifts for this week and next week (Monday–Friday range)
 
-**Goal:** Show batch/range scheduling for coverage across weekdays.
+**Goal:** Show batch/range scheduling for coverage.
 
 Example prompt:
 
@@ -60,17 +83,9 @@ Example prompt:
 Create shifts Monday through Friday for next week for Olivia Tray, 11:00 AM to 7:00 PM on Servers.
 ```
 
-Alternative prompt with multiple employees:
-
-TODO: THIS IS NOT SUPPORTED YET
-
-```text
-Schedule Mia Prep, Noah Saute, and Kai Grill on Kitchen for Monday-Friday this week and next week, 8 AM to 4 PM.
-```
-
 ---
 
-### 3) Create recurring shifts: Every {dayOfWeek} for next X weeks
+### 4) Create recurring shifts: Every {dayOfWeek} for next X weeks
 
 **Goal:** Show recurring pattern creation.
 
@@ -90,7 +105,7 @@ Create shifts for {EmployeeName} every {dayOfWeek} for the next {X} weeks from {
 
 ---
 
-### 4) Manager asks to see employee schedules
+### 5) Manager asks to see employee schedules
 
 **Goal:** Show manager reporting and lookup.
 
@@ -106,7 +121,25 @@ Show next week's shifts for each Luca Shaker.
 
 ---
 
-### 5) Employee login + self-service schedule and hours
+### 6) Reassign shift from one employee to another
+
+**Goal:** Show reassign works for employees on the same schedule.
+
+Assuming the following:
+- you have a shift assigned to Lance Dall on a Tuesday
+- you want to reassign the shift to Andie Andrews
+- and they are both on the same schedule
+then:
+
+```text
+Reassign Oliva's shift tomorrow to Emma
+```
+
+should result in the shift being reassigned to Andie.
+
+---
+
+### 7) Employee login + self-service schedule and hours
 
 **Goal:** Show employee-facing access where a staff member signs in and checks their own schedule and total hours.
 
@@ -138,23 +171,7 @@ List all of my shifts for this week.
 List all of my shifts for next week.
 ```
 
----
 
-### 6) Reassign shift from one employee to another
-
-**Goal:** Show reassign works for employees on the same schedule.
-
-Assuming the following:
-- you have a shift assigned to Lance Dall on a Tuesday
-- you want to reassign the shift to Andie Andrews
-- and they are both on the same schedule
-then:
-
-```text
-reassign Lance Dall's tuesday shift to Andie Andrews
-```
-
-should result in the shift being reassigned to Andie.
 ---
 
 ## Suggested end-to-end demo order
