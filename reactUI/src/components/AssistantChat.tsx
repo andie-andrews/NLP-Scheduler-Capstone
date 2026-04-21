@@ -23,7 +23,7 @@ interface AssistantResponse {
       updatedShift?: {
         id?: number
         start: string
-        durationHours: number
+        durationHours?: number
       }
       createdShift?: {
         id?: number
@@ -133,7 +133,7 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
         'updatedShift' in data.response.data &&
         typeof (data.response.data as { updatedShift: unknown }).updatedShift === 'object' &&
         (data.response.data as { updatedShift: unknown }).updatedShift !== null
-          ? (data.response.data as { updatedShift: { id?: number; start: string; durationHours: number } }).updatedShift
+          ? (data.response.data as { updatedShift: { id?: number; start: string; durationHours?: number } }).updatedShift
           : null
 
       const extractedCreatedShift =
@@ -209,9 +209,9 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
                     <Text size='sm'>
                       {new Date(m.updatedShiftData.start).toLocaleString()}
                     </Text>
-                    <Text size='sm' c='dimmed'>
+                    {m.updatedShiftData.durationHours && <Text size='sm' c='dimmed'>
                       Duration: {m.updatedShiftData.durationHours} hour{m.updatedShiftData.durationHours === 1 ? '' : 's'}
-                    </Text>
+                    </Text>}
                   </Stack>
                 </Card>
               )}
