@@ -31,6 +31,16 @@ interface AssistantResponse {
         start: string
         durationHours: number
       }
+      createdShifts?: Array<{
+        id?: number
+        start: string
+        durationHours: number
+      }>
+      shifts?: Array<{
+        id?: number
+        start: string
+        durationHours: number
+      }>
     }
   } | string | unknown
 }
@@ -156,18 +166,44 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
           ? (data.response.data as { createdShift: { id?: number; start: string; durationHours: number } }).createdShift
           : null
 
+      const extractedCreatedShifts =
+        typeof data.response === 'object' &&
+        data.response !== null &&
+        'data' in data.response &&
+        data.response.data !== null &&
+        typeof data.response.data === 'object' &&
+        'createdShifts' in data.response.data &&
+        Array.isArray((data.response.data as { createdShifts: unknown }).createdShifts)
+          ? (data.response.data as { createdShifts: Array<{ id?: number; start: string; durationHours: number }> }).createdShifts
+          : null
+
+      const createdShiftForCard =
+        extractedCreatedShifts && extractedCreatedShifts.length === 1 ? extractedCreatedShifts[0] : null
+
+      const extractedShifts =
+        typeof data.response === 'object' &&
+        data.response !== null &&
+        'data' in data.response &&
+        data.response.data !== null &&
+        typeof data.response.data === 'object' &&
+        'shifts' in data.response.data &&
+        Array.isArray((data.response.data as { shifts: unknown }).shifts)
+          ? (data.response.data as { shifts: Array<{ id?: number; start: string; durationHours: number }> }).shifts
+          : null
+
       dispatch(addMessage({
         role: 'assistant',
         content: responseText,
         shiftData: extractedShift || undefined,
         updatedShiftData: extractedUpdatedShift || undefined,
-        createdShiftData: extractedCreatedShift || undefined,
+        createdShiftData: createdShiftForCard || undefined,
+        shiftsData: extractedShifts || undefined,
       }))
 
       if (extractedUpdatedShift) {
         window.dispatchEvent(new CustomEvent('shifts:updated'))
       }
-      if (extractedCreatedShift) {
+      if (extractedCreatedShift || (extractedCreatedShifts && extractedCreatedShifts.length > 0)) {
         window.dispatchEvent(new CustomEvent('shifts:created'))
       }
     } catch (error) {
@@ -233,6 +269,31 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
                     <Text size='sm' c='dimmed'>
                       Duration: {m.createdShiftData.durationHours} hour{m.createdShiftData.durationHours === 1 ? '' : 's'}
                     </Text>
+                  </Stack>
+                </Card>
+              )}
+              {m.shiftsData && m.shiftsData.length > 0 && (
+                <Card withBorder radius='md' p='md' bg='gray.1'>
+                  <Stack gap='xs'>
+                    <Text fw={700}>📋 Shifts</Text>
+                    {m.shiftsData.map((s, idx) => {
+                      const d = new Date(s.start)
+                      return (
+                        <Card key={s.id ?? idx} withBorder radius='sm' p='xs'>
+                          <Stack gap={2}>
+                            <Text size='sm' fw={600}>
+                              {d.toLocaleDateString()}
+                            </Text>
+                            <Text size='xs'>
+                              {d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                            </Text>
+                            <Text size='xs' c='dimmed'>
+                              Duration: {s.durationHours} hour{s.durationHours === 1 ? '' : 's'}
+                            </Text>
+                          </Stack>
+                        </Card>
+                      )
+                    })}
                   </Stack>
                 </Card>
               )}

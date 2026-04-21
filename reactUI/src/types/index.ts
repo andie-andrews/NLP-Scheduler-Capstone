@@ -46,4 +46,9 @@ export interface ChatMessage {
     start: string
     durationHours: number
   }
+  shiftsData?: Array<{
+    id?: number
+    start: string
+    durationHours: number
+  }>
 }
