@@ -141,8 +141,8 @@ def get_employee_shifts(token, employee_id, week_offset=0):
 # -------------------------------
 # CREATE SHIFT
 # -------------------------------
-def create_shift(token, schedule_id, employee_id, date, time, duration_hours):
-    url = f"{BASE_URL}/schedules/{schedule_id}/shifts"
+def create_shift(token, schedule_group_id, employee_id, date, time, duration_hours):
+    url = f"{BASE_URL}/schedule-groups/{schedule_group_id}/shifts"
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -154,7 +154,7 @@ def create_shift(token, schedule_id, employee_id, date, time, duration_hours):
 
     payload = {
          # 🔥 REQUIRED WRAPPER
-            "scheduleGroupId": schedule_id,
+            "scheduleGroupId": schedule_group_id,
             "employeeId": employee_id,
             "start": dt.isoformat(),  
             "durationHours": duration_hours
