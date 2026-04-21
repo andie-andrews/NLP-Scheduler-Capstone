@@ -28,15 +28,15 @@ If your SQL Server instance name is different, replace `.\\SQLSERVER` with your 
 
 ### Seeded demo users
 
-All seeded users have password `password`:
+Each seeded user uses `firstName` as both username and password:
 
-- `boss1` (Supervisor)
-- `olivia.tray`
-- `emma.welcome`
-- `mia.prep`
-- `noah.saute`
-- `kai.grill`
-- `luca.shaker`
+- `boss` / `boss` (Supervisor)
+- `olivia` / `olivia`
+- `emma` / `emma`
+- `mia` / `mia`
+- `noah` / `noah`
+- `kai` / `kai`
+- `luca` / `luca`
 
 ---
 

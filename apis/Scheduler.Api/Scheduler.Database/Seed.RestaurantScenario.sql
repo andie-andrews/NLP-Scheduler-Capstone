@@ -80,26 +80,26 @@ DECLARE @KaiId INT = (SELECT TOP 1 Id FROM Employees WHERE Email = 'kai.grill@sc
 DECLARE @LucaId INT = (SELECT TOP 1 Id FROM Employees WHERE Email = 'luca.shaker@scheduler.local');
 
 -- Demo user logins.
-IF @ManagerId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'boss1')
-  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('boss1', 'password', 2, @ManagerId);
+IF @ManagerId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'boss')
+  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('boss', 'boss', 2, @ManagerId);
 
-IF @OliviaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'olivia.tray')
-  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('olivia.tray', 'password', 1, @OliviaId);
+IF @OliviaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'olivia')
+  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('olivia', 'olivia', 1, @OliviaId);
 
-IF @EmmaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'emma.welcome')
-  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('emma.welcome', 'password', 1, @EmmaId);
+IF @EmmaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'emma')
+  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('emma', 'emma', 1, @EmmaId);
 
-IF @MiaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'mia.prep')
-  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('mia.prep', 'password', 1, @MiaId);
+IF @MiaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'mia')
+  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('mia', 'mia', 1, @MiaId);
 
-IF @NoahId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'noah.saute')
-  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('noah.saute', 'password', 1, @NoahId);
+IF @NoahId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'noah')
+  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('noah', 'noah', 1, @NoahId);
 
-IF @KaiId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'kai.grill')
-  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('kai.grill', 'password', 1, @KaiId);
+IF @KaiId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'kai')
+  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('kai', 'kai', 1, @KaiId);
 
-IF @LucaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'luca.shaker')
-  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('luca.shaker', 'password', 1, @LucaId);
+IF @LucaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Users WHERE Username = 'luca')
+  INSERT INTO Users (Username, Password, Role, EmployeeId) VALUES ('luca', 'luca', 1, @LucaId);
 
 IF @OliviaId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ScheduleGroupEmployees WHERE ScheduleGroupId = @ServersGroupId AND EmployeeId = @OliviaId)
   INSERT INTO ScheduleGroupEmployees (ScheduleGroupId, EmployeeId) VALUES (@ServersGroupId, @OliviaId);
