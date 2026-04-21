@@ -1,13 +1,13 @@
 ﻿using Dapper;
 using Scheduler.Api.Infrastructure.Data;
 
-namespace Scheduler.Api.Features.Schedules.Handlers
+namespace Scheduler.Api.Features.ScheduleGroups.Handlers
 {
-  public class DeleteScheduleHandler
+  public class DeleteScheduleGroupHandler
   {
     private readonly IDbConnectionFactory _db;
 
-    public DeleteScheduleHandler(IDbConnectionFactory db)
+    public DeleteScheduleGroupHandler(IDbConnectionFactory db)
     {
       _db = db;
     }
@@ -23,19 +23,19 @@ namespace Scheduler.Api.Features.Schedules.Handlers
       try
       {
         await connection.ExecuteAsync(
-          "DELETE FROM Shifts WHERE ScheduleId = @id",
+          "DELETE FROM Shifts WHERE ScheduleGroupId = @id",
           new { id }, transaction);
 
         await connection.ExecuteAsync(
-          "DELETE FROM ScheduleEmployees WHERE ScheduleId = @id",
+          "DELETE FROM ScheduleGroupEmployees WHERE ScheduleGroupId = @id",
           new { id }, transaction);
 
         await connection.ExecuteAsync(
-          "DELETE FROM ScheduleManagers WHERE ScheduleId = @id",
+          "DELETE FROM ScheduleGroupManagers WHERE ScheduleGroupId = @id",
           new { id }, transaction);
 
         await connection.ExecuteAsync(
-          "DELETE FROM Schedules WHERE Id = @id",
+          "DELETE FROM ScheduleGroups WHERE Id = @id",
           new { id }, transaction);
 
         transaction.Commit();

@@ -19,9 +19,9 @@ def test_call_api_keeps_path_param_in_body_when_schema_requires_it():
 
     operation = {
         "method": "POST",
-        "path": "/api/schedules/{scheduleId}/shifts",
+        "path": "/api/schedule-groups/{scheduleGroupId}/shifts",
         "parameters": [
-            {"name": "scheduleId", "in": "path", "required": True, "schema": {"type": "integer"}},
+            {"name": "scheduleGroupId", "in": "path", "required": True, "schema": {"type": "integer"}},
         ],
         "requestBody": {
             "content": {
@@ -29,7 +29,7 @@ def test_call_api_keeps_path_param_in_body_when_schema_requires_it():
                     "schema": {
                         "type": "object",
                         "properties": {
-                            "scheduleId": {"type": "integer"},
+                            "scheduleGroupId": {"type": "integer"},
                             "employeeId": {"type": "integer"},
                         },
                     }
@@ -39,10 +39,10 @@ def test_call_api_keeps_path_param_in_body_when_schema_requires_it():
     }
 
     with patch("app.llm.openapi_client.requests.post", return_value=_DummyResponse()) as mock_post:
-        call_api("token", operation, {"scheduleId": 5, "employeeId": 1})
+        call_api("token", operation, {"scheduleGroupId": 5, "employeeId": 1})
 
     body = mock_post.call_args.kwargs["json"]
-    assert body["scheduleId"] == 5
+    assert body["scheduleGroupId"] == 5
     assert body["employeeId"] == 1
 
 
@@ -53,9 +53,9 @@ def test_call_api_removes_path_param_from_body_when_not_declared_in_schema():
 
     operation = {
         "method": "POST",
-        "path": "/api/schedules/{scheduleId}/members",
+        "path": "/api/schedule-groups/{scheduleGroupId}/members",
         "parameters": [
-            {"name": "scheduleId", "in": "path", "required": True, "schema": {"type": "integer"}},
+            {"name": "scheduleGroupId", "in": "path", "required": True, "schema": {"type": "integer"}},
         ],
         "requestBody": {
             "content": {
@@ -72,10 +72,10 @@ def test_call_api_removes_path_param_from_body_when_not_declared_in_schema():
     }
 
     with patch("app.llm.openapi_client.requests.post", return_value=_DummyResponse()) as mock_post:
-        call_api("token", operation, {"scheduleId": 5, "employeeId": 1})
+        call_api("token", operation, {"scheduleGroupId": 5, "employeeId": 1})
 
     body = mock_post.call_args.kwargs["json"]
-    assert "scheduleId" not in body
+    assert "scheduleGroupId" not in body
     assert body["employeeId"] == 1
 
 

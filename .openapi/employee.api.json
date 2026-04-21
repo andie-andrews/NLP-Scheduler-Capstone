@@ -299,12 +299,12 @@
         }
       }
     },
-    "/api/employees/{employeeId}/employeeSchedules": {
+    "/api/employees/{employeeId}/employeeScheduleGroups": {
       "get": {
         "tags": [
           "Schedule"
         ],
-        "operationId": "getEmployeeSchedules",
+        "operationId": "getEmployeeScheduleGroups",
         "summary": "Get schedulable resources for employee",
         "description": "Returns schedules the employee can be scheduled on.",
         "x-operation-type": "query",
@@ -325,7 +325,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Schedules",
+            "description": "ScheduleGroups",
             "content": {
               "application/json": {
                 "schema": {
@@ -394,7 +394,7 @@
           "employeeId": {
             "type": "integer"
           },
-          "scheduleId": {
+          "scheduleGroupId": {
             "type": "integer"
           },
           "employeeName": {

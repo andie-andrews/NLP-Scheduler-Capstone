@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Scheduler.Api.Features.Schedules.Models;
+using Scheduler.Api.Features.ScheduleGroups.Models;
 using Scheduler.Api.Features.Shifts.Handlers;
 using Scheduler.Api.Features.Shifts.Models;
 using Scheduler.Api.Features.Shifts.Services;
@@ -28,11 +28,11 @@ public class ShiftsController : ControllerBase
     _shiftDomainService = shiftCommandService;
   }
 
-  [HttpGet("schedules/{scheduleId}/shifts")]
+  [HttpGet("schedule-groups/{scheduleGroupId}/shifts")]
   [ProducesResponseType(typeof(IEnumerable<Shift>), 200)]
   [ProducesResponseType(403)]
   public async Task<IActionResult> GetShifts(
-    [FromRoute] int scheduleId,
+    [FromRoute] int scheduleGroupId,
     [FromQuery] DateTime? startDate,
     [FromQuery] DateTime? endDate)
   {
@@ -47,20 +47,20 @@ public class ShiftsController : ControllerBase
       employeeId = int.Parse(employeeIdClaim.Value);
     }
 
-    var result = await _getShifts.Handle(scheduleId, startDate, endDate, employeeId);
+    var result = await _getShifts.Handle(scheduleGroupId, startDate, endDate, employeeId);
     return Ok(result);
   }
 
-  [HttpPost("schedules/{scheduleId}/shifts")]
+  [HttpPost("schedule-groups/{scheduleGroupId}/shifts")]
   [Authorize(Roles = "Supervisor")]
   [ProducesResponseType(200)]
-  public async Task<IActionResult> CreateShift([FromRoute] int scheduleId, CreateShiftRequest request)
+  public async Task<IActionResult> CreateShift([FromRoute] int scheduleGroupId, CreateShiftRequest request)
   {
     var userEmployeeId = int.Parse(User.FindFirst("employeeId")!.Value);
 
     try
     {
-      await _shiftDomainService.CreateShift(scheduleId, request, userEmployeeId);
+      await _shiftDomainService.CreateShift(scheduleGroupId, request, userEmployeeId);
     }
     catch (ShiftValidationException ex)
     {

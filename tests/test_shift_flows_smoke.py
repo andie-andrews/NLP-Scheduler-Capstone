@@ -144,7 +144,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -191,7 +191,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -240,7 +240,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -283,7 +283,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -338,7 +338,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -382,7 +382,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -417,7 +417,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": None,
+                "scheduleGroupId": None,
                 "start": None,
                 "pendingStartDate": None,
                 "durationHours": None,
@@ -458,7 +458,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
                 "intent": "create_shift",
                 "employeeId": 10,
                 "employeeName": "Sophia",
-                "scheduleId": 4,
+                "scheduleGroupId": 4,
                 "start": "2026-04-15T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": None,
@@ -469,7 +469,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
                 "recent_schedule_assignment": {
                     "employeeName": "Sophia",
                     "scheduleName": "Hostesses",
-                    "scheduleId": 4,
+                    "scheduleGroupId": 4,
                 },
             },
             operations={"createShift": "create-shift-op"},
@@ -512,7 +512,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
@@ -558,7 +558,7 @@ class ShiftFlowSmokeTests(unittest.TestCase):
             pending_shift={
                 "intent": "create_shift",
                 "employeeId": 10,
-                "scheduleId": 22,
+                "scheduleGroupId": 22,
                 "start": "2026-04-20T09:00:00",
                 "pendingStartDate": None,
                 "durationHours": 8,
