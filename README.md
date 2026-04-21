@@ -109,7 +109,8 @@ cp .env.example .env
 
 Set at minimum:
 
-- `SCHEDULER_API_BASE_URL=https://localhost:7259`
+- `SCHEDULER_API_BASE_URL=http://localhost/schedulerapi`
+- `EMPLOYEE_API_BASE_URL=http://localhost/employeeapi`
 - `SCHEDULER_API_VERIFY_SSL=false` (for local self-signed certs)
 - `OPENAI_API_KEY=...`
 
@@ -122,7 +123,8 @@ cp .env.example .env
 
 Set at minimum:
 
-- `VITE_SCHEDULER_API_BASE_URL=https://localhost:7259`
+- `VITE_SCHEDULER_API_BASE_URL=http://localhost/schedulerapi`
+- `VITE_EMPLOYEE_API_BASE_URL=http://localhost/employeeapi`
 - `VITE_AI_ASSISTANT_URL=http://localhost:8000/api/assistant/chat`
 
 ### Run services

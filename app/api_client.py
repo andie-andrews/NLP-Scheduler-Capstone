@@ -1,7 +1,9 @@
+import os
+
 import requests
 import streamlit as st
-import os
 import urllib3
+
 
 def _runtime_environment() -> str:
     for env_var in ("SCHEDULER_RUNTIME_ENV", "APP_ENV", "ASPNETCORE_ENVIRONMENT", "ENVIRONMENT"):
@@ -11,18 +13,26 @@ def _runtime_environment() -> str:
     return "development"
 
 
-def _default_base_url() -> str:
+def _default_scheduler_base_url() -> str:
     if _runtime_environment() in {"production", "prod"}:
         return "https://nlp-scheduler-api-ehc5bhhdeparezd7.canadacentral-01.azurewebsites.net"
     return "http://localhost/schedulerapi"
 
 
-BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", _default_base_url()).rstrip("/")
+def _default_employee_base_url() -> str:
+    if _runtime_environment() in {"production", "prod"}:
+        return "https://nlp-employee-api.azurewebsites.net"
+    return "http://localhost/employeeapi"
+
+
+SCHEDULER_BASE_URL = os.getenv("SCHEDULER_API_BASE_URL", _default_scheduler_base_url()).rstrip("/")
+EMPLOYEE_BASE_URL = os.getenv("EMPLOYEE_API_BASE_URL", _default_employee_base_url()).rstrip("/")
 VERIFY_SSL = os.getenv("SCHEDULER_API_VERIFY_SSL", "true").lower() == "true"
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("SCHEDULER_API_TIMEOUT_SECONDS", "20"))
 
 if not VERIFY_SSL:
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 def get_headers():
     token = st.session_state.get("token")
@@ -33,38 +43,62 @@ def get_headers():
         "Authorization": f"Bearer {token}"
     }
 
-def post(path, data = None):
-    return requests.post(
-        f"{BASE_URL}{path}",
-        json=data,
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
 
-def get(path, params=None):
-    return requests.get(
-        f"{BASE_URL}{path}",
+def _request(method: str, base_url: str, path: str, *, params=None, data=None):
+    return requests.request(
+        method,
+        f"{base_url}{path}",
+        json=data,
         headers=get_headers(),
         params=params,
         verify=VERIFY_SSL,
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
+
+def post(path, data=None):
+    return _request("POST", SCHEDULER_BASE_URL, path, data=data)
+
+
+def get(path, params=None):
+    return _request("GET", SCHEDULER_BASE_URL, path, params=params)
+
+
+def _get_employee_api(path, params=None):
+    return _request("GET", EMPLOYEE_BASE_URL, path, params=params)
+
+
+def _post_employee_api(path, data=None):
+    return _request("POST", EMPLOYEE_BASE_URL, path, data=data)
+
+
+def _put_employee_api(path, data=None):
+    return _request("PUT", EMPLOYEE_BASE_URL, path, data=data)
+
+
+def _delete_employee_api(path):
+    return _request("DELETE", EMPLOYEE_BASE_URL, path)
+
+
 def get_my_schedule(employee_id, params=None):
-    return get(f"/api/employees/{employee_id}/shifts", params=params)
+    return _get_employee_api(f"/api/employees/{employee_id}/shifts", params=params)
+
 
 def get_schedules():
     return get("/api/schedules")
 
+
 def get_schedule_employees(schedule_id):
     return get(f"/api/schedules/{schedule_id}/scheduleEmployees")
+
 
 def get_schedule_shifts(schedule_id, params=None):
     return get(f"/api/schedules/{schedule_id}/shifts", params=params)
 
+
 def get_employee_schedules(employee_id):
-    return get(f"/api/employees/{employee_id}/employeeSchedules")
+    return _get_employee_api(f"/api/employees/{employee_id}/employeeSchedules")
+
 
 def create_shift(schedule_id, employee_id, start, duration):
     return post(
@@ -85,22 +119,12 @@ def update_shift(shift_id, start=None, duration=None):
     if duration is not None:
         payload["durationHours"] = duration
 
-    return requests.put(
-        f"{BASE_URL}/api/shifts/{shift_id}",
-        json=payload,
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    return _request("PUT", SCHEDULER_BASE_URL, f"/api/shifts/{shift_id}", data=payload)
 
 
 def delete_shift(shift_id):
-    return requests.delete(
-        f"{BASE_URL}/api/shifts/{shift_id}",
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    return _request("DELETE", SCHEDULER_BASE_URL, f"/api/shifts/{shift_id}")
+
 
 # -------------------------------
 # SCHEDULE CRUD
@@ -116,22 +140,12 @@ def create_schedule(name):
 
 
 def update_schedule(schedule_id, name):
-    return requests.put(
-        f"{BASE_URL}/api/schedules/{schedule_id}",
-        json={"name": name},
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    return _request("PUT", SCHEDULER_BASE_URL, f"/api/schedules/{schedule_id}", data={"name": name})
 
 
 def delete_schedule(schedule_id):
-    return requests.delete(
-        f"{BASE_URL}/api/schedules/{schedule_id}",
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    return _request("DELETE", SCHEDULER_BASE_URL, f"/api/schedules/{schedule_id}")
+
 
 # -------------------------------
 # SCHEDULE EMPLOYEES
@@ -144,12 +158,7 @@ def add_employee_to_schedule(schedule_id, employee_id):
 
 
 def remove_employee_from_schedule(schedule_id, employee_id):
-    return requests.delete(
-        f"{BASE_URL}/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}",
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    return _request("DELETE", SCHEDULER_BASE_URL, f"/api/schedules/{schedule_id}/scheduleEmployees/{employee_id}")
 
 
 # -------------------------------
@@ -157,15 +166,15 @@ def remove_employee_from_schedule(schedule_id, employee_id):
 # -------------------------------
 
 def get_all_employees(params=None):
-    return get("/api/employees", params=params)
+    return _get_employee_api("/api/employees", params=params)
 
 
 def get_employee(employee_id):
-    return get(f"/api/employees/{employee_id}")
+    return _get_employee_api(f"/api/employees/{employee_id}")
 
 
 def create_employee(first_name, last_name, email, role_id=1):
-    return post(
+    return _post_employee_api(
         "/api/employees",
         {
             "firstName": first_name,
@@ -186,19 +195,8 @@ def update_employee(employee_id, first_name, last_name, email, role_id=None):
     if role_id is not None:
         payload["roleId"] = role_id
 
-    return requests.put(
-        f"{BASE_URL}/api/employees/{employee_id}",
-        json=payload,
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    return _put_employee_api(f"/api/employees/{employee_id}", payload)
 
 
 def delete_employee(employee_id):
-    return requests.delete(
-        f"{BASE_URL}/api/employees/{employee_id}",
-        headers=get_headers(),
-        verify=VERIFY_SSL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    return _delete_employee_api(f"/api/employees/{employee_id}")

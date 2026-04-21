@@ -117,7 +117,6 @@ builder.Services.AddScoped<IDbConnectionFactory, SqlConnectionFactory>();
 
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<HealthHandler>();
-builder.Services.AddScoped<GetEmployeeByNameHandler>();
 builder.Services.AddScoped<AuthHandler>();
 builder.Services.AddScoped<AuthDomainService>();
 
@@ -135,14 +134,6 @@ builder.Services.AddScoped<DeleteScheduleHandler>();
 builder.Services.AddScoped<ScheduleDomainService>();
 builder.Services.AddScoped<AddEmployeeToScheduleHandler>();
 builder.Services.AddScoped<DeleteEmployeeToScheduleHandler>();
-builder.Services.AddScoped<GetEmployeeByIdHandler>();
-builder.Services.AddScoped<GetAllEmployeesHandler>();
-builder.Services.AddScoped<GetEmployeeByNameHandler>();
-builder.Services.AddScoped<GetEmployeeShiftsHandler>();
-builder.Services.AddScoped<CreateEmployeeHandler>();
-builder.Services.AddScoped<UpdateEmployeeHandler>();
-builder.Services.AddScoped<DeleteEmployeeHandler>();
-builder.Services.AddScoped<EmployeeDomainService>();
 builder.Services.AddScoped<DeleteShiftHandler>();
 builder.Services.AddScoped<UpdateShiftHandler>();
 builder.Services.AddScoped<ShiftDomainService>();

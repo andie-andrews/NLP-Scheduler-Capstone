@@ -29,6 +29,11 @@ def _is_next_shift_question(msg: str):
 def summarize_shifts(shifts, message: str, employee_full_name: str | None = None):
     employee_phrase = f" for {employee_full_name}" if employee_full_name else ""
 
+    if not isinstance(shifts, list):
+        shifts = []
+
+    shifts = [shift for shift in shifts if isinstance(shift, dict)]
+
     if not shifts:
         return {
             "summary": f"No shifts found{employee_phrase}.",

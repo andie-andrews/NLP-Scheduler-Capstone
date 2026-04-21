@@ -1,8 +1,9 @@
-# Creating a Local IIS Profile for `Scheduler.Api`
+# Creating Local IIS Profiles for `Scheduler.Api` and `Employee.Api`
 
-Use these steps when you want the API available at:
+Use these steps when you want the APIs available at:
 
 - `http://localhost/schedulerapi`
+- `http://localhost/employeeapi`
 
 ## 1) Enable IIS on your machine
 
@@ -14,30 +15,34 @@ On Windows, enable:
 
 Then restart if prompted.
 
-## 2) Create the IIS site and virtual directory/application
+## 2) Create IIS applications
 
-1. Open **IIS Manager**.
-2. Right-click **Default Web Site** (or your target site) and choose **Add Application...**.
-3. Set:
-   - **Alias**: `schedulerapi`
-   - **Physical path**: your published API output folder
-4. Choose or create an app pool with **No Managed Code** (for ASP.NET Core hosting model behind ANCM).
-5. Apply and start the site/application.
+For each API, open **IIS Manager** and add an application under your target website (commonly `Default Web Site`):
 
-## 3) Grant SQL access to the IIS app pool identity
+### Scheduler API
 
-If your connection string uses `Trusted_Connection=True`, run this in SQL Server so the IIS app pool can log in:
+- **Alias**: `schedulerapi`
+- **Physical path**: Scheduler API published folder
+- **Application pool**: `schedulerapi AppPool` (No Managed Code)
 
-```sql
-CREATE LOGIN [IIS APPPOOL\schedulerapi AppPool] FROM WINDOWS;
-GO
-USE [SchedulerDb];
-GO
-CREATE USER [IIS APPPOOL\schedulerapi AppPool] FOR LOGIN [IIS APPPOOL\schedulerapi AppPool];
-GO
-ALTER ROLE db_datareader ADD MEMBER [IIS APPPOOL\schedulerapi AppPool];
-ALTER ROLE db_datawriter ADD MEMBER [IIS APPPOOL\schedulerapi AppPool];
-```
+### Employee API
+
+- **Alias**: `employeeapi`
+- **Physical path**: Employee API published folder
+- **Application pool**: `employeeapi AppPool` (No Managed Code)
+
+## 3) Grant SQL access to IIS app pool identities
+
+If your connection string uses integrated security (`Trusted_Connection=True`), run:
+
+- `apis/Scheduler.Api/Scheduler.Database/IisAppPoolSqlAccess.sql`
+
+This script grants `db_datareader` + `db_datawriter` permissions for both:
+
+- `IIS APPPOOL\schedulerapi AppPool`
+- `IIS APPPOOL\employeeapi AppPool`
+
+> If your DB name is not `SchedulerDb`, update the `USE [SchedulerDb]` line before running.
 
 ## 4) Seed starter data
 
@@ -47,26 +52,23 @@ The database seed script is in:
 
 That script inserts baseline roles and a supervisor user for local testing.
 
-## 5) Add an IIS launch profile in `launchSettings.json`
+## 5) Add IIS launch profiles in `launchSettings.json`
 
-The API project now includes an `IIS` profile:
+Both API projects include an `IIS` profile with `ASPNETCORE_PATHBASE`:
 
-- `commandName: "IIS"`
-- `applicationUrl: "http://localhost/schedulerapi"`
-- `launchUrl: "swagger"`
-- `ASPNETCORE_PATHBASE=/schedulerapi`
-
-This makes local debugging honor the virtual directory base path.
+- Scheduler API path base: `/schedulerapi`
+- Employee API path base: `/employeeapi`
 
 ## 6) Run from Visual Studio
 
-1. Open the API project properties.
+1. Open the API project you want to debug.
 2. Select the **IIS** profile from the run target dropdown.
 3. Start debugging.
 
-If configured correctly, Swagger should open under:
+Swagger URLs should be:
 
 - `http://localhost/schedulerapi/swagger`
+- `http://localhost/employeeapi/swagger`
 
 ## Troubleshooting
 
@@ -76,11 +78,7 @@ If Visual Studio shows:
 
 Confirm these values are present:
 
-- `Properties/launchSettings.json` → `iisSettings.iis.applicationUrl = "http://localhost/schedulerapi"`
-- `Scheduler.Api.csproj.user`:
-
-- `<UseIIS>True</UseIIS>`
-- `<UseIISExpress>False</UseIISExpress>`
-- `<IISUrl>http://localhost/schedulerapi</IISUrl>`
+- `Properties/launchSettings.json` → `iisSettings.iis.applicationUrl`
+- `*.csproj.user` contains `UseIIS=True` and correct `IISUrl`
 
 If the error persists, close Visual Studio, delete the solution `.vs` folder, reopen the solution, and pick the `IIS` profile again.

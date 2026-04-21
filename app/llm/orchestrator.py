@@ -6,8 +6,8 @@ from pathlib import Path
 import jwt
 from dotenv import load_dotenv
 
-from llm.openapi_loader import DEFAULT_API_NAME, load_openapi_spec
-from llm.openapi_parser import parse_operations
+from llm.openapi_loader import load_openapi_spec
+from llm.openapi_parser import parse_operations_by_api
 from llm.openapi_client import call_api
 from llm.orchestration.intents import (
     is_add_schedule_member_intent,
@@ -108,8 +108,17 @@ load_dotenv(ROOT_DIR / ".env")
 llm_client = OrchestrationLLM(model="gpt-4o")
 
 specs = load_openapi_spec()
-spec = specs[DEFAULT_API_NAME]
-OPERATIONS = parse_operations(spec)
+operations_by_callable = parse_operations_by_api(specs)
+OPERATIONS = {key: value for key, value in operations_by_callable.items()}
+
+# Backward compatibility: expose un-namespaced operation IDs when unique.
+for operation in operations_by_callable.values():
+    operation_id = operation.get("operationId")
+    if not operation_id:
+        continue
+
+    if operation_id not in OPERATIONS:
+        OPERATIONS[operation_id] = operation
 GENERAL_CONVERSATION_SYSTEM_PROMPT = """
 You are a friendly assistant in a workforce scheduling app.
 
@@ -1284,6 +1293,16 @@ def run_orchestrator(message: str, token: str, session: dict):
 
     print("----- API RESULT -----")
     print(result)
+
+    if isinstance(result, dict):
+        status_code = result.get("__httpStatus") or result.get("statusCode")
+        if isinstance(status_code, int) and status_code >= 400:
+            raw_text = str(result.get("rawText") or result.get("error") or "").strip()
+            first_line = raw_text.splitlines()[0] if raw_text else ""
+            return (
+                f"I couldn't complete `{op_id}` because the `{operation.get('api_name', 'api')}` API returned {status_code}. "
+                f"{first_line}".strip()
+            )
 
     if op_id in {"createEmployee", "updateEmployee", "deleteEmployee"} and memory is not None:
         if hasattr(memory, "save_employee_directory"):
