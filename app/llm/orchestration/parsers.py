@@ -51,11 +51,17 @@ def find_name_in_message(message: str, employees: list):
     return None
 
 
-def extract_duration_hours(message: str):
+def extract_duration_hours(message: str, *, bare_number: bool = False):
     match = re.search(r"(\d+)\s*(hour|hours|hr|hrs)\b", normalize_temporal_text(message))
-    if not match:
-        return None
-    return int(match.group(1))
+    if match:
+        return int(match.group(1))
+    if bare_number:
+        bare_match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*", message or "")
+        if bare_match:
+            value = float(bare_match.group(1))
+            if value > 0:
+                return value if value != int(value) else int(value)
+    return None
 
 
 def extract_time_of_day(message: str):

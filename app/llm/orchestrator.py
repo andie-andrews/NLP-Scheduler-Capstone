@@ -254,7 +254,8 @@ def _attempt_fill_shift_state_from_message(message, token, state):
                 "options": resolution["options"],
             }
 
-    duration = extract_duration_hours(message)
+    # We want duration questions to just allow us to type "8", rather than "8 hours"
+    duration = extract_duration_hours(message, bare_number=state.get("awaiting") == "duration")
     if duration and not state.get("durationHours"):
         state["durationHours"] = duration
 
