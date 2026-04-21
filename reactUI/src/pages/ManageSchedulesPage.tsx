@@ -40,6 +40,20 @@ export function ManageSchedulesPage() {
 
   useEffect(() => { load().catch(() => undefined) }, [user, selectedScheduleId, weekOffset])
 
+  useEffect(() => {
+    const handleShiftChange = () => {
+      load().catch(() => undefined)
+    }
+
+    window.addEventListener('shifts:updated', handleShiftChange)
+    window.addEventListener('shifts:created', handleShiftChange)
+
+    return () => {
+      window.removeEventListener('shifts:updated', handleShiftChange)
+      window.removeEventListener('shifts:created', handleShiftChange)
+    }
+  }, [user, selectedScheduleId, weekOffset])
+
   const selectedSchedule = schedules.find((s) => s.id === selectedScheduleId)
   const scheduleSelectData = [
     { value: 'all', label: 'All Schedules' },
