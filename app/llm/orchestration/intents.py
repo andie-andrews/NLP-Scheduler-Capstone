@@ -125,6 +125,9 @@ def is_get_manager_schedule_groups_intent(message: str):
         or "manager group" in text
         or "manageable schedule groups" in text
         or "groups i can manage" in text
+        or "schedule groups i manage" in text
+        or "schedule groups i can manage" in text
+        or "groups i manage" in text
     )
 
 

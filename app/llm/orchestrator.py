@@ -71,7 +71,11 @@ from llm.orchestration.state_store import (
     set_pending_delete_schedule_state,
     set_pending_employee_operation_state,
 )
-from llm.orchestration.summary import summarize_schedule_groups, summarize_shifts
+from llm.orchestration.summary import (
+    summarize_manager_schedule_groups,
+    summarize_schedule_groups,
+    summarize_shifts,
+)
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
 from llm.orchestration.context_resolution import (
     is_follow_up_employee_query,
@@ -1398,6 +1402,13 @@ def run_orchestrator(message: str, token: str, session: dict):
                 employee_full_name = f"{first_name} {last_name}".strip() or None
 
         summary_data = summarize_schedule_groups(result, employee_full_name=employee_full_name)
+        return {
+            "summary": summary_data.get("summary", "No schedule groups found."),
+            "data": summary_data,
+        }
+
+    if op_id == "getManagerScheduleGroups":
+        summary_data = summarize_manager_schedule_groups(result)
         return {
             "summary": summary_data.get("summary", "No schedule groups found."),
             "data": summary_data,
