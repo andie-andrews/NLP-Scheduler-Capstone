@@ -31,4 +31,19 @@ export interface Shift {
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  shiftData?: {
+    id?: number
+    start: string
+    durationHours: number
+  }
+  updatedShiftData?: {
+    id?: number
+    start: string
+    durationHours?: number
+  }
+  createdShiftData?: {
+    id?: number
+    start: string
+    durationHours: number
+  }
 }

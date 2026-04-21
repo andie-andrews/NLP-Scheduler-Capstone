@@ -48,7 +48,7 @@ export function ManageSchedulesPage() {
 
   return (
     <PageWithAssistant>
-      <Stack>
+      <Stack style={{ height: '100%', minHeight: 0, flex: 1, overflow: 'hidden' }}>
         <Title order={2}>Manage Schedules</Title>
 
         <Group>
@@ -96,28 +96,30 @@ export function ManageSchedulesPage() {
           <Text>Employees: {employees.length} | Shifts this week: {shifts.length}</Text>
         </Card>
 
-        <Table striped highlightOnHover withTableBorder withColumnBorders>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Employee</Table.Th>
-              <Table.Th>Shifts</Table.Th>
-              <Table.Th>Total Hours</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {employees.map((employee) => {
-              const employeeShifts = shifts.filter((s) => s.employeeId === employee.id)
-              const totalHours = employeeShifts.reduce((acc, s) => acc + s.durationHours, 0)
-              return (
-                <Table.Tr key={employee.id}>
-                  <Table.Td>{employee.firstName} {employee.lastName}</Table.Td>
-                  <Table.Td>{employeeShifts.length}</Table.Td>
-                  <Table.Td>{totalHours}</Table.Td>
-                </Table.Tr>
-              )
-            })}
-          </Table.Tbody>
-        </Table>
+        <Card withBorder p='xs' style={{ height: 'calc(100vh - 330px)', minHeight: 260, overflowY: 'auto' }}>
+          <Table striped highlightOnHover withTableBorder withColumnBorders>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Employee</Table.Th>
+                <Table.Th>Shifts</Table.Th>
+                <Table.Th>Total Hours</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {employees.map((employee) => {
+                const employeeShifts = shifts.filter((s) => s.employeeId === employee.id)
+                const totalHours = employeeShifts.reduce((acc, s) => acc + s.durationHours, 0)
+                return (
+                  <Table.Tr key={employee.id}>
+                    <Table.Td>{employee.firstName} {employee.lastName}</Table.Td>
+                    <Table.Td>{employeeShifts.length}</Table.Td>
+                    <Table.Td>{totalHours}</Table.Td>
+                  </Table.Tr>
+                )
+              })}
+            </Table.Tbody>
+          </Table>
+        </Card>
       </Stack>
     </PageWithAssistant>
   )
