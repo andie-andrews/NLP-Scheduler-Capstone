@@ -71,7 +71,7 @@ from llm.orchestration.state_store import (
     set_pending_delete_schedule_state,
     set_pending_employee_operation_state,
 )
-from llm.orchestration.summary import summarize_shifts
+from llm.orchestration.summary import summarize_schedule_groups, summarize_shifts
 from llm.orchestration.tools import build_tools, sanitize_tools_for_openai
 from llm.orchestration.context_resolution import (
     is_follow_up_employee_query,
@@ -1382,6 +1382,25 @@ def run_orchestrator(message: str, token: str, session: dict):
         return {
             "summary": summary_data.get("summary", "No shifts found."),
             "data": response_data
+        }
+
+    if op_id == "getEmployeeScheduleGroups":
+        employee_full_name = None
+        target_employee_id = args.get("employeeId")
+        if target_employee_id is not None and isinstance(employees, list):
+            matched_employee = next(
+                (emp for emp in employees if emp.get("id") == target_employee_id),
+                None,
+            )
+            if matched_employee:
+                first_name = (matched_employee.get("firstName") or "").strip()
+                last_name = (matched_employee.get("lastName") or "").strip()
+                employee_full_name = f"{first_name} {last_name}".strip() or None
+
+        summary_data = summarize_schedule_groups(result, employee_full_name=employee_full_name)
+        return {
+            "summary": summary_data.get("summary", "No schedule groups found."),
+            "data": summary_data,
         }
 
     return result

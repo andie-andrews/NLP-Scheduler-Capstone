@@ -79,3 +79,32 @@ def summarize_shifts(shifts, message: str, employee_full_name: str | None = None
         "totalHours": total_hours,
         "shifts": shifts
     }
+
+
+def summarize_schedule_groups(groups, employee_full_name: str | None = None):
+    if not isinstance(groups, list):
+        groups = []
+
+    groups = [group for group in groups if isinstance(group, dict)]
+    employee_phrase = f" for {employee_full_name}" if employee_full_name else ""
+
+    if not groups:
+        return {
+            "summary": f"No schedule groups found{employee_phrase}.",
+            "groups": groups,
+        }
+
+    names = [str(group.get("name") or f"Schedule Group {group.get('id')}") for group in groups]
+    if len(names) == 1:
+        summary = f"{employee_full_name or 'This employee'} is in {names[0]}."
+    else:
+        summary = (
+            f"{employee_full_name or 'This employee'} is in {len(names)} schedule groups: "
+            + ", ".join(names[:-1])
+            + f", and {names[-1]}."
+        )
+
+    return {
+        "summary": summary,
+        "groups": groups,
+    }
