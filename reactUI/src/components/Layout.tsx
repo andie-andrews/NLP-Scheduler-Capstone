@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { AppShell, Button, Divider, Group, NavLink, Stack, Text, Title } from '@mantine/core'
+import { AppShell, Button, Divider, Group, Stack, Text, Title } from '@mantine/core'
 import { useAuth } from '../context/AuthContext'
 
-export type ViewKey = 'my-schedule' | 'employees' | 'schedules' | 'assistant'
+export type ViewKey = 'my-schedule' | 'employees' | 'schedules'
 
 export function Layout({ activeView, onChangeView, children }: { activeView: ViewKey; onChangeView: (v: ViewKey)=>void; children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -25,33 +25,40 @@ export function Layout({ activeView, onChangeView, children }: { activeView: Vie
 
       <AppShell.Navbar p='md'>
         <Stack gap='xs'>
-          <NavLink
-            label='My Schedule'
-            active={activeView === 'my-schedule'}
+          <Button
+            variant={activeView === 'my-schedule' ? 'filled' : 'outline'}
+            color='black'
+            autoContrast={true}
+            radius={15}
             onClick={() => onChangeView('my-schedule')}
-          />
+          >
+            My Schedule
+          </Button>
           {isManager && (
-            <NavLink
-              label='Manage Employees'
-              active={activeView === 'employees'}
+            <Button
+              variant={activeView === 'employees' ? 'filled' : 'outline'}
+              color='black'
+              autoContrast={true}
+              radius={15}
               onClick={() => onChangeView('employees')}
-            />
+            >
+              Manage Employees
+            </Button>
           )}
           {isManager && (
-            <NavLink
-              label='Manage Schedules'
-              active={activeView === 'schedules'}
+            <Button
+              variant={activeView === 'schedules' ? 'filled' : 'outline'}
+              color='black'
+              autoContrast={true}
+              radius={15}
               onClick={() => onChangeView('schedules')}
-            />
+            >
+              Manage Schedules
+            </Button>
           )}
-          <NavLink
-            label='AI Assistant'
-            active={activeView === 'assistant'}
-            onClick={() => onChangeView('assistant')}
-          />
         </Stack>
         <Divider my='md' />
-        <Button variant='light' color='red' onClick={logout}>
+        <Button variant='light' color='red' onClick={logout} radius={15}>
           Logout
         </Button>
       </AppShell.Navbar>
