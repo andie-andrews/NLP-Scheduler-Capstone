@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Badge, Button, Card, Grid, Group, Stack, Text, Title } from '@mantine/core'
 import { api } from '../api/client'
 import { PageWithAssistant } from '../components/PageWithAssistant'
@@ -14,13 +14,34 @@ export function MySchedulePage() {
   const weekStart = useMemo(() => addDays(startOfWeekSunday(new Date()), weekOffset * 7), [weekOffset])
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
 
-  useEffect(() => {
+  const loadShifts = useCallback(() => {
     if (!user) return
     api.getMySchedule(user.employeeId, user.token, toIsoDate(weekStart), toIsoDate(weekEnd)).then(setShifts).catch(() => setShifts([]))
   }, [user, weekStart, weekEnd])
 
+  useEffect(() => {
+    loadShifts()
+  }, [loadShifts])
+
   const totalHours = shifts.reduce((acc, s) => acc + s.durationHours, 0)
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
+
+  useEffect(() => {
+    const handleShiftUpdate = () => {
+      loadShifts()
+    }
+    const handleShiftCreate = () => {
+      loadShifts()
+    }
+
+    window.addEventListener('shifts:updated', handleShiftUpdate)
+    window.addEventListener('shifts:created', handleShiftCreate)
+
+    return () => {
+      window.removeEventListener('shifts:updated', handleShiftUpdate)
+      window.removeEventListener('shifts:created', handleShiftCreate)
+    }
+  }, [loadShifts])
 
   const shiftsByDay = useMemo(() => {
     return weekDays.map((day) => {

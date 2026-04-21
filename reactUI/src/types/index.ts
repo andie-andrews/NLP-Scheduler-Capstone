@@ -36,4 +36,14 @@ export interface ChatMessage {
     start: string
     durationHours: number
   }
+  updatedShiftData?: {
+    id?: number
+    start: string
+    durationHours: number
+  }
+  createdShiftData?: {
+    id?: number
+    start: string
+    durationHours: number
+  }
 }

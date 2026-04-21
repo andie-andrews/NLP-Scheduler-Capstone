@@ -20,6 +20,16 @@ interface AssistantResponse {
         start: string
         durationHours: number
       }
+      updatedShift?: {
+        id?: number
+        start: string
+        durationHours: number
+      }
+      createdShift?: {
+        id?: number
+        start: string
+        durationHours: number
+      }
     }
   } | string | unknown
 }
@@ -114,11 +124,44 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
           ? (data.response.data as { nextShift: { id?: number; start: string; durationHours: number } }).nextShift
           : null
 
+      const extractedUpdatedShift =
+        typeof data.response === 'object' &&
+        data.response !== null &&
+        'data' in data.response &&
+        data.response.data !== null &&
+        typeof data.response.data === 'object' &&
+        'updatedShift' in data.response.data &&
+        typeof (data.response.data as { updatedShift: unknown }).updatedShift === 'object' &&
+        (data.response.data as { updatedShift: unknown }).updatedShift !== null
+          ? (data.response.data as { updatedShift: { id?: number; start: string; durationHours: number } }).updatedShift
+          : null
+
+      const extractedCreatedShift =
+        typeof data.response === 'object' &&
+        data.response !== null &&
+        'data' in data.response &&
+        data.response.data !== null &&
+        typeof data.response.data === 'object' &&
+        'createdShift' in data.response.data &&
+        typeof (data.response.data as { createdShift: unknown }).createdShift === 'object' &&
+        (data.response.data as { createdShift: unknown }).createdShift !== null
+          ? (data.response.data as { createdShift: { id?: number; start: string; durationHours: number } }).createdShift
+          : null
+
       dispatch(addMessage({
         role: 'assistant',
         content: responseText,
         shiftData: extractedShift || undefined,
+        updatedShiftData: extractedUpdatedShift || undefined,
+        createdShiftData: extractedCreatedShift || undefined,
       }))
+
+      if (extractedUpdatedShift) {
+        window.dispatchEvent(new CustomEvent('shifts:updated'))
+      }
+      if (extractedCreatedShift) {
+        window.dispatchEvent(new CustomEvent('shifts:created'))
+      }
     } catch (error) {
       const fallback = error instanceof Error ? error.message : 'Unable to reach AI assistant service.'
       dispatch(addMessage({ role: 'assistant', content: fallback }))
@@ -155,6 +198,32 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
                     </Text>
                     <Text size='sm' c='dimmed'>
                       Duration: {m.shiftData.durationHours} hour{m.shiftData.durationHours === 1 ? '' : 's'}
+                    </Text>
+                  </Stack>
+                </Card>
+              )}
+              {m.updatedShiftData && (
+                <Card withBorder radius='md' p='md' bg='yellow.0'>
+                  <Stack gap='xs'>
+                    <Text fw={700}>🛠️ Updated Shift</Text>
+                    <Text size='sm'>
+                      {new Date(m.updatedShiftData.start).toLocaleString()}
+                    </Text>
+                    <Text size='sm' c='dimmed'>
+                      Duration: {m.updatedShiftData.durationHours} hour{m.updatedShiftData.durationHours === 1 ? '' : 's'}
+                    </Text>
+                  </Stack>
+                </Card>
+              )}
+              {m.createdShiftData && (
+                <Card withBorder radius='md' p='md' bg='blue.1'>
+                  <Stack gap='xs'>
+                    <Text fw={700}>✨ Created Shift</Text>
+                    <Text size='sm'>
+                      {new Date(m.createdShiftData.start).toLocaleString()}
+                    </Text>
+                    <Text size='sm' c='dimmed'>
+                      Duration: {m.createdShiftData.durationHours} hour{m.createdShiftData.durationHours === 1 ? '' : 's'}
                     </Text>
                   </Stack>
                 </Card>
