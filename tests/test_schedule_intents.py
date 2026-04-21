@@ -35,5 +35,9 @@ def test_is_get_manager_schedule_groups_intent_true_for_manager_group_lookup():
     assert is_get_manager_schedule_groups_intent("Show me my manager groups") is True
 
 
+def test_is_get_manager_schedule_groups_intent_true_for_schedule_groups_i_manage_phrase():
+    assert is_get_manager_schedule_groups_intent("show me all schedule groups I manage") is True
+
+
 def test_is_create_schedule_intent_true_for_manager_group_creation_phrase():
     assert is_create_schedule_intent("Create manager group Kitchen Leads") is True
