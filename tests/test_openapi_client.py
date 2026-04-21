@@ -252,3 +252,39 @@ def test_call_api_prefers_explicit_base_url_override():
 
     called_url = mock_get.call_args.args[0]
     assert called_url == "https://staging.example.com/custom-base/api/employees"
+
+
+def test_call_api_prefers_api_specific_base_url_override():
+    if "requests" not in sys.modules:
+        sys.modules["requests"] = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    elif not hasattr(sys.modules["requests"], "get"):
+        setattr(sys.modules["requests"], "get", lambda *args, **kwargs: None)
+    call_api = importlib.import_module("app.llm.openapi_client").call_api
+
+    operation = {
+        "api_name": "employee",
+        "method": "GET",
+        "path": "/api/employees",
+        "servers": [
+            {"url": "http://localhost/employeeapi", "x-environment-name": "development"},
+            {"url": "https://prod.employee.example.com", "x-environment-name": "production"},
+        ],
+        "parameters": [],
+        "requestBody": None,
+    }
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "SCHEDULER_RUNTIME_ENV": "production",
+                "EMPLOYEE_API_BASE_URL": "https://employee.staging.example.com/base/",
+            },
+            clear=True,
+        ),
+        patch("app.llm.openapi_client.requests.get", return_value=_DummyResponse()) as mock_get,
+    ):
+        call_api("token", operation, {})
+
+    called_url = mock_get.call_args.args[0]
+    assert called_url == "https://employee.staging.example.com/base/api/employees"

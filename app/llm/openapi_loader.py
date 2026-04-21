@@ -6,7 +6,8 @@ import jsonref
 OPENAPI_MANIFEST_ENV_VAR = "SCHEDULER_OPENAPI_SPECS"
 DEFAULT_API_NAME = "scheduler"
 ROOT_DIR = Path(__file__).resolve().parents[2]
-DEFAULT_SPEC_PATH = Path(__file__).parent.parent.parent / ".openapi" / "scheduler.api.json"
+DEFAULT_SPEC_DIRECTORY = ROOT_DIR / ".openapi"
+DEFAULT_SPEC_PATH = DEFAULT_SPEC_DIRECTORY / "scheduler.api.json"
 
 
 def parse_openapi_manifest(manifest: str) -> dict[str, Path]:
@@ -48,10 +49,13 @@ def parse_openapi_manifest(manifest: str) -> dict[str, Path]:
 def _resolve_spec_manifest() -> dict[str, Path]:
     manifest = os.getenv(OPENAPI_MANIFEST_ENV_VAR)
 
-    if not manifest:
-        return {DEFAULT_API_NAME: DEFAULT_SPEC_PATH}
+    if manifest:
+        return parse_openapi_manifest(manifest)
 
-    return parse_openapi_manifest(manifest)
+    if DEFAULT_SPEC_DIRECTORY.is_dir():
+        return {"all": DEFAULT_SPEC_DIRECTORY}
+
+    return {DEFAULT_API_NAME: DEFAULT_SPEC_PATH}
 
 
 def _derive_api_name_from_file(spec_file: Path) -> str:

@@ -1,5 +1,6 @@
-import requests
 import os
+
+import requests
 import urllib3
 
 DEFAULT_LOCAL_BASE_URL = "http://localhost/schedulerapi"
@@ -14,10 +15,24 @@ def _runtime_environment() -> str:
     return "development"
 
 
-def _base_url(operation: dict) -> str:
+def _api_specific_base_url_override(operation: dict) -> str | None:
+    api_name = (operation.get("api_name") or "").strip().upper()
+    if api_name:
+        api_specific_override = os.getenv(f"{api_name}_API_BASE_URL")
+        if api_specific_override and api_specific_override.strip():
+            return api_specific_override.strip().rstrip("/")
+
     explicit_base_url = os.getenv("SCHEDULER_API_BASE_URL")
     if explicit_base_url and explicit_base_url.strip():
         return explicit_base_url.strip().rstrip("/")
+
+    return None
+
+
+def _base_url(operation: dict) -> str:
+    explicit_override = _api_specific_base_url_override(operation)
+    if explicit_override:
+        return explicit_override
 
     requested_environment = "production" if _runtime_environment() in {"production", "prod"} else "development"
     servers = operation.get("servers") or []
@@ -59,6 +74,7 @@ def _normalize_employee_search_result(operation, result):
                 return candidate
 
     return result
+
 
 def call_api(token, operation, args):
     # Avoid mutating caller-owned args (some flows reuse args after API calls).

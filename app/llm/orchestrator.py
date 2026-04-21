@@ -6,8 +6,8 @@ from pathlib import Path
 import jwt
 from dotenv import load_dotenv
 
-from llm.openapi_loader import DEFAULT_API_NAME, load_openapi_spec
-from llm.openapi_parser import parse_operations
+from llm.openapi_loader import load_openapi_spec
+from llm.openapi_parser import parse_operations_by_api
 from llm.openapi_client import call_api
 from llm.orchestration.intents import (
     is_add_schedule_member_intent,
@@ -108,8 +108,17 @@ load_dotenv(ROOT_DIR / ".env")
 llm_client = OrchestrationLLM(model="gpt-4o")
 
 specs = load_openapi_spec()
-spec = specs[DEFAULT_API_NAME]
-OPERATIONS = parse_operations(spec)
+operations_by_callable = parse_operations_by_api(specs)
+OPERATIONS = {key: value for key, value in operations_by_callable.items()}
+
+# Backward compatibility: expose un-namespaced operation IDs when unique.
+for operation in operations_by_callable.values():
+    operation_id = operation.get("operationId")
+    if not operation_id:
+        continue
+
+    if operation_id not in OPERATIONS:
+        OPERATIONS[operation_id] = operation
 GENERAL_CONVERSATION_SYSTEM_PROMPT = """
 You are a friendly assistant in a workforce scheduling app.
 
