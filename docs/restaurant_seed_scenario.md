@@ -39,14 +39,6 @@ Use the prompts below during demos to illustrate core scheduling workflows.
 Example prompt:
 
 ```text
-create schedule group
-```
-
-```text
-Trainer
-```
-
-```text
 show me the schedule groups I manage
 ```
 
@@ -99,12 +91,6 @@ Example prompt:
 Create shifts for Luca Shaker every Thursday for the next 6 weeks from 5:00 PM to 11:00 PM on Bartenders.
 ```
 
-Template prompt:
-
-```text
-Create shifts for {EmployeeName} every {dayOfWeek} for the next {X} weeks from {startTime} to {endTime} on {ScheduleName}.
-```
-
 (If you typed `dayOfweed`, use `dayOfWeek` in the actual prompt.)
 
 ---
@@ -146,7 +132,7 @@ should result in the shift being reassigned to Andie.
 ### 7) Employee login + self-service schedule and hours
 
 **Goal:** Show employee-facing access where a staff member signs in and checks their own schedule and total hours.
-
+#### CLEAR THE CHAT FIRST !
 ASSUMING YOU ARE LOGGED IN AS BOSS MAN, you need to create a shift for the below prompts:
 ```text
 Create a shift for Boss Man 4/30/2026 from 9:00 AM to 5:00 PM.
