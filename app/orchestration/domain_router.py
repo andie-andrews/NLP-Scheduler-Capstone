@@ -19,23 +19,8 @@ class DomainRoutingError(ValueError):
     """Raised when cross-domain or domain policy is violated."""
 
 
-FLOW_TO_DOMAIN = {
-    "create_shift": "schedule",
-    "update_shift": "schedule",
-    "delete_shift": "schedule",
-    "create_schedule": "schedule",
-    "add_schedule_member": "schedule",
-    "remove_schedule_member": "schedule",
-    "delete_schedule": "schedule",
-    "get_manager_schedule_groups": "schedule",
-    "find_employee": "employee",
-    "create_employee": "employee",
-    "update_employee": "employee",
-    "delete_employee": "employee",
-}
-
-
 def infer_workflow_from_message(message: str) -> str | None:
+    """Infer workflow key from the incoming user message using existing intent matchers."""
     if is_create_shift_intent(message):
         return "create_shift"
     if is_update_shift_intent(message):
@@ -61,13 +46,32 @@ def infer_workflow_from_message(message: str) -> str | None:
     return None
 
 
+def _flow_to_domain_map_for_app(app_config: dict) -> dict[str, str]:
+    """Build workflow->domain ownership for the resolved app from app registry domain workflow definitions."""
+    ownership: dict[str, str] = {}
+    for domain, domain_config in (app_config.get("domains") or {}).items():
+        for workflow in domain_config.get("workflows", []):
+            current_owner = ownership.get(workflow)
+            if current_owner and current_owner != domain:
+                raise DomainRoutingError(
+                    f"workflow '{workflow}' is assigned to multiple domains: {current_owner}, {domain}"
+                )
+            ownership[workflow] = domain
+    return ownership
+
+
 def resolve_domain_and_workflow(app_config: dict, message: str, max_hops: int | None = None) -> tuple[str, str | None]:
+    """Resolve request domain/workflow while enforcing directional cross-domain policy rules."""
     primary_domain = app_config.get("primary_domain")
     workflow = infer_workflow_from_message(message)
     if workflow is None:
         return primary_domain, None
 
-    target_domain = FLOW_TO_DOMAIN.get(workflow)
+    flow_to_domain = _flow_to_domain_map_for_app(app_config)
+    target_domain = flow_to_domain.get(workflow)
+    if target_domain is None:
+        raise DomainRoutingError(f"workflow '{workflow}' is not configured for this app")
+
     if target_domain == primary_domain:
         return target_domain, workflow
 
