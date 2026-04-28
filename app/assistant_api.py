@@ -26,11 +26,15 @@ from llm.orchestrator import run_orchestrator
 
 
 class ChatRequest(BaseModel):
+    """Legacy v1 assistant chat request payload."""
+
     message: str = Field(min_length=1)
     conversationId: str | None = None
 
 
 class ChatResponse(BaseModel):
+    """Legacy v1 assistant chat response payload."""
+
     conversationId: str
     response: Any
 

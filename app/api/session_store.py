@@ -14,12 +14,16 @@ from llm.memory import ConversationMemory
 
 @dataclass
 class AuthUser:
+    """Decoded bearer-token user context used for session bootstrap."""
+
     role: str | None
     employee_id: int | None
     token: str
 
 
 class SessionRecord(BaseModel):
+    """Container for conversation session state and last-seen timestamp."""
+
     session: dict[str, Any]
     last_seen_epoch_seconds: float
 

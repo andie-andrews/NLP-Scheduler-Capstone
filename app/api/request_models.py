@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 
 
 class AssistantRequest(BaseModel):
+    """V2 assistant request contract with required appcode routing context."""
+
     appcode: str = Field(min_length=1)
     message: str = Field(min_length=1)
     conversationId: str | None = None
@@ -15,6 +17,8 @@ class AssistantRequest(BaseModel):
 
 
 class AssistantResponse(BaseModel):
+    """V2 assistant response contract with structured success/error fields."""
+
     success: bool
     conversationId: str
     appcode: str
