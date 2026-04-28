@@ -47,3 +47,8 @@ def test_scheduling_blocks_disallowed_employee_cross_domain_workflow():
 def test_employee_app_cannot_route_to_schedule_workflows():
     with pytest.raises(DomainRoutingError, match="not configured"):
         resolve_domain_and_workflow(EMPLOYEE_APP, "create shift for Jane")
+
+
+def test_employee_app_rejects_unmapped_intents_to_fail_closed():
+    with pytest.raises(DomainRoutingError, match="unable to map request intent"):
+        resolve_domain_and_workflow(EMPLOYEE_APP, "show my shifts this week")

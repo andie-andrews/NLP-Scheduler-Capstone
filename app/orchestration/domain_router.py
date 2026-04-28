@@ -60,12 +60,12 @@ def _flow_to_domain_map_for_app(app_config: dict) -> dict[str, str]:
     return ownership
 
 
-def resolve_domain_and_workflow(app_config: dict, message: str, max_hops: int | None = None) -> tuple[str, str | None]:
+def resolve_domain_and_workflow(app_config: dict, message: str, max_hops: int | None = None) -> tuple[str, str]:
     """Resolve request domain/workflow while enforcing directional cross-domain policy rules."""
     primary_domain = app_config.get("primary_domain")
     workflow = infer_workflow_from_message(message)
     if workflow is None:
-        return primary_domain, None
+        raise DomainRoutingError("unable to map request intent to a configured workflow")
 
     flow_to_domain = _flow_to_domain_map_for_app(app_config)
     target_domain = flow_to_domain.get(workflow)
