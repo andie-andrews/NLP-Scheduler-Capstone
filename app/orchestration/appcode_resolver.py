@@ -11,10 +11,15 @@ class AppcodeResolutionError(ValueError):
 _REGISTRY_PATH = Path(__file__).resolve().parents[1] / "config" / "app_registry.json"
 
 
-def load_app_registry() -> dict:
+def load_registry_payload() -> dict:
+    """Load the complete app registry payload from disk."""
     with _REGISTRY_PATH.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
-    return payload.get("apps", {})
+        return json.load(handle)
+
+
+def load_app_registry() -> dict:
+    """Load only appcode definitions from the app registry payload."""
+    return load_registry_payload().get("apps", {})
 
 
 def resolve_appcode(appcode: str | None, registry: dict | None = None) -> tuple[str, dict]:

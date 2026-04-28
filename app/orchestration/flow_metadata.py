@@ -1,26 +1,10 @@
 from __future__ import annotations
 
-from orchestration.appcode_resolver import load_app_registry
+from orchestration.appcode_resolver import load_app_registry, load_registry_payload
 
 
 class FlowMetadataError(ValueError):
     """Raised when workflow metadata cannot be derived from the app registry."""
-
-
-FLOW_HANDLER_MAP: dict[str, str] = {
-    "create_shift": "create_shift",
-    "update_shift": "update_shift",
-    "delete_shift": "delete_shift",
-    "create_schedule": "create_schedule",
-    "add_schedule_member": "add_schedule_member",
-    "remove_schedule_member": "remove_schedule_member",
-    "delete_schedule": "delete_schedule",
-    "get_manager_schedule_groups": "get_manager_schedule_groups",
-    "find_employee": "find_employee",
-    "create_employee": "create_employee",
-    "update_employee": "update_employee",
-    "delete_employee": "delete_employee",
-}
 
 
 def build_workflow_domain_map(registry: dict | None = None) -> dict[str, str]:
@@ -41,9 +25,11 @@ def build_workflow_domain_map(registry: dict | None = None) -> dict[str, str]:
     return ownership
 
 
-def get_workflow_handler(workflow: str) -> str:
-    """Resolve canonical handler key for a workflow."""
-    handler = FLOW_HANDLER_MAP.get(workflow)
+def get_workflow_handler(workflow: str, registry_payload: dict | None = None) -> str:
+    """Resolve canonical handler key for a workflow from app registry configuration."""
+    payload = registry_payload or load_registry_payload()
+    handler_map = payload.get("workflow_handlers") or {}
+    handler = handler_map.get(workflow)
     if not handler:
-        raise FlowMetadataError(f"workflow '{workflow}' is missing a handler mapping")
+        raise FlowMetadataError(f"workflow '{workflow}' is missing a handler mapping in app_registry.json")
     return handler

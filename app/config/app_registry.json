@@ -1,8 +1,25 @@
 {
+  "workflow_handlers": {
+    "create_shift": "create_shift",
+    "update_shift": "update_shift",
+    "delete_shift": "delete_shift",
+    "create_schedule": "create_schedule",
+    "add_schedule_member": "add_schedule_member",
+    "remove_schedule_member": "remove_schedule_member",
+    "delete_schedule": "delete_schedule",
+    "get_manager_schedule_groups": "get_manager_schedule_groups",
+    "find_employee": "find_employee",
+    "create_employee": "create_employee",
+    "update_employee": "update_employee",
+    "delete_employee": "delete_employee"
+  },
   "apps": {
     "scheduling": {
       "primary_domain": "schedule",
-      "domain_priority": ["schedule", "employee"],
+      "domain_priority": [
+        "schedule",
+        "employee"
+      ],
       "max_cross_domain_hops": 1,
       "prompts": {
         "global": "You are an AI assistant for workforce operations.",
@@ -53,13 +70,19 @@
       },
       "cross_domain": {
         "employee": {
-          "allowed_workflows": ["find_employee", "create_employee", "update_employee"]
+          "allowed_workflows": [
+            "find_employee",
+            "create_employee",
+            "update_employee"
+          ]
         }
       }
     },
     "employee": {
       "primary_domain": "employee",
-      "domain_priority": ["employee"],
+      "domain_priority": [
+        "employee"
+      ],
       "max_cross_domain_hops": 0,
       "prompts": {
         "global": "You are an AI assistant for workforce operations.",
