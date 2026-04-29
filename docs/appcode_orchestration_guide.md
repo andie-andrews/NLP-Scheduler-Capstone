@@ -66,7 +66,7 @@ Update `app/config/app_registry.json`:
   - `max_cross_domain_hops`
   - `prompts` (`global`, `appcode`, `domains`, `flows`, `roles`)
   - `domains.<domain>.workflows`
-  - `domains.<domain>.plugin` (for example: `legacy_orchestrator` or your custom plugin)
+  - `domains.<domain>.plugin` (for example: `schedule_orchestrator` / `employee_orchestrator` or your custom plugin)
   - `cross_domain` allowlists
 - Add workflow->handler mappings to top-level `workflow_handlers` for each new workflow key.
 

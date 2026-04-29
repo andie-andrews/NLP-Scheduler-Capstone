@@ -1,6 +1,6 @@
 import jwt
 
-from llm.apps.scheduling.orchestrator import _extract_employee_id_from_token
+from llm.apps.scheduling.schedule_orchestrator import _extract_employee_id_from_token
 
 
 def test_extract_employee_id_from_token_reads_employee_id_claim():

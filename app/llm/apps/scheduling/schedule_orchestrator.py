@@ -98,6 +98,7 @@ from llm.orchestration.apps.scheduling.flows.pending_schedule_flow import handle
 from llm.orchestration.apps.employee.flows.pending_employee_flow import handle_pending_employee_flow
 from llm.prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
 from llm.langchain_orchestration import OrchestrationLLM
+from orchestration.appcode_resolver import load_registry_payload
 
 # Load environment variables for non-Streamlit entry points (e.g., assistant_api, tests, scripts).
 # Note: this module moved under `app/llm/apps/scheduling`, so we resolve the app/repo
@@ -135,6 +136,23 @@ Keep responses concise and helpful.
 """
 
 
+
+
+
+def _register_configured_shift_flows(flow_registry: FlowRegistry):
+    """Register shift flow handlers by reading configured workflow handlers for scheduling appcode."""
+    payload = load_registry_payload()
+    app = (payload.get("apps") or {}).get("scheduling") or {}
+    configured = set(((app.get("domains") or {}).get("schedule") or {}).get("workflows", []))
+    handlers = {
+        "create_shift": handle_create_shift_flow,
+        "update_shift": handle_update_shift_flow,
+        "delete_shift": handle_delete_shift_flow,
+    }
+    for workflow in configured:
+        handler = handlers.get(workflow)
+        if handler is not None:
+            flow_registry.register(workflow, handler)
 def _resolve_operation_for_tool_call(tool_name: str, operations: dict):
     if tool_name in operations:
         operation = operations[tool_name] or {}
@@ -1141,9 +1159,7 @@ def run_orchestrator(message: str, token: str, session: dict):
         return f"Done — {employee_display} was {action_word} {schedule_display}."
 
     flow_registry = FlowRegistry()
-    flow_registry.register("delete_shift", handle_delete_shift_flow)
-    flow_registry.register("update_shift", handle_update_shift_flow)
-    flow_registry.register("create_shift", handle_create_shift_flow)
+    _register_configured_shift_flows(flow_registry)
     flow_result = flow_registry.dispatch(**build_shift_flow_kwargs(
         message=message,
         token=token,

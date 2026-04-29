@@ -10,7 +10,7 @@ class DomainExecutionError(ValueError):
 def resolve_domain_plugin_name(app_config: dict, domain: str) -> str:
     """Resolve plugin name for a domain from app config, defaulting to legacy orchestrator plugin."""
     domain_config = (app_config.get("domains") or {}).get(domain) or {}
-    return domain_config.get("plugin") or "legacy_orchestrator"
+    return domain_config.get("plugin") or "schedule_orchestrator"
 
 
 def execute_domain_request(*, app_config: dict, domain: str, message: str, token: str, session: dict):

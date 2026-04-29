@@ -58,7 +58,7 @@
             "delete_schedule",
             "get_manager_schedule_groups"
           ],
-          "plugin": "legacy_orchestrator"
+          "plugin": "schedule_orchestrator"
         },
         "employee": {
           "workflows": [
@@ -67,7 +67,7 @@
             "update_employee",
             "delete_employee"
           ],
-          "plugin": "legacy_orchestrator"
+          "plugin": "employee_orchestrator"
         }
       },
       "cross_domain": {
@@ -111,7 +111,7 @@
             "update_employee",
             "delete_employee"
           ],
-          "plugin": "legacy_orchestrator"
+          "plugin": "employee_orchestrator"
         }
       },
       "cross_domain": {}

@@ -10,15 +10,25 @@ class DomainPlugin(Protocol):
         """Execute a domain request using plugin-specific runtime logic."""
 
 
-class LegacyOrchestratorPlugin:
-    """Plugin adapter that routes execution to the existing legacy orchestrator runtime."""
+class ScheduleOrchestratorPlugin:
+    """Plugin adapter that routes schedule execution to schedule orchestrator runtime."""
 
     def execute(self, *, message: str, token: str, session: dict):
-        from llm.apps.scheduling.orchestrator import run_orchestrator
+        from llm.apps.scheduling.schedule_orchestrator import run_orchestrator
 
         return run_orchestrator(message=message, token=token, session=session)
 
 
+class EmployeeOrchestratorPlugin:
+    """Plugin adapter that routes employee execution to employee orchestrator runtime."""
+
+    def execute(self, *, message: str, token: str, session: dict):
+        from llm.apps.employee.employee_orchestrator import run_employee_orchestrator
+
+        return run_employee_orchestrator(message=message, token=token, session=session)
+
+
 PLUGIN_REGISTRY: dict[str, DomainPlugin] = {
-    "legacy_orchestrator": LegacyOrchestratorPlugin(),
+    "schedule_orchestrator": ScheduleOrchestratorPlugin(),
+    "employee_orchestrator": EmployeeOrchestratorPlugin(),
 }

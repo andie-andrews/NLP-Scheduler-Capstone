@@ -4,7 +4,7 @@ from llm.openapi_parser import parse_operations
 
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
-from llm.apps.scheduling.orchestrator import _resolve_operation_for_tool_call
+from llm.apps.scheduling.schedule_orchestrator import _resolve_operation_for_tool_call
 
 
 def test_resolve_operation_for_namespaced_tool_name():
