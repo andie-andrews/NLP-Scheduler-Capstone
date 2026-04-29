@@ -60,6 +60,7 @@ Update `app/config/app_registry.json`:
   - `max_cross_domain_hops`
   - `prompts` (`global`, `appcode`, `domains`, `flows`, `roles`)
   - `domains.<domain>.workflows`
+  - `domains.<domain>.plugin` (for example: `legacy_orchestrator` or your custom plugin)
   - `cross_domain` allowlists
 - Add workflow->handler mappings to top-level `workflow_handlers` for each new workflow key.
 
@@ -71,6 +72,9 @@ Update `app/orchestration/domain_router.py`:
 - Keep workflow keys aligned with `app_registry.json`.
 
 ### 3) Add/extend flow handlers
+
+Also register or implement the domain runtime plugin in `app/orchestration/domain_plugins.py` and reference it from `domains.<domain>.plugin` in registry.
+
 
 Update the runtime flow handling path used by your app workflows:
 

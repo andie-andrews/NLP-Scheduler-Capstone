@@ -25,4 +25,4 @@ def run_orchestration_request(
     session["resolved_workflow"] = workflow
     session["composed_prompt"] = composed_prompt
 
-    return execute_domain_request(domain=domain, message=message, token=token, session=session)
+    return execute_domain_request(app_config=app_config, domain=domain, message=message, token=token, session=session)
