@@ -32,6 +32,12 @@ The assistant runtime now supports a centralized, appcode-oriented orchestration
   - `app/orchestration/domain_executors.py`
   - `app/orchestration/engine.py`
 
+
+### Runtime path (current)
+
+- **v2 endpoint** (`/api/v2/assistant/chat`) uses `run_orchestration_request(...)` in `app/orchestration/engine.py`.
+- **v1 legacy endpoint** (`/api/assistant/chat`) also routes through the same orchestration engine using default appcode `scheduling`, so domain routing/prompt composition/policy checks are centralized in one path.
+
 ## Why this was done
 
 1. **Explicit app routing:**

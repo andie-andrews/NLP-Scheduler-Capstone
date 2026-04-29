@@ -22,7 +22,7 @@ from api.session_store import (
     get_or_create_session,
     session_ttl_seconds,
 )
-from llm.orchestrator import run_orchestrator
+from orchestration.engine import run_orchestration_request
 
 
 class ChatRequest(BaseModel):
@@ -40,6 +40,7 @@ class ChatResponse(BaseModel):
 
 
 app = FastAPI(title="Scheduler Assistant API", version="1.1.0")
+LEGACY_V1_APPCODE = "scheduling"
 
 allowed_origins = [
     origin.strip()
@@ -80,10 +81,12 @@ def chat(payload: ChatRequest, authorization: str | None = Header(default=None))
     conversation_id = payload.conversationId or str(uuid.uuid4())
     session = get_or_create_session(conversation_id, user)
 
-    response = run_orchestrator(
+    response = run_orchestration_request(
+        appcode=LEGACY_V1_APPCODE,
         message=payload.message,
         token=user.token,
         session=session,
+        role=session.get("role"),
     )
 
     return ChatResponse(conversationId=conversation_id, response=response)
