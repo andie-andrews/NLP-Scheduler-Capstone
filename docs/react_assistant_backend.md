@@ -41,3 +41,5 @@ If your browser blocks chat calls with a cross-origin message, make sure the ass
 
 Example:
 `ASSISTANT_API_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://localhost:5173,https://127.0.0.1:5173`
+
+For orchestration architecture details and onboarding new appcodes, see `docs/appcode_orchestration_guide.md`.
