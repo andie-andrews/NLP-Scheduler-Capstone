@@ -1,7 +1,10 @@
 """HTTP backend for the in-repo assistant orchestrator.
 
-This mirrors the Streamlit assistant behavior by keeping conversation state server-side
-and calling the same `run_orchestrator(...)` function used by the Streamlit UI.
+Exposes both:
+- legacy v1 assistant routes under `/api/assistant/*`
+- v2 assistant routes mounted from `app/api/routes.py` under `/api/v2/assistant/*`
+
+Both paths use centralized orchestration/session infrastructure.
 """
 
 from __future__ import annotations
@@ -41,6 +44,7 @@ class ChatResponse(BaseModel):
 
 app = FastAPI(title="Scheduler Assistant API", version="1.1.0")
 LEGACY_V1_APPCODE = "scheduling"
+V2_ROUTE_PREFIX = "/api/v2/assistant"
 
 allowed_origins = [
     origin.strip()
@@ -99,4 +103,6 @@ def reset_chat(conversation_id: str, authorization: str | None = Header(default=
     return {"status": "cleared"}
 
 
+
+# Mount v2 assistant routes from `app/api/routes.py` (prefix: /api/v2/assistant).
 app.include_router(assistant_v2_router)
