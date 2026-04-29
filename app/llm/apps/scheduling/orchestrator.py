@@ -95,7 +95,7 @@ from llm.orchestration.apps.scheduling.flows.create_shift_flow import handle_cre
 from llm.orchestration.apps.scheduling.flows.delete_shift_flow import handle_delete_shift_flow
 from llm.orchestration.apps.scheduling.flows.update_shift_flow import handle_update_shift_flow
 from llm.orchestration.apps.scheduling.flows.pending_schedule_flow import handle_pending_schedule_flow
-from llm.orchestration.apps.scheduling.flows.pending_employee_flow import handle_pending_employee_flow
+from llm.orchestration.apps.employee.flows.pending_employee_flow import handle_pending_employee_flow
 from llm.prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
 from llm.langchain_orchestration import OrchestrationLLM
 

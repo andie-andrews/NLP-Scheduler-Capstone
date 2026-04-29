@@ -1,7 +1,7 @@
 import unittest
 
 from llm.orchestration.apps.scheduling.flows.pending_schedule_flow import handle_pending_schedule_flow
-from llm.orchestration.apps.scheduling.flows.pending_employee_flow import handle_pending_employee_flow
+from llm.orchestration.apps.employee.flows.pending_employee_flow import handle_pending_employee_flow
 
 
 class PendingFlowSmokeTests(unittest.TestCase):
