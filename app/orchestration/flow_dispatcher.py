@@ -41,7 +41,7 @@ def dispatch_flow(
             )
 
     try:
-        handler_name = get_workflow_handler(workflow)
+        handler_name = get_workflow_handler(workflow, registry_payload=registry)
     except FlowMetadataError as exc:
         raise FlowDispatchError(str(exc)) from exc
 

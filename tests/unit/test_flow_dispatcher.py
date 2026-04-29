@@ -38,3 +38,23 @@ def test_dispatcher_calls_handler_for_allowed_workflow():
         employee_id=12,
     )
     assert result == "created:12"
+
+
+def test_dispatcher_uses_injected_registry_for_handler_resolution():
+    registry = {
+        "scheduling": SCHEDULING_APP,
+        "workflow_handlers": {"create_shift": "create_shift_custom"},
+    }
+    handlers = {"create_shift_custom": lambda **kwargs: f"created:{kwargs['employee_id']}"}
+
+    result = dispatch_flow(
+        appcode="scheduling",
+        app_config=SCHEDULING_APP,
+        domain="schedule",
+        workflow="create_shift",
+        handlers=handlers,
+        registry=registry,
+        employee_id=7,
+    )
+
+    assert result == "created:7"
