@@ -47,3 +47,17 @@ def test_scheduling_blocks_disallowed_employee_cross_domain_workflow():
 def test_employee_app_cannot_route_to_schedule_workflows():
     with pytest.raises(DomainRoutingError, match="not configured"):
         resolve_domain_and_workflow(EMPLOYEE_APP, "create shift for Jane")
+
+
+def test_registry_workflow_name_fallback_inference():
+    app_config = {
+        "primary_domain": "schedule",
+        "domains": {
+            "schedule": {"workflows": ["create_shift", "delete_shift"]},
+        },
+        "cross_domain": {},
+    }
+
+    domain, workflow = resolve_domain_and_workflow(app_config, "please create shift for tomorrow")
+    assert domain == "schedule"
+    assert workflow == "create_shift"

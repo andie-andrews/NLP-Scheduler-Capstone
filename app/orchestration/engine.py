@@ -24,5 +24,9 @@ def run_orchestration_request(
     session["resolved_domain"] = domain
     session["resolved_workflow"] = workflow
     session["composed_prompt"] = composed_prompt
+    session["available_workflows_by_domain"] = {
+        domain_name: list((domain_config or {}).get("workflows", []))
+        for domain_name, domain_config in (app_config.get("domains") or {}).items()
+    }
 
     return execute_domain_request(app_config=app_config, domain=domain, message=message, token=token, session=session)

@@ -19,6 +19,22 @@ class DomainRoutingError(ValueError):
     """Raised when cross-domain or domain policy is violated."""
 
 
+
+def infer_workflow_from_registry(app_config: dict, message: str) -> str | None:
+    """Infer workflow key by matching configured workflow names against message text."""
+    text = (message or "").lower().strip()
+    if not text:
+        return None
+
+    for domain_config in (app_config.get("domains") or {}).values():
+        for workflow in domain_config.get("workflows", []):
+            phrase = workflow.replace("_", " ").lower()
+            words = [part for part in phrase.split() if part]
+            if words and all(word in text for word in words):
+                return workflow
+    return None
+
+
 def infer_workflow_from_message(message: str) -> str | None:
     """Infer workflow key from the incoming user message using existing intent matchers."""
     if is_create_shift_intent(message):
@@ -64,6 +80,8 @@ def resolve_domain_and_workflow(app_config: dict, message: str, max_hops: int | 
     """Resolve request domain/workflow while enforcing directional cross-domain policy rules."""
     primary_domain = app_config.get("primary_domain")
     workflow = infer_workflow_from_message(message)
+    if workflow is None:
+        workflow = infer_workflow_from_registry(app_config, message)
     if workflow is None:
         return primary_domain, None
 
