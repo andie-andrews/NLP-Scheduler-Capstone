@@ -100,7 +100,9 @@ from llm.prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
 from llm.langchain_orchestration import OrchestrationLLM
 
 # Load environment variables for non-Streamlit entry points (e.g., assistant_api, tests, scripts).
-APP_DIR = Path(__file__).resolve().parents[1]
+# Note: this module moved under `app/llm/apps/scheduling`, so we resolve the app/repo
+# roots by walking up from this file location.
+APP_DIR = Path(__file__).resolve().parents[3]
 ROOT_DIR = APP_DIR.parent
 load_dotenv(APP_DIR / ".env")
 load_dotenv(ROOT_DIR / ".env")
