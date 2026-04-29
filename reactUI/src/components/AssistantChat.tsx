@@ -11,6 +11,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../store'
 
 const assistantUrl = import.meta.env.VITE_AI_ASSISTANT_URL as string | undefined
+const assistantAppcode = 'scheduling'
 
 interface AssistantResponse {
   conversationId: string
@@ -43,6 +44,8 @@ interface AssistantResponse {
       }>
     }
   } | string | unknown
+  success?: boolean
+  error?: string | null
 }
 
 interface AssistantChatProps {
@@ -91,7 +94,7 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
       if (!assistantUrl || !user) {
         dispatch(addMessage({
           role: 'assistant',
-          content: 'AI endpoint not configured. Set VITE_AI_ASSISTANT_URL to your backend assistant endpoint (for example: http://localhost:8000/api/assistant/chat).',
+          content: 'AI endpoint not configured. Set VITE_AI_ASSISTANT_URL to your backend assistant endpoint (for example: http://localhost:8000/api/v2/assistant/chat).',
         }))
         return
       }
@@ -102,7 +105,11 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
           'Content-Type': 'application/json',
           Authorization: `Bearer ${user.token}`,
         },
-        body: JSON.stringify({ message: userPrompt, conversationId }),
+        body: JSON.stringify({
+          appcode: assistantAppcode,
+          message: userPrompt,
+          conversationId,
+        }),
       })
 
       if (!res.ok) {
@@ -113,6 +120,10 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
       const data = await res.json() as AssistantResponse
       if (data.conversationId) {
         dispatch(setConversationId(data.conversationId))
+      }
+
+      if (data.success === false) {
+        throw new Error(data.error || 'Assistant request failed.')
       }
 
       const summaryText =
@@ -128,7 +139,7 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
           ? data.response
           : summaryText
             ? summaryText
-          : "Unable to reach AI assistant service."
+            : 'Unable to reach AI assistant service.'
 
       const extractedShift =
         typeof data.response === 'object' &&
@@ -299,26 +310,24 @@ export function AssistantChat({ title = '🤖 AI Scheduler Assistant' }: Assista
               )}
             </Stack>
           ))}
-          {!messages.length && <Text c='dimmed'>Ask something about schedules, shifts, or hours...</Text>}
         </Stack>
       </Card>
 
-      <Group align='end' wrap='nowrap'>
+      <Group>
         <TextInput
           style={{ flex: 1 }}
+          placeholder='Ask about schedules, shifts, or hours...'
           value={input}
           onChange={(e) => dispatch(setInput(e.currentTarget.value))}
-          placeholder='Ask something about schedules, shifts, or hours...'
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
               void send()
             }
           }}
+          disabled={loading}
         />
-        <Button loading={loading} onClick={() => void send()}>
-          Send
-        </Button>
+        <Button onClick={() => void send()} loading={loading}>Send</Button>
       </Group>
     </Stack>
   )

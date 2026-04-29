@@ -33,7 +33,7 @@ uvicorn assistant_api:app --reload --port 8000
 Then set in `reactUI/.env`:
 
 ```env
-VITE_AI_ASSISTANT_URL=http://localhost:8000/api/assistant/chat
+VITE_AI_ASSISTANT_URL=http://localhost:8000/api/v2/assistant/chat
 ```
 
 ## Environment variables
@@ -42,7 +42,7 @@ VITE_AI_ASSISTANT_URL=http://localhost:8000/api/assistant/chat
 Base URL for the Scheduler REST API used by regular app features (login, employees, schedules, shifts).
 
 ### `VITE_AI_ASSISTANT_URL`
-URL for the AI assistant backend endpoint that the React chat UI calls. This should point to `/api/assistant/chat` on the assistant backend.
+URL for the AI assistant backend endpoint that the React chat UI calls. This should point to `/api/v2/assistant/chat` on the assistant backend.
 
 ## Where to put the OpenAI key
 Do **not** put your OpenAI API key in `reactUI/.env` (anything prefixed with `VITE_` is exposed to the browser).

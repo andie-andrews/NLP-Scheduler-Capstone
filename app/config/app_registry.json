@@ -1,0 +1,117 @@
+{
+  "workflow_handlers": {
+    "create_shift": "create_shift",
+    "update_shift": "update_shift",
+    "delete_shift": "delete_shift",
+    "create_schedule": "create_schedule",
+    "add_schedule_member": "add_schedule_member",
+    "remove_schedule_member": "remove_schedule_member",
+    "delete_schedule": "delete_schedule",
+    "get_manager_schedule_groups": "get_manager_schedule_groups",
+    "find_employee": "find_employee",
+    "create_employee": "create_employee",
+    "update_employee": "update_employee",
+    "delete_employee": "delete_employee"
+  },
+  "apps": {
+    "scheduling": {
+      "primary_domain": "schedule",
+      "domain_priority": [
+        "schedule",
+        "employee"
+      ],
+      "max_cross_domain_hops": 1,
+      "prompts": {
+        "global": "You are an AI assistant for workforce operations.",
+        "appcode": "This request is in the scheduling app. Prioritize schedule operations.",
+        "domains": {
+          "schedule": "Handle schedule and shift workflows first.",
+          "employee": "Use employee workflows only to support schedule outcomes."
+        },
+        "flows": {
+          "find_employee": "Use this workflow to resolve an employee for schedule tasks.",
+          "create_employee": "Only create employees when required by a schedule workflow.",
+          "update_employee": "Only update employee details when needed by schedule execution.",
+          "create_shift": "Collect all required schedule and shift fields before execution.",
+          "update_shift": "Confirm what shift attribute should be changed before execution.",
+          "delete_shift": "Always confirm destructive shift actions.",
+          "create_schedule": "Only create schedule groups if the user explicitly requests it.",
+          "add_schedule_member": "Validate employee and target schedule before adding membership.",
+          "remove_schedule_member": "Validate employee and target schedule before removing membership.",
+          "delete_schedule": "Confirm destructive schedule deletion actions.",
+          "get_manager_schedule_groups": "Use this for manager schedule-group visibility queries."
+        },
+        "roles": {
+          "Employee": "Employees can only access their own schedule unless policy allows otherwise.",
+          "Supervisor": "Supervisors can manage schedules and execute staffing workflows."
+        }
+      },
+      "domains": {
+        "schedule": {
+          "workflows": [
+            "create_shift",
+            "update_shift",
+            "delete_shift",
+            "create_schedule",
+            "add_schedule_member",
+            "remove_schedule_member",
+            "delete_schedule",
+            "get_manager_schedule_groups"
+          ]
+        },
+        "employee": {
+          "workflows": [
+            "find_employee",
+            "create_employee",
+            "update_employee",
+            "delete_employee"
+          ]
+        }
+      },
+      "cross_domain": {
+        "employee": {
+          "allowed_workflows": [
+            "find_employee",
+            "create_employee",
+            "update_employee"
+          ]
+        }
+      }
+    },
+    "employee": {
+      "primary_domain": "employee",
+      "domain_priority": [
+        "employee"
+      ],
+      "max_cross_domain_hops": 0,
+      "prompts": {
+        "global": "You are an AI assistant for workforce operations.",
+        "appcode": "This request is in the employee app. Stay inside employee workflows.",
+        "domains": {
+          "employee": "Handle employee directory and profile workflows."
+        },
+        "flows": {
+          "find_employee": "Resolve employee identity and profile fields.",
+          "create_employee": "Collect required employee profile fields before create.",
+          "update_employee": "Collect target employee and updates before patching.",
+          "delete_employee": "Confirm destructive employee deletion actions."
+        },
+        "roles": {
+          "Employee": "Employees can view their own profile context.",
+          "Supervisor": "Supervisors can execute staffing-related employee workflows."
+        }
+      },
+      "domains": {
+        "employee": {
+          "workflows": [
+            "find_employee",
+            "create_employee",
+            "update_employee",
+            "delete_employee"
+          ]
+        }
+      },
+      "cross_domain": {}
+    }
+  }
+}

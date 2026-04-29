@@ -11,10 +11,10 @@ This project now includes a Python HTTP backend (`app/assistant_api.py`) that wr
 ## Endpoints
 
 - `GET /health`
-- `POST /api/assistant/chat`
-  - body: `{ "message": "...", "conversationId": "optional" }`
-  - returns: `{ "conversationId": "...", "response": <orchestrator-response> }`
-- `DELETE /api/assistant/chat/{conversationId}`
+- `POST /api/v2/assistant/chat`
+  - body: `{ "appcode": "scheduling", "message": "...", "conversationId": "optional" }`
+  - returns: `{ "success": true|false, "conversationId": "...", "appcode": "...", "domain": "...", "workflow": "...", "response": <orchestrator-response>, "error": "..." }`
+- `DELETE /api/v2/assistant/chat/{conversationId}`
 
 ## Local run
 
@@ -34,3 +34,10 @@ uvicorn assistant_api:app --reload --port 8000
 
 - `ASSISTANT_API_ALLOW_ORIGINS` (default `*`)
 - `ASSISTANT_SESSION_TTL_SECONDS` (default `28800`, 8 hours)
+
+
+### CORS troubleshooting
+If your browser blocks chat calls with a cross-origin message, make sure the assistant backend allows your exact frontend origin (scheme + host + port).
+
+Example:
+`ASSISTANT_API_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://localhost:5173,https://127.0.0.1:5173`
