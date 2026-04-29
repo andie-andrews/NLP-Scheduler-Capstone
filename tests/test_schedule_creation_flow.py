@@ -1,4 +1,4 @@
-from app.llm.orchestration.flows.pending_schedule_flow import handle_pending_schedule_flow
+from llm.orchestration.apps.scheduling.flows.pending_schedule_flow import handle_pending_schedule_flow
 
 
 def test_pending_create_schedule_creates_group_and_clears_state():

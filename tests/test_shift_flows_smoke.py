@@ -2,9 +2,9 @@ import unittest
 from datetime import date
 from unittest.mock import Mock
 
-from app.llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
-from app.llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
-from app.llm.orchestration.flows.update_shift_flow import handle_update_shift_flow
+from llm.orchestration.apps.scheduling.flows.create_shift_flow import handle_create_shift_flow
+from llm.orchestration.apps.scheduling.flows.delete_shift_flow import handle_delete_shift_flow
+from llm.orchestration.apps.scheduling.flows.update_shift_flow import handle_update_shift_flow
 
 
 class ShiftFlowSmokeTests(unittest.TestCase):

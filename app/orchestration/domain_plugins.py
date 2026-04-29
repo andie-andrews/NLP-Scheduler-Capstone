@@ -14,7 +14,7 @@ class LegacyOrchestratorPlugin:
     """Plugin adapter that routes execution to the existing legacy orchestrator runtime."""
 
     def execute(self, *, message: str, token: str, session: dict):
-        from llm.orchestrator import run_orchestrator
+        from llm.apps.scheduling.orchestrator import run_orchestrator
 
         return run_orchestrator(message=message, token=token, session=session)
 

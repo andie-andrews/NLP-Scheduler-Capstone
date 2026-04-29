@@ -91,13 +91,13 @@ from llm.orchestration.access_control import (
     looks_like_other_employee_schedule_request,
 )
 from llm.orchestration.registry import FlowRegistry
-from llm.orchestration.flows.create_shift_flow import handle_create_shift_flow
-from llm.orchestration.flows.delete_shift_flow import handle_delete_shift_flow
-from llm.orchestration.flows.update_shift_flow import handle_update_shift_flow
-from llm.orchestration.flows.pending_schedule_flow import handle_pending_schedule_flow
-from llm.orchestration.flows.pending_employee_flow import handle_pending_employee_flow
-from .prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
-from .langchain_orchestration import OrchestrationLLM
+from llm.orchestration.apps.scheduling.flows.create_shift_flow import handle_create_shift_flow
+from llm.orchestration.apps.scheduling.flows.delete_shift_flow import handle_delete_shift_flow
+from llm.orchestration.apps.scheduling.flows.update_shift_flow import handle_update_shift_flow
+from llm.orchestration.apps.scheduling.flows.pending_schedule_flow import handle_pending_schedule_flow
+from llm.orchestration.apps.scheduling.flows.pending_employee_flow import handle_pending_employee_flow
+from llm.prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
+from llm.langchain_orchestration import OrchestrationLLM
 
 # Load environment variables for non-Streamlit entry points (e.g., assistant_api, tests, scripts).
 APP_DIR = Path(__file__).resolve().parents[1]
