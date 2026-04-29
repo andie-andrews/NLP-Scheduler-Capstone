@@ -23,10 +23,6 @@ def chat_v2(payload: AssistantRequest, authorization: str | None = Header(defaul
     conversation_id = payload.conversationId or str(uuid.uuid4())
     session = get_or_create_session(conversation_id, user)
 
-    if payload.role:
-        session["role"] = payload.role
-    if payload.userContext:
-        session["user_context"] = payload.userContext
     if payload.sessionMetadata:
         session.setdefault("session_metadata", {}).update(payload.sessionMetadata)
 

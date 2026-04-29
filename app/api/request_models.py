@@ -11,8 +11,6 @@ class AssistantRequest(BaseModel):
     appcode: str = Field(min_length=1)
     message: str = Field(min_length=1)
     conversationId: str | None = None
-    role: str | None = None
-    userContext: dict[str, Any] | None = None
     sessionMetadata: dict[str, Any] | None = None
 
 
