@@ -100,9 +100,10 @@ from llm.langchain_orchestration import OrchestrationLLM
 from llm.domain_orchestration.appcode_resolver import load_registry_payload
 
 # Load environment variables for non-Streamlit entry points (e.g., assistant_api, tests, scripts).
-# Note: this module moved under `app/llm/apps/scheduling`, so we resolve the app/repo
-# roots by walking up from this file location.
-APP_DIR = Path(__file__).resolve().parents[3]
+# Note: this module now lives under
+# `app/llm/domain_orchestration/domains/scheduling/plugins`, so we resolve the
+# app/repo roots by walking up from this file location.
+APP_DIR = Path(__file__).resolve().parents[5]
 ROOT_DIR = APP_DIR.parent
 load_dotenv(APP_DIR / ".env")
 load_dotenv(ROOT_DIR / ".env")
