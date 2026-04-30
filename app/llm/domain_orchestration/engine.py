@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from orchestration.appcode_resolver import resolve_appcode
-from orchestration.domain_executors import execute_domain_request
-from orchestration.domain_router import resolve_domain_and_workflow
-from orchestration.prompt_composer import compose_prompt
+from llm.domain_orchestration.appcode_resolver import resolve_appcode
+from llm.domain_orchestration.domain_executors import execute_domain_request
+from llm.domain_orchestration.domain_router import resolve_domain_and_workflow
+from llm.domain_orchestration.prompt_composer import compose_prompt
 
 
 def run_orchestration_request(

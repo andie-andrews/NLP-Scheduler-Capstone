@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from orchestration.domain_plugins import PLUGIN_REGISTRY
-from orchestration.pending_dispatch import dispatch_pending_before_plugin
+from llm.domain_orchestration.domain_plugins import PLUGIN_REGISTRY
+from llm.domain_orchestration.pending_dispatch import dispatch_pending_before_plugin
 
 
 class DomainExecutionError(ValueError):

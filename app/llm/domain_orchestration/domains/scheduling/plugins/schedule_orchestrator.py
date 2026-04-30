@@ -91,13 +91,13 @@ from llm.orchestration.access_control import (
     looks_like_other_employee_schedule_request,
 )
 from llm.orchestration.registry import FlowRegistry
-from llm.orchestration.apps.scheduling.flows.create_shift_flow import handle_create_shift_flow
-from llm.orchestration.apps.scheduling.flows.delete_shift_flow import handle_delete_shift_flow
-from llm.orchestration.apps.scheduling.flows.update_shift_flow import handle_update_shift_flow
-from llm.orchestration.apps.scheduling.flows.pending_schedule_flow import handle_pending_schedule_flow
+from llm.domain_orchestration.domains.scheduling.flows.create_shift_flow import handle_create_shift_flow
+from llm.domain_orchestration.domains.scheduling.flows.delete_shift_flow import handle_delete_shift_flow
+from llm.domain_orchestration.domains.scheduling.flows.update_shift_flow import handle_update_shift_flow
+from llm.domain_orchestration.domains.scheduling.flows.pending_schedule_flow import handle_pending_schedule_flow
 from llm.prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
 from llm.langchain_orchestration import OrchestrationLLM
-from orchestration.appcode_resolver import load_registry_payload
+from llm.domain_orchestration.appcode_resolver import load_registry_payload
 
 # Load environment variables for non-Streamlit entry points (e.g., assistant_api, tests, scripts).
 # Note: this module moved under `app/llm/apps/scheduling`, so we resolve the app/repo
@@ -799,7 +799,7 @@ def dispatch_pending_flows(message: str, token: str, session: dict):
         return "Okay — I cancelled deleting the schedule."
 
     if pending_employee_operation:
-        from llm.apps.employee.employee_orchestrator import run_employee_orchestrator
+        from llm.domain_orchestration.domains.employee.plugins.employee_orchestrator import run_employee_orchestrator
 
         employee_flow_result = run_employee_orchestrator(message=message, token=token, session=session)
         if employee_flow_result is not None:

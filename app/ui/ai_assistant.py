@@ -3,7 +3,7 @@ from datetime import datetime
 import streamlit as st
 
 from llm.memory import ConversationMemory
-from llm.apps.scheduling.schedule_orchestrator import run_orchestrator
+from llm.domain_orchestration.domains.scheduling.plugins.schedule_orchestrator import run_orchestrator
 from ui.theme import render_page_header
 
 

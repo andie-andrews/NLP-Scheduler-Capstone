@@ -25,7 +25,7 @@ from api.session_store import (
     get_or_create_session,
     session_ttl_seconds,
 )
-from orchestration.engine import run_orchestration_request
+from llm.domain_orchestration.engine import run_orchestration_request
 
 
 class ChatRequest(BaseModel):

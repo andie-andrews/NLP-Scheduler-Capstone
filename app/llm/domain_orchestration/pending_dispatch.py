@@ -20,7 +20,7 @@ def dispatch_pending_before_plugin(*, domain: str, message: str, token: str, ses
         if not has_pending_schedule_state:
             return None
 
-        from llm.apps.scheduling.schedule_orchestrator import dispatch_pending_flows
+        from llm.domain_orchestration.domains.scheduling.plugins.schedule_orchestrator import dispatch_pending_flows
 
         return dispatch_pending_flows(message=message, token=token, session=session)
 
@@ -28,7 +28,7 @@ def dispatch_pending_before_plugin(*, domain: str, message: str, token: str, ses
         if get_pending_employee_operation_state(session) is None:
             return None
 
-        from llm.apps.employee.employee_orchestrator import run_employee_orchestrator
+        from llm.domain_orchestration.domains.employee.plugins.employee_orchestrator import run_employee_orchestrator
 
         return run_employee_orchestrator(message=message, token=token, session=session)
 

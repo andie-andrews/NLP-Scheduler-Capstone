@@ -8,7 +8,7 @@ class AppcodeResolutionError(ValueError):
     """Raised when appcode is missing or not present in registry."""
 
 
-_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "config" / "app_registry.json"
+_REGISTRY_PATH = Path(__file__).resolve().parents[2] / "config" / "app_registry.json"
 
 
 def load_registry_payload() -> dict:

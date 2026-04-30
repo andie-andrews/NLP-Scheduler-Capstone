@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from orchestration.flow_metadata import FlowMetadataError, build_workflow_domain_map, get_workflow_handler
+from llm.domain_orchestration.flow_metadata import FlowMetadataError, build_workflow_domain_map, get_workflow_handler
 
 
 class FlowDispatchError(ValueError):

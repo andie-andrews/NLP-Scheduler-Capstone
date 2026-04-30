@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from orchestration.appcode_resolver import load_app_registry, load_registry_payload
+from llm.domain_orchestration.appcode_resolver import load_app_registry, load_registry_payload
 
 
 class FlowMetadataError(ValueError):

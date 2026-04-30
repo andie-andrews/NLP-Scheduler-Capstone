@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from llm.apps.scheduling.schedule_orchestrator import (
+from llm.domain_orchestration.domains.scheduling.plugins.schedule_orchestrator import (
     OPERATIONS,
     _extract_employee_name_parts,
     _extract_explicit_employee_id,
     _extract_role_id,
 )
 from llm.openapi_client import call_api
-from llm.orchestration.apps.employee.flows.pending_employee_flow import handle_pending_employee_flow
+from llm.domain_orchestration.domains.employee.flows.pending_employee_flow import handle_pending_employee_flow
 from llm.orchestration.resolvers import resolve_employee_id
 from llm.orchestration.state_store import (
     clear_pending_employee_operation_state,
