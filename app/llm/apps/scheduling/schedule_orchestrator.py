@@ -95,7 +95,6 @@ from llm.orchestration.apps.scheduling.flows.create_shift_flow import handle_cre
 from llm.orchestration.apps.scheduling.flows.delete_shift_flow import handle_delete_shift_flow
 from llm.orchestration.apps.scheduling.flows.update_shift_flow import handle_update_shift_flow
 from llm.orchestration.apps.scheduling.flows.pending_schedule_flow import handle_pending_schedule_flow
-from llm.orchestration.apps.employee.flows.pending_employee_flow import handle_pending_employee_flow
 from llm.prompts_v2 import SYSTEM_PROMPT, CALCULATION_RULES
 from llm.langchain_orchestration import OrchestrationLLM
 from orchestration.appcode_resolver import load_registry_payload
@@ -868,14 +867,14 @@ def run_orchestrator(message: str, token: str, session: dict):
         pending_delete_schedule = None
         return "Okay — I cancelled deleting the schedule."
 
-    if pending_employee_operation and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
-        clear_pending_employee_operation_state(session)
-        pending_employee_operation = None
-        return "Okay — I cancelled the employee update flow."
+    if pending_employee_operation:
+        from llm.apps.employee.employee_orchestrator import run_employee_orchestrator
+        employee_flow_result = run_employee_orchestrator(message=message, token=token, session=session)
+        if employee_flow_result is not None:
+            return employee_flow_result
 
     pending_flow_registry = FlowRegistry()
     pending_flow_registry.register("pending_schedule", handle_pending_schedule_flow)
-    pending_flow_registry.register("pending_employee", handle_pending_employee_flow)
     pending_flow_result = pending_flow_registry.dispatch(**build_pending_flow_kwargs(
         message=message,
         token=token,
