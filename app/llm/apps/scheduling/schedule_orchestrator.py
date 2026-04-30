@@ -784,6 +784,54 @@ ONLY return tool calls.
     return SYSTEM_PROMPT + "\n\n" + context + "\n\n" + tool_rules + "\n\n" + CALCULATION_RULES
 
 
+def dispatch_pending_flows(message: str, token: str, session: dict):
+    """Handle pending scheduling/employee flows before main orchestration execution."""
+    pending_create_schedule = get_pending_create_schedule_state(session)
+    pending_delete_schedule = get_pending_delete_schedule_state(session)
+    pending_employee_operation = get_pending_employee_operation_state(session)
+
+    if pending_create_schedule and re.search(r"\b(start over|restart|cancel)\b", (message or "").lower()):
+        clear_pending_create_schedule_state(session)
+        return "Okay — I cancelled creating a new schedule."
+
+    if pending_delete_schedule and re.search(r"\b(start over|restart|cancel)\b", (message or "").lower()):
+        clear_pending_delete_schedule_state(session)
+        return "Okay — I cancelled deleting the schedule."
+
+    if pending_employee_operation:
+        from llm.apps.employee.employee_orchestrator import run_employee_orchestrator
+
+        employee_flow_result = run_employee_orchestrator(message=message, token=token, session=session)
+        if employee_flow_result is not None:
+            return employee_flow_result
+
+    pending_flow_registry = FlowRegistry()
+    pending_flow_registry.register("pending_schedule", handle_pending_schedule_flow)
+    pending_flow_result = pending_flow_registry.dispatch(**build_pending_flow_kwargs(
+        message=message,
+        token=token,
+        session=session,
+        pending_create_schedule=pending_create_schedule,
+        pending_delete_schedule=pending_delete_schedule,
+        pending_employee_operation=pending_employee_operation,
+        operations=OPERATIONS,
+        call_api=call_api,
+        clear_pending_create_schedule_state=clear_pending_create_schedule_state,
+        clear_pending_delete_schedule_state=clear_pending_delete_schedule_state,
+        extract_schedule_name_or_id_from_message=_extract_schedule_name_or_id_from_message,
+        extract_schedule_name_for_create=_extract_schedule_name_for_create,
+        normalize_schedule_id_arg=normalize_schedule_id_arg,
+        lookup_schedule_name_by_id=_lookup_schedule_name_by_id,
+        extract_employee_name_parts=_extract_employee_name_parts,
+        extract_role_id=_extract_role_id,
+        extract_explicit_employee_id=_extract_explicit_employee_id,
+        resolve_employee_id=resolve_employee_id,
+        set_pending_employee_operation_state=set_pending_employee_operation_state,
+        clear_pending_employee_operation_state=clear_pending_employee_operation_state,
+    ))
+    return pending_flow_result
+
+
 def run_orchestrator(message: str, token: str, session: dict):
     raw_message = message or ""
     normalized_message = normalize_temporal_text(raw_message)
@@ -857,46 +905,7 @@ def run_orchestrator(message: str, token: str, session: dict):
         pending_schedule_member_change = None
         return "Okay — I cancelled the schedule-group member update flow."
 
-    if pending_create_schedule and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
-        clear_pending_create_schedule_state(session)
-        pending_create_schedule = None
-        return "Okay — I cancelled creating a new schedule."
-
-    if pending_delete_schedule and re.search(r"\b(start over|restart|cancel)\b", message.lower()):
-        clear_pending_delete_schedule_state(session)
-        pending_delete_schedule = None
-        return "Okay — I cancelled deleting the schedule."
-
-    if pending_employee_operation:
-        from llm.apps.employee.employee_orchestrator import run_employee_orchestrator
-        employee_flow_result = run_employee_orchestrator(message=message, token=token, session=session)
-        if employee_flow_result is not None:
-            return employee_flow_result
-
-    pending_flow_registry = FlowRegistry()
-    pending_flow_registry.register("pending_schedule", handle_pending_schedule_flow)
-    pending_flow_result = pending_flow_registry.dispatch(**build_pending_flow_kwargs(
-        message=message,
-        token=token,
-        session=session,
-        pending_create_schedule=pending_create_schedule,
-        pending_delete_schedule=pending_delete_schedule,
-        pending_employee_operation=pending_employee_operation,
-        operations=OPERATIONS,
-        call_api=call_api,
-        clear_pending_create_schedule_state=clear_pending_create_schedule_state,
-        clear_pending_delete_schedule_state=clear_pending_delete_schedule_state,
-        extract_schedule_name_or_id_from_message=_extract_schedule_name_or_id_from_message,
-        extract_schedule_name_for_create=_extract_schedule_name_for_create,
-        normalize_schedule_id_arg=normalize_schedule_id_arg,
-        lookup_schedule_name_by_id=_lookup_schedule_name_by_id,
-        extract_employee_name_parts=_extract_employee_name_parts,
-        extract_role_id=_extract_role_id,
-        extract_explicit_employee_id=_extract_explicit_employee_id,
-        resolve_employee_id=resolve_employee_id,
-        set_pending_employee_operation_state=set_pending_employee_operation_state,
-        clear_pending_employee_operation_state=clear_pending_employee_operation_state,
-    ))
+    pending_flow_result = dispatch_pending_flows(message=message, token=token, session=session)
     if pending_flow_result is not None:
         return pending_flow_result
 

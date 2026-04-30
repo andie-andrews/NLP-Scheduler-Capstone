@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from orchestration.domain_plugins import PLUGIN_REGISTRY
+from orchestration.pending_dispatch import dispatch_pending_before_plugin
 
 
 class DomainExecutionError(ValueError):
@@ -18,6 +19,10 @@ def execute_domain_request(*, app_config: dict, domain: str, message: str, token
     domain_config = (app_config.get("domains") or {}).get(domain)
     if not domain_config:
         raise DomainExecutionError(f"domain '{domain}' has no configured definition")
+
+    pending_result = dispatch_pending_before_plugin(domain=domain, message=message, token=token, session=session)
+    if pending_result is not None:
+        return pending_result
 
     plugin_name = resolve_domain_plugin_name(app_config, domain)
     plugin = PLUGIN_REGISTRY.get(plugin_name)
