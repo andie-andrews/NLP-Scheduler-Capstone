@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from llm.orchestration.state_store import (
+    get_pending_delete_shift_state,
     get_pending_create_schedule_state,
     get_pending_delete_schedule_state,
     get_pending_employee_operation_state,
+    get_pending_schedule_member_change_state,
+    get_pending_shift_state,
+    get_pending_show_shifts_state,
+    get_pending_update_shift_state,
 )
 
 
@@ -12,6 +17,11 @@ def dispatch_pending_before_plugin(*, domain: str, message: str, token: str, ses
     if domain == "schedule":
         has_pending_schedule_state = any(
             [
+                get_pending_shift_state(session),
+                get_pending_delete_shift_state(session),
+                get_pending_show_shifts_state(session),
+                get_pending_update_shift_state(session),
+                get_pending_schedule_member_change_state(session),
                 get_pending_create_schedule_state(session),
                 get_pending_delete_schedule_state(session),
                 get_pending_employee_operation_state(session),
