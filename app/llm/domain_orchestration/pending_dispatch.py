@@ -30,9 +30,12 @@ def dispatch_pending_before_plugin(*, domain: str, message: str, token: str, ses
         if not has_pending_schedule_state:
             return None
 
-        from llm.domain_orchestration.domains.scheduling.plugins.schedule_orchestrator import dispatch_pending_flows
+        from llm.domain_orchestration.domains.scheduling.plugins.schedule_orchestrator import run_orchestrator
 
-        return dispatch_pending_flows(message=message, token=token, session=session)
+        # Route through the full scheduling orchestrator for pending turns.
+        # Why: shift-related pending flows are handled in `run_orchestrator`
+        # (not only in `dispatch_pending_flows`).
+        return run_orchestrator(message=message, token=token, session=session)
 
     if domain == "employee":
         if get_pending_employee_operation_state(session) is None:
