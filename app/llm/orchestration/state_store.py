@@ -10,7 +10,12 @@ PENDING_EMPLOYEE_OPERATION_KEY = "pending_employee_operation"
 
 
 def _get_memory(session: dict):
-    return session.get("memory") if session else None
+    if session is None:
+        return None
+    # Prefer explicit memory container when present, but fall back to the
+    # session mapping itself for runtimes that store pending keys directly on
+    # session.
+    return session.get("memory", session)
 
 
 def _read_memory_value(memory, key: str):
