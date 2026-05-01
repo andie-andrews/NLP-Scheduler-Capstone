@@ -20,11 +20,17 @@ def execute_domain_request(*, app_config: dict, domain: str, message: str, token
     if not domain_config:
         raise DomainExecutionError(f"domain '{domain}' has no configured definition")
 
-    pending_result = dispatch_pending_before_plugin(domain=domain, message=message, token=token, session=session)
+    plugin_name = resolve_domain_plugin_name(app_config, domain)
+    pending_result = dispatch_pending_before_plugin(
+        domain=domain,
+        plugin_name=plugin_name,
+        message=message,
+        token=token,
+        session=session,
+    )
     if pending_result is not None:
         return pending_result
 
-    plugin_name = resolve_domain_plugin_name(app_config, domain)
     plugin = PLUGIN_REGISTRY.get(plugin_name)
     if plugin is None:
         raise DomainExecutionError(f"plugin '{plugin_name}' is not registered for domain '{domain}'")

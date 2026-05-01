@@ -12,7 +12,7 @@ from llm.orchestration.state_store import (
 )
 
 
-def dispatch_pending_before_plugin(*, domain: str, message: str, token: str, session: dict):
+def dispatch_pending_before_plugin(*, domain: str, plugin_name: str, message: str, token: str, session: dict):
     """Dispatch domain-specific pending workflows before plugin runtime execution."""
     if domain == "schedule":
         has_pending_schedule_state = any(
@@ -30,12 +30,14 @@ def dispatch_pending_before_plugin(*, domain: str, message: str, token: str, ses
         if not has_pending_schedule_state:
             return None
 
-        from llm.domain_orchestration.domains.scheduling.plugins.schedule_orchestrator import run_orchestrator
+        # Reuse configured scheduling plugin dispatch instead of hardcoding
+        # a specific module import to keep this dispatcher domain-driven.
+        from llm.domain_orchestration.domain_plugins import PLUGIN_REGISTRY
 
-        # Route through the full scheduling orchestrator for pending turns.
-        # Why: shift-related pending flows are handled in `run_orchestrator`
-        # (not only in `dispatch_pending_flows`).
-        return run_orchestrator(message=message, token=token, session=session)
+        plugin = PLUGIN_REGISTRY.get(plugin_name)
+        if plugin is None:
+            return None
+        return plugin.execute(message=message, token=token, session=session)
 
     if domain == "employee":
         if get_pending_employee_operation_state(session) is None:
