@@ -40,6 +40,11 @@ def _set_pending_state(session, key: str, state):
     _write_memory_value(_get_memory(session), key, state)
 
 
+def has_any_pending_state(session, keys: list[str]) -> bool:
+    """Return True when any pending-state key is set in the current session memory."""
+    return any(_get_pending_state(session, key) is not None for key in keys)
+
+
 def get_pending_shift_state(session):
     return _get_pending_state(session, PENDING_CREATE_SHIFT_KEY)
 

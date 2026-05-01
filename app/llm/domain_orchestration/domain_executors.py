@@ -24,6 +24,7 @@ def execute_domain_request(*, app_config: dict, domain: str, message: str, token
     pending_result = dispatch_pending_before_plugin(
         domain=domain,
         plugin_name=plugin_name,
+        configured_workflows=list((domain_config or {}).get("workflows", [])),
         message=message,
         token=token,
         session=session,

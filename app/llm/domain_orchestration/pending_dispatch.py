@@ -1,32 +1,41 @@
 from __future__ import annotations
 
 from llm.orchestration.state_store import (
-    get_pending_delete_shift_state,
-    get_pending_create_schedule_state,
-    get_pending_delete_schedule_state,
     get_pending_employee_operation_state,
-    get_pending_schedule_member_change_state,
-    get_pending_shift_state,
-    get_pending_show_shifts_state,
-    get_pending_update_shift_state,
+    has_any_pending_state,
 )
 
+WORKFLOW_PENDING_KEYS = {
+    "create_shift": "pending_create_shift",
+    "update_shift": "pending_update_shift",
+    "delete_shift": "pending_delete_shift",
+    "create_schedule": "pending_create_schedule",
+    "add_schedule_member": "pending_schedule_member_change",
+    "remove_schedule_member": "pending_schedule_member_change",
+    "delete_schedule": "pending_delete_schedule",
+}
 
-def dispatch_pending_before_plugin(*, domain: str, plugin_name: str, message: str, token: str, session: dict):
+SCHEDULE_AUX_PENDING_KEYS = ["pending_show_shifts", "pending_employee_operation"]
+
+
+def dispatch_pending_before_plugin(
+    *,
+    domain: str,
+    plugin_name: str,
+    configured_workflows: list[str],
+    message: str,
+    token: str,
+    session: dict,
+):
     """Dispatch domain-specific pending workflows before plugin runtime execution."""
     if domain == "schedule":
-        has_pending_schedule_state = any(
-            [
-                get_pending_shift_state(session),
-                get_pending_delete_shift_state(session),
-                get_pending_show_shifts_state(session),
-                get_pending_update_shift_state(session),
-                get_pending_schedule_member_change_state(session),
-                get_pending_create_schedule_state(session),
-                get_pending_delete_schedule_state(session),
-                get_pending_employee_operation_state(session),
-            ]
-        )
+        pending_keys = {
+            WORKFLOW_PENDING_KEYS[workflow]
+            for workflow in configured_workflows or []
+            if workflow in WORKFLOW_PENDING_KEYS
+        }
+        pending_keys.update(SCHEDULE_AUX_PENDING_KEYS)
+        has_pending_schedule_state = has_any_pending_state(session, list(pending_keys))
         if not has_pending_schedule_state:
             return None
 
@@ -40,7 +49,7 @@ def dispatch_pending_before_plugin(*, domain: str, plugin_name: str, message: st
         return plugin.execute(message=message, token=token, session=session)
 
     if domain == "employee":
-        if get_pending_employee_operation_state(session) is None:
+        if not has_any_pending_state(session, ["pending_employee_operation"]):
             return None
 
         from llm.domain_orchestration.domains.employee.plugins.employee_orchestrator import run_employee_orchestrator
