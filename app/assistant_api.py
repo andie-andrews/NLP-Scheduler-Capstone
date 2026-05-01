@@ -21,6 +21,7 @@ from api.routes import router as assistant_v2_router
 from api.session_store import (
     cleanup_expired_sessions,
     conversation_store,
+    default_conversation_id_for_user,
     decode_bearer_token,
     get_or_create_session,
     session_ttl_seconds,
@@ -82,7 +83,7 @@ def chat(payload: ChatRequest, authorization: str | None = Header(default=None))
     cleanup_expired_sessions()
     user = decode_bearer_token(authorization)
 
-    conversation_id = payload.conversationId or str(uuid.uuid4())
+    conversation_id = payload.conversationId or default_conversation_id_for_user(user)
     session = get_or_create_session(conversation_id, user)
 
     response = run_orchestration_request(

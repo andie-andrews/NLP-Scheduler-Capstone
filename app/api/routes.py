@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-import uuid
-
 from fastapi import APIRouter, Header, HTTPException
 
 from api.request_models import AssistantRequest, AssistantResponse
-from api.session_store import cleanup_expired_sessions, conversation_store, decode_bearer_token, get_or_create_session
+from api.session_store import (
+    cleanup_expired_sessions,
+    conversation_store,
+    decode_bearer_token,
+    default_conversation_id_for_user,
+    get_or_create_session,
+)
 from llm.domain_orchestration.appcode_resolver import AppcodeResolutionError
 from llm.domain_orchestration.domain_router import DomainRoutingError
 from llm.domain_orchestration.engine import run_orchestration_request
@@ -20,7 +24,7 @@ def chat_v2(payload: AssistantRequest, authorization: str | None = Header(defaul
     cleanup_expired_sessions()
     user = decode_bearer_token(authorization)
 
-    conversation_id = payload.conversationId or str(uuid.uuid4())
+    conversation_id = payload.conversationId or default_conversation_id_for_user(user)
     session = get_or_create_session(conversation_id, user)
 
     if payload.sessionMetadata:

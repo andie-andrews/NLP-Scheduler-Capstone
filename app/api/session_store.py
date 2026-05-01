@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import hashlib
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -84,3 +85,14 @@ def get_or_create_session(conversation_id: str, user: AuthUser) -> dict[str, Any
     session["role"] = user.role
     session["employee_id"] = user.employee_id
     return session
+
+
+def default_conversation_id_for_user(user: AuthUser) -> str:
+    """Build a stable per-user fallback conversation id for multi-turn continuity.
+
+    Used when the client does not send `conversationId`.
+    """
+    if user.employee_id is not None:
+        return f"user:{user.employee_id}"
+    token_fingerprint = hashlib.sha256(user.token.encode("utf-8")).hexdigest()[:16]
+    return f"token:{token_fingerprint}"
